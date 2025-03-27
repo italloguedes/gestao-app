@@ -1,31 +1,34 @@
-import { Resend } from '@resend/resend';
+// lib/sendEmail.ts
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use STARTTLS (port 587)
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+  tls: {
+    // Evitar problemas com certificados em alguns ambientes
+    rejectUnauthorized: false,
+  },
+});
 
-export async function sendEmail(
-  to: string,
-  nome: string,
-  horario: string,
-  diaAtual: string
-) {
+export async function sendEmail(to: string, subject: string, text: string) {
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to,
+    subject,
+    text,
+  };
+
   try {
-    await resend.emails.send({
-      from: 'Gestão App <onboarding@resend.dev>', // Substitua pelo seu domínio verificado no Resend
-      to,
-      subject: 'Confirmação de Atendimento',
-      html: `
-        <h1>Confirmação de Atendimento</h1>
-        <p>Olá, ${nome}!</p>
-        <p>Seu atendimento foi agendado com sucesso.</p>
-        <p><strong>Data:</strong> ${diaAtual}</p>
-        <p><strong>Horário:</strong> ${horario}</p>
-        <p>Estamos ansiosos para atendê-lo!</p>
-        <p>Atenciosamente,<br>Equipe Gestão App</p>
-      `,
-    });
-    console.log('E-mail enviado com sucesso para', to);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('E-mail enviado:', info.response);
+    return info;
   } catch (error) {
     console.error('Erro ao enviar e-mail:', error);
-    throw new Error('Falha ao enviar e-mail');
+    throw error;
   }
 }

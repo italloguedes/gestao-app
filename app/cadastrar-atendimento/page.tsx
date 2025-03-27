@@ -1,17 +1,17 @@
+// app/cadastrar-atendimento/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { sendEmail } from '../../lib/sendEmail';
 
 export default function CadastrarAtendimento() {
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
-  const [horario, setHorario] = useState('');
-  const [diaAtual, setDiaAtual] = useState('');
+  const [solicitante, setSolicitante] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
   // Verifica se o usuário está logado e obtém o usuario_id
@@ -33,9 +33,27 @@ export default function CadastrarAtendimento() {
     e.preventDefault();
 
     if (!userId) {
-      alert('Usuário não autenticado.');
+      setMessage('Usuário não autenticado.');
       return;
     }
+
+    // Obtém a data e horário atuais
+    const now = new Date();
+    const diaAtual = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    const horario = now.toTimeString().split(' ')[0]; // Formato HH:MM:SS
+    const createdAt = now.toISOString();
+    const updatedAt = now.toISOString();
+
+    // Gera o número de protocolo chamando a função do Supabase
+    const { data: protocolData, error: protocolError } = await supabase
+      .rpc('generate_protocolo');
+
+    if (protocolError) {
+      setMessage('Erro ao gerar número de protocolo: ' + protocolError.message);
+      return;
+    }
+
+    const protocolo = protocolData; // Exemplo: "2025-0001"
 
     // Insere o atendimento no Supabase
     const { data, error } = await supabase.from('atendimentos').insert([
@@ -43,25 +61,66 @@ export default function CadastrarAtendimento() {
         nome,
         cpf,
         email,
+        solicitante,
         horario,
         dia_atual: diaAtual,
         usuario_id: userId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: createdAt,
+        updated_at: updatedAt,
+        protocolo, // Adiciona o número de protocolo
       },
     ]);
 
     if (error) {
-      alert('Erro ao cadastrar atendimento: ' + error.message);
-    } else {
-      try {
-        // Envia o e-mail
-        await sendEmail(email, nome, horario, diaAtual);
-        alert('Atendimento cadastrado com sucesso! E-mail de confirmação enviado.');
-      } catch (emailError) {
-        alert('Atendimento cadastrado, mas houve um erro ao enviar o e-mail.');
+      setMessage('Erro ao cadastrar atendimento: ' + error.message);
+      return;
+    }
+
+    // Monta o corpo do e-mail com o número de protocolo
+    const emailBody = `
+Olá ${nome}, CPF - ${cpf}.
+Seu atendimento foi realizado com sucesso e o prazo para retirada é de 30 dias.
+
+**Número de Protocolo: ${protocolo}**
+
+Sua CIN estará disponível nas versões digital e física. O acesso pode ser feito pelo aplicativo ou site do gov.br.
+
+Local de retirada: Prédio da Assembleia Legislativa Anexo III, Sala Sensorial.
+
+Endereço: Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238.
+
+Horário: 08h às 11:30 e 13h às 16h.
+
+Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
+
+Retiradas por terceiros podem ser feitas por parentes de 1º ou 2º grau (pai, mãe, filho, irmãos, tios ou avós) mediante apresentação de documento original com foto e certidão de nascimento ou casamento do titular.
+
+Acessar gov.br
+© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.
+    `.trim();
+
+    // Envia o e-mail chamando a API Route
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: `Confirmação de Atendimento - ${nome}`,
+          text: emailBody,
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        setMessage('Atendimento cadastrado com sucesso! E-mail de confirmação enviado.');
+        setTimeout(() => router.push('/dashboard'), 2000); // Redireciona após 2 segundos
+      } else {
+        setMessage('Atendimento cadastrado, mas houve um erro ao enviar o e-mail: ' + result.error);
       }
-      router.push('/dashboard'); // Redireciona para o dashboard após o cadastro
+    } catch (emailError) {
+      setMessage('Atendimento cadastrado, mas houve um erro ao enviar o e-mail.');
+      console.error(emailError);
     }
   };
 
@@ -100,21 +159,11 @@ export default function CadastrarAtendimento() {
           />
         </div>
         <div style={{ marginBottom: '15px' }}>
-          <label>Horário:</label>
+          <label>Solicitante:</label>
           <input
-            type="time"
-            value={horario}
-            onChange={(e) => setHorario(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Dia:</label>
-          <input
-            type="date"
-            value={diaAtual}
-            onChange={(e) => setDiaAtual(e.target.value)}
+            type="text"
+            value={solicitante}
+            onChange={(e) => setSolicitante(e.target.value)}
             required
             style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
@@ -129,6 +178,7 @@ export default function CadastrarAtendimento() {
       >
         Voltar
       </button>
+      {message && <p style={{ marginTop: '15px', color: message.includes('sucesso') ? 'green' : 'red' }}>{message}</p>}
     </div>
   );
 }
