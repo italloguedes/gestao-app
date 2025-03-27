@@ -1,169 +1,105 @@
-// app/consultar-atendimentos/page.tsx
-'use client';
+'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 // Definição do tipo para os dados de atendimento
 interface Atendimento {
-  id: string;
-  nome: string;
-  cpf: string;
-  email: string;
-  solicitante: string;
-  horario: string;
-  dia_atual: string;
-  usuario_id: string;
-  created_at: string;
-  updated_at: string;
-  protocolo: string;
+  id: string
+  nome: string
+  cpf: string
+  dia_atual: string
+  solicitante: string
+  email?: string // Opcional, caso esteja presente em alguns registros
 }
 
-export default function ConsultarAtendimentos() {
-  const [termoBusca, setTermoBusca] = useState('');
-  const [resultados, setResultados] = useState<Atendimento[]>([]);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const router = useRouter();
+const ConsultaAtendimento = () => {
+  const [termoBusca, setTermoBusca] = useState('')
+  const [resultados, setResultados] = useState<Atendimento[]>([])
+  const [carregando, setCarregando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  const formatarCPF = (cpf: string) => {
+    return cpf.replace(/\D/g, '') // Remove tudo que não for número
+  }
 
   const buscarAtendimentos = async () => {
-    const termo = termoBusca.trim();
-    if (!termo) {
-      setErro('Por favor, digite um nome ou CPF para buscar.');
-      return;
+    const termoFormatado = formatarCPF(termoBusca).trim()
+
+    if (!termoBusca) {
+      setErro('Digite um nome ou CPF válido para buscar.')
+      return
     }
 
-    setCarregando(true);
-    setErro(null);
-    setResultados([]);
+    setCarregando(true)
+    setErro(null)
+    setResultados([])
 
-    // Obtém o ID do usuário logado
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user.id;
+    try {
+      const { data, error } = await supabase
+        .from('atendimentos')
+        .select('*')
+        .or(
+          `cpf.ilike.%${termoFormatado}%,nome.ilike.%${termoBusca}%`
+        )
 
-    if (!userId) {
-      setErro('Usuário não autenticado.');
-      setCarregando(false);
-      return;
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      if (!data || data.length === 0) {
+        setErro('Nenhum atendimento encontrado.')
+      } else {
+        setResultados(data)
+      }
+    } catch (err) {
+      setErro('Erro ao buscar atendimentos. Tente novamente.')
     }
 
-    // Formata o termo para buscar no CPF (remove caracteres não numéricos)
-    const termoFormatadoCPF = termo.replace(/\D/g, '');
-
-    // Busca atendimentos do usuário logado, por nome ou CPF
-    const { data, error } = await supabase
-      .from('atendimentos')
-      .select('*')
-      .eq('usuario_id', userId) // Filtra pelo usuário logado
-      .or(
-        `cpf.ilike.%${termoFormatadoCPF}%,nome.ilike.%${termo}%`
-      );
-
-    if (error) {
-      setErro('Erro ao buscar atendimentos. Tente novamente mais tarde.');
-      console.error('Erro na busca:', error);
-    } else if (!data || data.length === 0) {
-      setErro('Nenhum atendimento encontrado para este nome ou CPF.');
-    } else {
-      setResultados(data);
-    }
-
-    setCarregando(false);
-  };
-
-  // Função para formatar a data
-  const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  // Função para formatar o CPF
-  const formatarCPF = (cpf: string) => {
-    const cleaned = cpf.replace(/\D/g, '');
-    if (cleaned.length !== 11) return cpf;
-    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  };
+    setCarregando(false)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-10">
-      <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          Consultar Atendimentos
-        </h1>
+      <div className="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-4">Consultar Atendimento</h1>
 
-        {/* Campo de busca */}
-        <div className="mb-6">
+        <div className="mb-4">
           <input
             type="text"
-            placeholder="Digite parte do Nome ou CPF"
+            placeholder="Digite o Nome ou CPF"
             value={termoBusca}
             onChange={(e) => setTermoBusca(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-gray-300 rounded"
           />
-          <button
-            onClick={buscarAtendimentos}
-            disabled={carregando}
-            className="mt-3 w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {carregando ? 'Buscando...' : 'Buscar Atendimentos'}
-          </button>
         </div>
 
-        {/* Mensagem de erro */}
-        {erro && (
-          <p className="text-red-500 text-center mb-4">{erro}</p>
-        )}
+        <button
+          onClick={buscarAtendimentos}
+          disabled={carregando}
+          className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {carregando ? 'Buscando...' : 'Buscar'}
+        </button>
 
-        {/* Resultados */}
+        {erro && <p className="text-red-500 mt-4">{erro}</p>}
+
         {resultados.length > 0 && (
-          <div className="space-y-4">
-            {resultados.map((atendimento) => (
-              <div
-                key={atendimento.id}
-                className="p-6 bg-gray-50 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow"
-              >
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                  {atendimento.nome}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-700">
-                  <p>
-                    <strong>CPF:</strong> {formatarCPF(atendimento.cpf)}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {atendimento.email}
-                  </p>
-                  <p>
-                    <strong>Solicitante:</strong> {atendimento.solicitante}
-                  </p>
-                  <p>
-                    <strong>Data:</strong> {formatarData(atendimento.dia_atual)}
-                  </p>
-                  <p>
-                    <strong>Horário:</strong> {atendimento.horario}
-                  </p>
-                  <p>
-                    <strong>Protocolo:</strong> {atendimento.protocolo}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-2">Resultados:</h2>
+            <ul className="border border-gray-300 rounded p-4">
+              {resultados.map((atendimento) => (
+                <li key={atendimento.id} className="border-b py-2">
+                  <p><strong>Nome:</strong> {atendimento.nome}</p>
+                  <p><strong>CPF:</strong> {atendimento.cpf}</p>
+                  <p><strong>Data:</strong> {new Date(atendimento.dia_atual).toLocaleDateString()}</p>
+                  <p><strong>Solicitante:</strong> {atendimento.solicitante}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
-
-        {/* Botão Voltar */}
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="mt-6 w-full p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          Voltar para o Dashboard
-        </button>
       </div>
-    </div>
-  );
+  )
 }
+
+export default ConsultaAtendimento
