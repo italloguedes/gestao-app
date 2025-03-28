@@ -24,7 +24,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h1>Dashboard</h1>
+      <h1>Gestão de Atendimentos Sala Sensorial / Alece</h1>
       <div style={{ display: 'flex', gap: '10px', margin: '20px 0' }}>
         <button onClick={() => router.push('/cadastrar-atendimento')}>
           Cadastrar Atendimento
