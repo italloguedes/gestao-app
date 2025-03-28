@@ -19,6 +19,7 @@ export default function ConsultaAtendimento() {
   const [termoBusca, setTermoBusca] = useState('');
   const [resultados, setResultados] = useState<Atendimento[]>([]);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  
 
   const buscarAtendimentos = async () => {
     setMensagem(null);
@@ -100,6 +101,19 @@ export default function ConsultaAtendimento() {
         >
           Buscar
         </button>
+        <button
+          onClick={() => ('/dashboard')}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#0070f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+          }}
+        >
+          Voltar
+        </button>
+
       </div>
 
       {mensagem && (
