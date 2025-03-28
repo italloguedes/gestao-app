@@ -11,148 +11,104 @@ export default function CadastrarAtendimento() {
   const [solicitante, setSolicitante] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Verifica se o usuário está logado e obtém o usuario_id
   useEffect(() => {
-    const fetchUser = async () => {
+    const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/'); // Redireciona para a página de login se não estiver logado
+        router.push('/');
       } else {
         setUserId(session.user.id);
       }
     };
-    fetchUser();
+    checkUser();
   }, [router]);
+
+  const isValidCpf = (cpf: string) => {
+    return /^[0-9]{11}$/.test(cpf);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!userId) {
       setMessage('Usuário não autenticado.');
       return;
     }
-
-    // Obtém a data e horário atuais
+    if (!isValidCpf(cpf)) {
+      setMessage('CPF inválido. Use apenas números, sem pontos ou traços.');
+      return;
+    }
+    setLoading(true);
+    
     const now = new Date();
-    const diaAtual = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-    const horario = now.toTimeString().split(' ')[0]; // Formato HH:MM:SS
-    const createdAt = now.toISOString();
-    const updatedAt = now.toISOString();
-
-    // Gera o número de protocolo chamando a função do Supabase
-    const { data: protocolData, error: protocolError } = await supabase
-      .rpc('generate_protocolo');
-
+    const diaAtual = now.toISOString().split('T')[0];
+    const horario = now.toTimeString().split(' ')[0];
+    
+    const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
     if (protocolError) {
       setMessage('Erro ao gerar número de protocolo: ' + protocolError.message);
+      setLoading(false);
       return;
     }
 
-    const protocolo = protocolData; // Exemplo: "2025-0001"
-
-    // Insere o atendimento no Supabase
+    const protocolo = protocolData;
     const { error } = await supabase.from('atendimentos').insert([
-      {
-        nome,
-        cpf,
-        email,
-        solicitante,
-        horario,
-        dia_atual: diaAtual,
-        usuario_id: userId,
-        created_at: createdAt,
-        updated_at: updatedAt,
-        protocolo,
-      },
+      { nome, cpf, email, solicitante, horario, dia_atual: diaAtual, usuario_id: userId, protocolo }
     ]);
 
     if (error) {
       setMessage('Erro ao cadastrar atendimento: ' + error.message);
+      setLoading(false);
       return;
     }
 
-    // Envia o e-mail chamando a API Route
     try {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: email,
-          nome,
-          cpf,
-          protocolo, // Adiciona o número de protocolo
-        }),
+        body: JSON.stringify({ to: email, nome, cpf, protocolo })
       });
 
       const result = await res.json();
       if (res.ok) {
-        setMessage('Atendimento cadastrado com sucesso! E-mail de confirmação enviado.');
-        setTimeout(() => router.push('/dashboard'), 2000); // Redireciona após 2 segundos
+        setMessage('Atendimento cadastrado com sucesso! E-mail enviado.');
+        setTimeout(() => router.push('/dashboard'), 2000);
       } else {
-        setMessage('Atendimento cadastrado, mas houve um erro ao enviar o e-mail: ' + result.error);
+        setMessage('Atendimento cadastrado, mas erro ao enviar e-mail: ' + result.error);
       }
     } catch (emailError) {
-      setMessage('Atendimento cadastrado, mas houve um erro ao enviar o e-mail.');
+      setMessage('Atendimento cadastrado, mas houve erro ao enviar o e-mail.');
     }
+
+    setLoading(false);
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>Cadastrar Atendimento</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Nome:</label>
-          <input
-            type="text"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>CPF:</label>
-          <input
-            type="text"
-            value={cpf}
-            onChange={(e) => setCpf(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Solicitante:</label>
-          <input
-            type="text"
-            value={solicitante}
-            onChange={(e) => setSolicitante(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <button type="submit" style={{ padding: '10px 20px' }}>
-          Cadastrar
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6">
+      <header className="bg-green-700 text-white shadow-lg py-4 w-full text-center">
+        <h1 className="text-2xl font-bold">Cadastrar Atendimento</h1>
+      </header>
+      <main className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mt-6">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Novo Atendimento</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
+          <input type="text" placeholder="CPF" value={cpf} onChange={(e) => setCpf(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
+          <input type="text" placeholder="Solicitante" value={solicitante} onChange={(e) => setSolicitante(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
+          <button type="submit" className="w-full px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-800 transition-colors" disabled={loading}>
+            {loading ? 'Cadastrando...' : 'Cadastrar'}
+          </button>
+        </form>
+        <button onClick={() => router.push('/dashboard')} className="w-full mt-4 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+          Voltar
         </button>
-      </form>
-      <button
-        onClick={() => router.push('/dashboard')}
-        style={{ marginTop: '10px', padding: '10px 20px' }}
-      >
-        Voltar
-      </button>
-      {message && <p style={{ marginTop: '15px', color: message.includes('sucesso') ? 'green' : 'red' }}>{message}</p>}
+        {message && <p className={`mt-4 text-center ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
+      </main>
+      <footer className="bg-gray-800 text-white py-4 w-full text-center mt-6">
+        <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
+      </footer>
     </div>
   );
 }
