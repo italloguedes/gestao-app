@@ -1,4 +1,3 @@
-// app/cadastrar-atendimento/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,9 +16,7 @@ export default function CadastrarAtendimento() {
   // Verifica se o usuário está logado e obtém o usuario_id
   useEffect(() => {
     const fetchUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/'); // Redireciona para a página de login se não estiver logado
       } else {
@@ -56,7 +53,7 @@ export default function CadastrarAtendimento() {
     const protocolo = protocolData; // Exemplo: "2025-0001"
 
     // Insere o atendimento no Supabase
-    const { data, error } = await supabase.from('atendimentos').insert([
+    const { error } = await supabase.from('atendimentos').insert([
       {
         nome,
         cpf,
@@ -67,7 +64,7 @@ export default function CadastrarAtendimento() {
         usuario_id: userId,
         created_at: createdAt,
         updated_at: updatedAt,
-        protocolo, // Adiciona o número de protocolo
+        protocolo,
       },
     ]);
 
@@ -76,16 +73,6 @@ export default function CadastrarAtendimento() {
       return;
     }
 
-    // Monta o corpo do e-mail com o número de protocolo
-    const emailBody = `
-Olá ${nome}, CPF - ${cpf}.
-Seu atendimento foi realizado com sucesso e o prazo para retirada é de 20 dias.
-
-**Número de Protocolo: ${protocolo}**
-
-© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.
-    `.trim();
-
     // Envia o e-mail chamando a API Route
     try {
       const res = await fetch('/api/send-email', {
@@ -93,8 +80,9 @@ Seu atendimento foi realizado com sucesso e o prazo para retirada é de 20 dias.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: email,
-          subject: `Confirmação de Atendimento - ${nome}`,
-          text: emailBody,
+          nome,
+          cpf,
+          protocolo, // Adiciona o número de protocolo
         }),
       });
 
@@ -107,7 +95,6 @@ Seu atendimento foi realizado com sucesso e o prazo para retirada é de 20 dias.
       }
     } catch (emailError) {
       setMessage('Atendimento cadastrado, mas houve um erro ao enviar o e-mail.');
-      console.error(emailError);
     }
   };
 
