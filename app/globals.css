@@ -7,7 +7,7 @@ body {
 
 button {
   padding: 10px 20px;
-  background-color: #0070f3;
+  background-color:hsl(145, 94%, 27%);
   color: white;
   border: none;
   border-radius: 5px;
@@ -15,7 +15,7 @@ button {
 }
 
 button:hover {
-  background-color: #005bb5;
+  background-color: #167c23;
 }
 
 input {
