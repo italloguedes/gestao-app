@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendEmail(to: string, subject: string, content: string) {
   const mailOptions: any = {
-    from: `Gestão de Atendimentos <${process.env.GMAIL_USER}>`,
+    from: `Sala Sensorial / ALECE <${process.env.GMAIL_USER}>`,
     to,
     subject,
   };
