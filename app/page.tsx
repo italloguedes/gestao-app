@@ -102,7 +102,7 @@ Com uma equipe capacitada e um ambiente adaptado, a Sala Sensorial reforça o co
       </main>
 
       {/* Rodapé */}
-      <footer style={{ backgroundColor: '#1f2937', color: 'white', padding: '16px', textAlign: 'center' }}>
+      <footer style={{ backgroundColor: '#008751', color: 'white', padding: '16px', textAlign: 'center' }}>
         <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
         <p style={{ marginTop: '8px' }}>
           Entre em contato: (85) 2180-6587 |{' '}

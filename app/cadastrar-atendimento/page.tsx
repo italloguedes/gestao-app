@@ -86,22 +86,59 @@ export default function CadastrarAtendimento() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6">
-      <header className="bg-green-700 text-white shadow-lg py-4 w-full text-center">
-        <h1 className="text-2xl font-bold">Cadastrar Atendimento</h1>
+    <div className="min-h-screen bg-gradient-to-r from-green-300 via-blue-200 to-purple-300 flex items-center justify-center p-6">
+      <header className="bg-white shadow-xl rounded-lg w-full max-w-md p-4 text-center mb-8">
+        <h1 className="text-3xl font-semibold text-gray-800">Cadastrar Atendimento</h1>
       </header>
-      <main className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Novo Atendimento</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
-          <input type="text" placeholder="CPF" value={cpf} onChange={(e) => setCpf(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
-          <input type="text" placeholder="Solicitante" value={solicitante} onChange={(e) => setSolicitante(e.target.value)} required className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-400" />
-          <button type="submit" className="w-full px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-800 transition-colors" disabled={loading}>
+      <main className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 space-y-6">
+        <h2 className="text-xl font-medium text-gray-700 text-center">Novo Atendimento</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex flex-col">
+            <input 
+              type="text" 
+              placeholder="Nome" 
+              value={nome} 
+              onChange={(e) => setNome(e.target.value)} 
+              required 
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
+            />
+            <input 
+              type="text" 
+              placeholder="CPF" 
+              value={cpf} 
+              onChange={(e) => setCpf(e.target.value)} 
+              required 
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
+            />
+            <input 
+              type="email" 
+              placeholder="Email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
+            />
+            <input 
+              type="text" 
+              placeholder="Solicitante" 
+              value={solicitante} 
+              onChange={(e) => setSolicitante(e.target.value)} 
+              required 
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
+            />
+          </div>
+          <button 
+            type="submit" 
+            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
+            disabled={loading}
+          >
             {loading ? 'Cadastrando...' : 'Cadastrar'}
           </button>
         </form>
-        <button onClick={() => router.push('/dashboard')} className="w-full mt-4 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+        <button 
+          onClick={() => router.push('/dashboard')} 
+          className="w-full mt-4 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
           Voltar
         </button>
         {message && <p className={`mt-4 text-center ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}

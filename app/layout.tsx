@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Gestão App',
+  title: 'Sala Sensorial-app',
   description: 'Aplicação de gestão com autenticação Supabase',
 };
 
