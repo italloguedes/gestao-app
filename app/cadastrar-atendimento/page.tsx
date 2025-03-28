@@ -79,23 +79,10 @@ export default function CadastrarAtendimento() {
     // Monta o corpo do e-mail com o número de protocolo
     const emailBody = `
 Olá ${nome}, CPF - ${cpf}.
-Seu atendimento foi realizado com sucesso e o prazo para retirada é de 30 dias.
+Seu atendimento foi realizado com sucesso e o prazo para retirada é de 20 dias.
 
 **Número de Protocolo: ${protocolo}**
 
-Sua CIN estará disponível nas versões digital e física. O acesso pode ser feito pelo aplicativo ou site do gov.br.
-
-Local de retirada: Prédio da Assembleia Legislativa Anexo III, Sala Sensorial.
-
-Endereço: Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238.
-
-Horário: 08h às 11:30 e 13h às 16h.
-
-Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
-
-Retiradas por terceiros podem ser feitas por parentes de 1º ou 2º grau (pai, mãe, filho, irmãos, tios ou avós) mediante apresentação de documento original com foto e certidão de nascimento ou casamento do titular.
-
-Acessar gov.br
 © 2025 Sala Sensorial - ALECE. Todos os direitos reservados.
     `.trim();
 
