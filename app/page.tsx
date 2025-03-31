@@ -192,7 +192,7 @@ export default function Home() {
         }
 
         .logo {
-          height: 100px; /* Aumenta a altura da logo para telas grandes */
+          height: 48px; /* Aumenta a altura da logo para telas grandes */
           width: auto; /* Mantém a proporção da imagem */
           object-fit: contain; /* Garante que a logo não seja distorcida */
         }
