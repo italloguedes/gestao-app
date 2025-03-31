@@ -9,9 +9,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) router.push('/');
     };
     checkUser();
@@ -35,6 +33,9 @@ export default function Dashboard() {
         <button onClick={() => router.push('/relatorios')}>Relatórios</button>
         <button onClick={() => router.push('/cadastrar-cin')}>
           Cadastrar CIN
+        </button>
+        <button onClick={() => router.push('/criar-postagem')}>
+          Criar Postagem
         </button>
       </div>
       <button className="logout" onClick={handleLogout}>Sair</button>

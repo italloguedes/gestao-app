@@ -41,11 +41,11 @@ export default function CadastrarAtendimento() {
       return;
     }
     setLoading(true);
-    
+
     const now = new Date();
     const diaAtual = now.toISOString().split('T')[0];
     const horario = now.toTimeString().split(' ')[0];
-    
+
     const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
     if (protocolError) {
       setMessage('Erro ao gerar número de protocolo: ' + protocolError.message);
@@ -86,66 +86,239 @@ export default function CadastrarAtendimento() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-green-300 via-blue-200 to-purple-300 flex items-center justify-center p-6">
-      <header className="bg-white shadow-xl rounded-lg w-full max-w-md p-4 text-center mb-8">
-        <h1 className="text-3xl font-semibold text-gray-800">Cadastrar Atendimento</h1>
-      </header>
-      <main className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 space-y-6">
-        <h2 className="text-xl font-medium text-gray-700 text-center">Novo Atendimento</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex flex-col">
-            <input 
-              type="text" 
-              placeholder="Nome" 
-              value={nome} 
-              onChange={(e) => setNome(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
-            />
-            <input 
-              type="text" 
-              placeholder="CPF" 
-              value={cpf} 
-              onChange={(e) => setCpf(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
-            />
-            <input 
-              type="email" 
-              placeholder="Email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
-            />
-            <input 
-              type="text" 
-              placeholder="Solicitante" 
-              value={solicitante} 
-              onChange={(e) => setSolicitante(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400" 
-            />
-          </div>
-          <button 
-            type="submit" 
-            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-            disabled={loading}
-          >
-            {loading ? 'Cadastrando...' : 'Cadastrar'}
-          </button>
-        </form>
-        <button 
-          onClick={() => router.push('/dashboard')} 
-          className="w-full mt-4 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
+    <div className="container">
+      <header className="header">
+        <h1>Gestão de Atendimentos Sala Sensorial / Alece</h1>
+        <button onClick={() => router.push('/dashboard')} className="back-button">
           Voltar
         </button>
-        {message && <p className={`mt-4 text-center ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
+      </header>
+
+      <main className="main">
+        <h2>Cadastrar Atendimento</h2>
+        <form onSubmit={handleSubmit} className="form">
+          <div className="form-group">
+            <label htmlFor="nome">Nome</label>
+            <input
+              type="text"
+              id="nome"
+              placeholder="Nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="cpf">CPF</label>
+            <input
+              type="text"
+              id="cpf"
+              placeholder="CPF (apenas números)"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="solicitante">Solicitante</label>
+            <input
+              type="text"
+              id="solicitante"
+              placeholder="Solicitante"
+              value={solicitante}
+              onChange={(e) => setSolicitante(e.target.value)}
+              required
+            />
+          </div>
+          <div className="button-group">
+            <button type="submit" disabled={loading}>
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
+            </button>
+            <button
+              type="button"
+              className="cancel"
+              onClick={() => router.push('/dashboard')}
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+        {message && (
+          <p className={`message ${message.includes('sucesso') ? 'success' : 'error'}`}>
+            {message}
+          </p>
+        )}
       </main>
-      <footer className="bg-gray-800 text-white py-4 w-full text-center mt-6">
+
+      <footer className="footer">
         <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
       </footer>
+
+      <style jsx>{`
+        .container {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #f3f4f6; /* Fundo claro como no dashboard */
+        }
+
+        .header {
+          background-color: #008751;
+          color: white;
+          padding: 16px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+
+        .header h1 {
+          font-size: 24px;
+          font-weight: 700;
+        }
+
+        .back-button {
+          background: #1e40af;
+          color: white;
+          border: none;
+          padding: 8px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.3s ease-in-out;
+        }
+
+        .back-button:hover {
+          background: #1e3a8a;
+        }
+
+        .main {
+          max-width: 600px; /* Ajustado para ser um pouco menor que o dashboard */
+          margin: 40px auto;
+          padding: 20px;
+          background: white;
+          border-radius: 10px;
+          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main h2 {
+          color: #008751;
+          font-size: 24px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .form {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        label {
+          font-size: 16px;
+          color: #333;
+          margin-bottom: 5px;
+        }
+
+        input {
+          padding: 10px;
+          font-size: 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 5px;
+          outline: none;
+          transition: border-color 0.3s;
+        }
+
+        input:focus {
+          border-color: #008751;
+        }
+
+        .button-group {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 20px;
+        }
+
+        button {
+          background: #008751;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          font-size: 16px;
+          font-weight: bold;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.3s ease-in-out;
+        }
+
+        button:hover {
+          background: #00663d;
+        }
+
+        button:disabled {
+          background: #cccccc;
+          cursor: not-allowed;
+        }
+
+        .cancel {
+          background: #d9534f;
+        }
+
+        .cancel:hover {
+          background: #c9302c;
+        }
+
+        .message {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 16px;
+        }
+
+        .success {
+          color: #008751;
+        }
+
+        .error {
+          color: #d9534f;
+        }
+
+        .footer {
+          background-color: #008751;
+          color: white;
+          padding: 20px;
+          text-align: center;
+          box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+          margin-top: auto;
+        }
+
+        .footer p {
+          font-size: 14px;
+        }
+      `}</style>
     </div>
   );
 }

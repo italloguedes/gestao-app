@@ -110,97 +110,204 @@ export default function CadastrarCIN() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-gray-900 fixed top-0 left-0 w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
-            <div className="flex items-center">
-              <h1 className="text-lg font-medium text-white">
-                Gestão de Atendimentos e CIN - Sala Sensorial
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/consultar-atendimentos')}
-                className="px-3 py-1 text-white border border-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm"
-              >
-                Consulta
-              </button>
-              <button
-                onClick={() => router.push('/cadastrar-atendimento')}
-                className="px-3 py-1 text-white border border-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm"
-              >
-                Cadastro de Atendimento
-              </button>
-              <button
-                onClick={() => router.push('/cadastrar-cin')}
-                className="px-3 py-1 text-white border border-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm"
-              >
-                Cadastro CINS
-              </button>
-              <button
-                onClick={() => router.push('/relatorios')}
-                className="px-3 py-1 text-white border border-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm"
-              >
-                Relatórios
-              </button>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  router.push('/');
-                }}
-                className="px-3 py-1 text-white border border-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="container">
+      <header className="header">
+        <h1>Gestão de Atendimentos Sala Sensorial / Alece</h1>
+        <button onClick={() => router.push('/dashboard')} className="back-button">
+          Voltar
+        </button>
+      </header>
 
-      {/* Conteúdo da página */}
-      <div className="pt-20 px-4">
-        <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-          <h1 className="text-2xl font-bold mb-4">Cadastrar CIN</h1>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">CPF</label>
+      <main className="main">
+        <h2>Cadastrar CIN</h2>
+        <div className="form">
+          <div className="form-group">
+            <label htmlFor="cpf">CPF</label>
             <input
               type="text"
+              id="cpf"
+              placeholder="Digite o CPF (apenas números)"
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
-              placeholder="Digite o CPF"
-              className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-
-          <button
-            onClick={handleCadastrarCIN}
-            className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-            disabled={loading}
-          >
-            {loading ? 'Cadastrando...' : 'Cadastrar CIN'}
-          </button>
-
-          {mensagem && (
-            <p
-              className={`mt-4 ${
-                mensagem.includes('Erro') ? 'text-red-500' : 'text-green-500'
-              }`}
+          <div className="button-group">
+            <button onClick={handleCadastrarCIN} disabled={loading}>
+              {loading ? 'Cadastrando...' : 'Cadastrar CIN'}
+            </button>
+            <button
+              className="cancel"
+              onClick={() => router.push('/dashboard')}
+              disabled={loading}
             >
-              {mensagem}
-            </p>
-          )}
-
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="mt-4 w-full p-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            Voltar
-          </button>
+              Cancelar
+            </button>
+          </div>
         </div>
-      </div>
+        {mensagem && (
+          <p className={`message ${mensagem.includes('sucesso') ? 'success' : 'error'}`}>
+            {mensagem}
+          </p>
+        )}
+      </main>
+
+      <footer className="footer">
+        <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
+      </footer>
+
+      <style jsx>{`
+        .container {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #f3f4f6; /* Fundo claro como no dashboard */
+        }
+
+        .header {
+          background-color: #008751;
+          color: white;
+          padding: 16px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+
+        .header h1 {
+          font-size: 24px;
+          font-weight: 700;
+        }
+
+        .back-button {
+          background: #1e40af;
+          color: white;
+          border: none;
+          padding: 8px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.3s ease-in-out;
+        }
+
+        .back-button:hover {
+          background: #1e3a8a;
+        }
+
+        .main {
+          max-width: 600px; /* Ajustado para ser um pouco menor que o dashboard */
+          margin: 40px auto;
+          padding: 20px;
+          background: white;
+          border-radius: 10px;
+          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main h2 {
+          color: #008751;
+          font-size: 24px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .form {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        label {
+          font-size: 16px;
+          color: #333;
+          margin-bottom: 5px;
+        }
+
+        input {
+          padding: 10px;
+          font-size: 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 5px;
+          outline: none;
+          transition: border-color 0.3s;
+        }
+
+        input:focus {
+          border-color: #008751;
+        }
+
+        .button-group {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 20px;
+        }
+
+        button {
+          background: #008751;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          font-size: 16px;
+          font-weight: bold;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.3s ease-in-out;
+        }
+
+        button:hover {
+          background: #00663d;
+        }
+
+        button:disabled {
+          background: #cccccc;
+          cursor: not-allowed;
+        }
+
+        .cancel {
+          background: #d9534f;
+        }
+
+        .cancel:hover {
+          background: #c9302c;
+        }
+
+        .message {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 16px;
+        }
+
+        .success {
+          color: #008751;
+        }
+
+        .error {
+          color: #d9534f;
+        }
+
+        .footer {
+          background-color: #008751;
+          color: white;
+          padding: 20px;
+          text-align: center;
+          box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+          margin-top: auto;
+        }
+
+        .footer p {
+          font-size: 14px;
+        }
+      `}</style>
     </div>
   );
 }
