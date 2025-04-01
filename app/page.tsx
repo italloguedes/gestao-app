@@ -124,7 +124,7 @@ export default function Home() {
           </form>
         ) : (
           <div className="button-group">
-            <button onClick={() => router.push('/dashboard')}>Dashboard</button>
+            <button onClick={() => router.push('/dashboard')}>Painel de Controle</button>
             <button
               className="logout"
               onClick={async () => {
@@ -133,7 +133,7 @@ export default function Home() {
                 router.push('/');
               }}
             >
-              Logout
+              Deslogar
             </button>
           </div>
         )}
@@ -268,7 +268,7 @@ export default function Home() {
           overflow: hidden;
           transition: transform 0.3s;
           margin: 0 10px; /* Espaçamento entre os slides */
-          width: 100%; /* Garante que o card ocupe o espaço disponível */
+          width: 50%; /* Garante que o card ocupe o espaço disponível */
         }
 
         .postagem-card:hover {
