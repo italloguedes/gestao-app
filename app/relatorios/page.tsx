@@ -9,6 +9,7 @@ interface Atendimento {
   id: string;
   nome: string;
   cpf: string;
+  solicitante: string;
   dia_atual: string;
   usuario_id: string;
 }
@@ -79,7 +80,7 @@ export default function Relatorios() {
     try {
       const { data, error } = await supabase
         .from('atendimentos')
-        .select('id, nome, cpf, dia_atual, usuario_id')
+        .select('id, nome, cpf, solicitante, dia_atual, usuario_id')
         .eq('usuario_id', userId)
         .gte('dia_atual', dataInicioFormatted)
         .lte('dia_atual', dataFimFormatted)
@@ -180,6 +181,7 @@ export default function Relatorios() {
                     <tr>
                       <th>Nome</th>
                       <th>CPF</th>
+                      <th>Solicitante</th>
                       <th>Data</th>
                     </tr>
                   </thead>
@@ -188,6 +190,7 @@ export default function Relatorios() {
                       <tr key={atendimento.id}>
                         <td>{atendimento.nome}</td>
                         <td>{atendimento.cpf}</td>
+                        <td>{atendimento.solicitante}</td>
                         <td>
                           {atendimento.dia_atual
                             ? new Date(atendimento.dia_atual).toLocaleDateString('pt-BR')
