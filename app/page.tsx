@@ -168,257 +168,244 @@ export default function Home() {
         <p>Entre em contato: (85) 2180-6587</p>
       </footer>
 
-      <style jsx>{`
-        .container {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          background: #f3f4f6; /* Fundo claro */
-        }
+     <style jsx>{`
+  .container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+  }
 
-        .header {
-          background-color: #008751;
-          color: white;
-          padding: 16px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          position: sticky;
-          top: 0;
-          z-index: 10;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap; /* Permite que o header quebre em mobile */
-          padding: 12px 20px;
-        }
+  .header {
+    background: linear-gradient(135deg, #008751 0%, #006B40 100%);
+    color: white;
+    padding: 20px 40px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
 
-        .logo {
-          height: 48px; /* Aumenta a altura da logo para telas grandes */
-          width: auto; /* Mantém a proporção da imagem */
-          object-fit: contain; /* Garante que a logo não seja distorcida */
-        }
+  .logo {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+  }
 
-        .login-form {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          flex-wrap: wrap; /* Permite que os inputs quebrem em mobile */
-        }
+  .logo:hover {
+    transform: scale(1.05);
+  }
 
-        .login-form input {
-          padding: 8px 12px;
-          border-radius: 6px;
-          border: none;
-          background-color: #fff;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          outline: none;
-          font-size: 14px;
-          width: 100%; /* Inputs ocupam 100% da largura em mobile */
-          max-width: 200px; /* Limita a largura em telas maiores */
-        }
+  .login-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
 
-        .button-group {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap; /* Permite que os botões quebrem em mobile */
-        }
+  .login-form input {
+    width: 220px;
+  }
 
-        .button-group button,
-        .login-form button {
-          padding: 8px 20px;
-          background-color: #1e40af;
-          color: white;
-          border-radius: 6px;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          transition: background-color 0.3s;
-        }
+  .button-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 
-        .button-group button:hover,
-        .login-form button:hover {
-          background-color: #1e3a8a;
-        }
+  .button-group button,
+  .login-form button {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  }
 
-        .button-group .logout {
-          background-color: #d9534f;
-        }
+  .button-group .logout {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  }
 
-        .button-group .logout:hover {
-          background-color: #c9302c;
-        }
+  .main {
+    flex: 1;
+    padding: 20px;
+    animation: fadeIn 0.8s ease-out;
+  }
 
-        .main {
-          flex: 1;
-          padding: 20px;
-        }
+  .main h2 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #008751;
+    text-align: center;
+    margin: 40px 0;
+    position: relative;
+    padding-bottom: 15px;
+  }
 
-        .main h2 {
-          font-size: 24px;
-          font-weight: 700;
-          color: #008751;
-          text-align: center;
-          margin-bottom: 32px;
-        }
+  .main h2:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #008751, #00b76a);
+    border-radius: 2px;
+  }
 
-        .postagem-card {
-          background-color: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-          overflow: hidden;
-          transition: transform 0.3s;
-          margin: 0 10px; /* Espaçamento entre os slides */
-          width: 50%; /* Garante que o card ocupe o espaço disponível */
-        }
+  .postagem-card {
+    background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin: 15px;
+    height: 100%;
+  }
 
-        .postagem-card:hover {
-          transform: translateY(-5px);
-        }
+  .postagem-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+  }
 
-        .postagem-card img {
-          width: 100%;
-          height: 200px;
-          object-fit: cover;
-        }
+  .postagem-card img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
 
-        .postagem-content {
-          padding: 20px;
-        }
+  .postagem-card:hover img {
+    transform: scale(1.05);
+  }
 
-        .postagem-content h3 {
-          font-size: 22px;
-          font-weight: 600;
-          color: #111827;
-          margin-bottom: 12px;
-        }
+  .postagem-content {
+    padding: 25px;
+  }
 
-        .postagem-content .descricao {
-          color: #6b7280;
-          font-size: 16px;
-          line-height: 1.5;
-          margin-bottom: 16px;
-          max-height: 72px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+  .postagem-content h3 {
+    font-size: 24px;
+    color: #1a1a1a;
+    margin-bottom: 15px;
+    font-weight: 700;
+  }
 
-        .postagem-content .data {
-          font-size: 14px;
-          color: #9ca3af;
-        }
+  .postagem-content .descricao {
+    color: #4b5563;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-        .no-postagens {
-          text-align: center;
-          color: #6b7280;
-          font-size: 18px;
-        }
+  .postagem-content .data {
+    font-size: 14px;
+    color: #6b7280;
+  }
 
-        .footer {
-          background-color: #008751;
-          color: white;
-          padding: 20px;
-          text-align: center;
-          box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-        }
+  .no-postagens {
+    text-align: center;
+    color: #6b7280;
+    font-size: 18px;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
 
-        .footer p {
-          font-size: 14px;
-        }
+  .footer {
+    background: linear-gradient(135deg, #008751 0%, #006B40 100%);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-        .footer p + p {
-          margin-top: 8px;
-        }
+  .footer p {
+    font-size: 15px;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    margin: 5px 0;
+  }
 
-        /* Estilização dos pontos de navegação do carrossel */
-        .slick-dots li button:before {
-          color: #008751;
-        }
+  /* Estilização dos pontos de navegação do carrossel */
+  :global(.slick-dots li button:before) {
+    color: #008751;
+    font-size: 12px;
+  }
 
-        .slick-dots li.slick-active button:before {
-          color: #00663d;
-        }
+  :global(.slick-dots li.slick-active button:before) {
+    color: #006B40;
+  }
 
-        /* Garante que o carrossel seja horizontal */
-        .slick-track {
-          display: flex !important;
-          flex-direction: row !important;
-        }
+  :global(.slick-prev),
+  :global(.slick-next) {
+    z-index: 1;
+  }
 
-        .slick-slide {
-          height: auto !important;
-        }
+  :global(.slick-prev:before),
+  :global(.slick-next:before) {
+    color: #008751;
+    font-size: 24px;
+  }
 
-        /* Ajustes para dispositivos móveis */
-        @media (max-width: 600px) {
-          .header {
-            flex-direction: column;
-            gap: 10px;
-            padding: 10px;
-          }
+  /* Ajustes para dispositivos móveis */
+  @media (max-width: 600px) {
+    .header {
+      padding: 15px;
+      flex-direction: column;
+      gap: 15px;
+    }
 
-          .logo {
-            height: 40px; /* Aumenta a altura da logo para mobile */
-          }
+    .logo {
+      height: 45px;
+    }
 
-          .login-form {
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-          }
+    .login-form {
+      flex-direction: column;
+      width: 100%;
+    }
 
-          .login-form input {
-            max-width: 100%;
-          }
+    .login-form input {
+      width: 100%;
+    }
 
-          .button-group {
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-          }
+    .button-group {
+      flex-direction: column;
+      width: 100%;
+    }
 
-          .button-group button {
-            width: 100%;
-          }
+    .button-group button {
+      width: 100%;
+    }
 
-          .main {
-            padding: 10px;
-          }
+    .main {
+      padding: 15px;
+    }
 
-          .main h2 {
-            font-size: 20px;
-            margin-bottom: 20px;
-          }
+    .main h2 {
+      font-size: 24px;
+      margin: 20px 0;
+    }
 
-          .postagem-card img {
-            height: 150px; /* Reduz a altura da imagem no mobile */
-          }
+    .postagem-content {
+      padding: 15px;
+    }
 
-          .postagem-content {
-            padding: 15px;
-          }
+    .postagem-content h3 {
+      font-size: 20px;
+    }
 
-          .postagem-content h3 {
-            font-size: 18px;
-          }
-
-          .postagem-content .descricao {
-            font-size: 14px;
-            max-height: 60px;
-          }
-
-          .postagem-content .data {
-            font-size: 12px;
-          }
-
-          .footer {
-            padding: 15px;
-          }
-
-          .footer p {
-            font-size: 12px;
-          }
-        }
-      `}</style>
+    .footer {
+      padding: 20px 15px;
+    }
+  }
+`}</style>
     </div>
   );
 }
