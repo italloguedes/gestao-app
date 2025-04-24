@@ -85,6 +85,10 @@ export default function AtendimentoDetalhes({ id }: Props) {
     return timeString.substring(0, 5);
   };
 
+  const handleStatusChange = (event: { target: { value: string } }) => {
+    updateStatus(event.target.value);
+  };
+
   if (loading) return <Loading />;
   if (error) return <div className="text-red-600">Erro: {error}</div>;
   if (!atendimento) return <div>Atendimento não encontrado</div>;
@@ -114,7 +118,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
                 <select
                   className="border rounded px-2 py-1"
                   value={atendimento.status}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateStatus(e.target.value)}
+                  onChange={handleStatusChange}
                 >
                   <option value="em_andamento">Em andamento</option>
                   <option value="concluido">Concluído</option>
