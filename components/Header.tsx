@@ -6,10 +6,10 @@ import Logo from './Logo';
 
 export default function Header() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     router.push('/login');
   };
 
@@ -21,7 +21,7 @@ export default function Header() {
           {user && (
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">
-                {user.name}
+                {user.email}
               </span>
               <button
                 onClick={handleLogout}
