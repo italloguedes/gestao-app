@@ -28,8 +28,10 @@ export default function GerarRelatorioPage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Fortaleza'
+    });
   };
 
   const formatTime = (timeString: string) => {
@@ -141,11 +143,14 @@ export default function GerarRelatorioPage() {
 
       console.log('Buscando atendimentos...', { dataInicio, dataFim });
 
+      const dataInicioAjustada = dataInicio + 'T00:00:00';
+      const dataFimAjustada = dataFim + 'T23:59:59';
+
       const { data: atendimentos, error } = await supabase
         .from('atendimentos')
         .select('*')
-        .gte('dia_atual', dataInicio)
-        .lte('dia_atual', dataFim)
+        .gte('dia_atual', dataInicioAjustada)
+        .lte('dia_atual', dataFimAjustada)
         .order('dia_atual', { ascending: true });
 
       if (error) {
