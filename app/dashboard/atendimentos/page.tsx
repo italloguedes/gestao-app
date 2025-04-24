@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/db';
 import Link from 'next/link';
@@ -24,6 +24,7 @@ export default function AtendimentosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -31,6 +32,7 @@ export default function AtendimentosPage() {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Efeito para autenticação
   useEffect(() => {
     const checkAuth = async () => {
       if (!user) {
@@ -40,11 +42,24 @@ export default function AtendimentosPage() {
           return;
         }
       }
-      fetchAtendimentos();
     };
     
     checkAuth();
-  }, [user, router, currentPage, searchTerm]);
+  }, [user, router]);
+
+  // Debounce para o termo de busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Aguarda 500ms após a última digitação
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Efeito para buscar atendimentos
+  useEffect(() => {
+    fetchAtendimentos();
+  }, [currentPage, debouncedSearchTerm]);
 
   const fetchAtendimentos = async () => {
     try {
@@ -53,8 +68,8 @@ export default function AtendimentosPage() {
         .from('atendimentos')
         .select('*', { count: 'exact' });
 
-      if (searchTerm) {
-        query = query.or(`nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,protocolo.ilike.%${searchTerm}%`);
+      if (debouncedSearchTerm) {
+        query = query.or(`nome.ilike.%${debouncedSearchTerm}%,cpf.ilike.%${debouncedSearchTerm}%,protocolo.ilike.%${debouncedSearchTerm}%`);
       }
 
       const { data, error, count } = await query
@@ -111,7 +126,7 @@ export default function AtendimentosPage() {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1); // Reset to first page on new search
+            setCurrentPage(1);
           }}
         />
       </div>
