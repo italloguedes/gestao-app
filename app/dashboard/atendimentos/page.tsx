@@ -24,27 +24,48 @@ export default function AtendimentosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 50;
   const router = useRouter();
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) {
-      router.push('/dashboard');
-      return;
-    }
-    fetchAtendimentos();
-  }, [user, router]);
+    const checkAuth = async () => {
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push('/dashboard');
+          return;
+        }
+      }
+      fetchAtendimentos();
+    };
+    
+    checkAuth();
+  }, [user, router, currentPage, searchTerm]);
 
   const fetchAtendimentos = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      let query = supabase
         .from('atendimentos')
-        .select('*')
-        .order('dia_atual', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      if (searchTerm) {
+        query = query.or(`nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,protocolo.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('dia_atual', { ascending: false })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
 
       setAtendimentos(data || []);
+      setTotalCount(count || 0);
+      setTotalPages(Math.ceil((count || 0) / itemsPerPage));
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -62,14 +83,11 @@ export default function AtendimentosPage() {
     return timeString.substring(0, 5);
   };
 
-  const filteredAtendimentos = atendimentos.filter((atendimento) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      atendimento.nome.toLowerCase().includes(searchLower) ||
-      atendimento.protocolo.toLowerCase().includes(searchLower) ||
-      atendimento.cpf.includes(searchTerm)
-    );
-  });
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   if (loading) return <Loading />;
 
@@ -91,7 +109,10 @@ export default function AtendimentosPage() {
           placeholder="Buscar por nome, protocolo ou CPF..."
           className="w-full p-2 border rounded"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page on new search
+          }}
         />
       </div>
 
@@ -115,7 +136,7 @@ export default function AtendimentosPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredAtendimentos.map((atendimento) => (
+            {atendimentos.map((atendimento) => (
               <tr key={atendimento.id} className="border-b hover:bg-gray-50">
                 <td className="px-6 py-4">{atendimento.protocolo}</td>
                 <td className="px-6 py-4">{atendimento.nome}</td>
@@ -147,6 +168,32 @@ export default function AtendimentosPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center mt-4">
+        <div className="text-sm text-gray-600">
+          Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, totalCount)} de {totalCount} registros
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <span className="px-3 py-1">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Próxima
+          </button>
+        </div>
       </div>
     </div>
   );
