@@ -18,14 +18,12 @@ interface Atendimento {
   status: string;
 }
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
+type Props = {
+  params: { id: string };
+  searchParams: Record<string, string | string[] | undefined>;
+};
 
-export default function AtendimentoDetalhesPage({ params, searchParams }: PageProps) {
+export default async function AtendimentoDetalhesPage({ params, searchParams }: Props) {
   const [atendimento, setAtendimento] = useState<Atendimento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +68,7 @@ export default function AtendimentoDetalhesPage({ params, searchParams }: PagePr
 
       if (error) throw error;
       
-      setAtendimento(prev => prev ? { ...prev, status: newStatus } : null);
+      setAtendimento((prev: Atendimento | null) => prev ? { ...prev, status: newStatus } : null);
       setEditingStatus(false);
     } catch (err: any) {
       setError(err.message);
@@ -117,7 +115,7 @@ export default function AtendimentoDetalhesPage({ params, searchParams }: PagePr
                 <select
                   className="border rounded px-2 py-1"
                   value={atendimento.status}
-                  onChange={(e) => updateStatus(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateStatus(e.target.value)}
                 >
                   <option value="em_andamento">Em andamento</option>
                   <option value="concluido">Concluído</option>
