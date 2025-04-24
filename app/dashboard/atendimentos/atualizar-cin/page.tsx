@@ -4,14 +4,9 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import Header from '@/components/Header';
+import { sendEmail } from '@/lib/sendEmail';
 import Loading from '@/app/components/Loading';
-
-interface Atendimento {
-  id: string;
-  nome: string;
-  email: string;
-  status: string;
-}
 
 export default function AtualizarCINPage() {
   const searchParams = useSearchParams();
@@ -32,38 +27,57 @@ export default function AtualizarCINPage() {
         return;
       }
 
+      // Formatar o CPF removendo caracteres não numéricos
+      const cpfLimpo = cpf.replace(/\D/g, '');
+
+      console.log('Buscando atendimento para CPF:', cpfLimpo);
+
       // Buscar atendimento pelo CPF
       const { data: atendimentos, error: fetchError } = await supabase
         .from('atendimentos')
         .select('*')
-        .eq('cpf', cpf)
-        .single();
+        .eq('cpf', cpfLimpo)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (fetchError || !atendimentos) {
+      console.log('Resultado da busca:', { atendimentos, fetchError });
+
+      if (fetchError) {
+        console.error('Erro ao buscar atendimento:', fetchError);
+        setMessage({ text: 'Erro ao buscar atendimento: ' + fetchError.message, type: 'error' });
+        return;
+      }
+
+      if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Atendimento não encontrado para este CPF', type: 'error' });
         return;
       }
 
-      const atendimento: Atendimento = atendimentos;
+      const atendimento = atendimentos[0];
 
-      if (atendimento.status === 'concluído') {
+      if (atendimento.status === 'Concluído') {
         setMessage({ text: 'Este atendimento já está concluído', type: 'error' });
         return;
       }
 
+      console.log('Atualizando status do atendimento:', atendimento.id);
+
       // Atualizar status do atendimento
       const { error: updateError } = await supabase
         .from('atendimentos')
-        .update({ status: 'concluído' })
+        .update({ status: 'Concluído' })
         .eq('id', atendimento.id);
 
       if (updateError) {
-        setMessage({ text: 'Erro ao atualizar status do atendimento', type: 'error' });
+        console.error('Erro ao atualizar status:', updateError);
+        setMessage({ text: 'Erro ao atualizar status do atendimento: ' + updateError.message, type: 'error' });
         return;
       }
 
+      console.log('Status atualizado, enviando email...');
+
       // Enviar email de conclusão
-      const response = await fetch('/api/send-email-cin', {
+      const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,18 +85,22 @@ export default function AtualizarCINPage() {
         body: JSON.stringify({
           to: atendimento.email,
           nome: atendimento.nome,
-          cpf: cpf,
+          cpf: atendimento.cpf,
         }),
       });
 
+      const emailResult = await response.json();
+
       if (!response.ok) {
+        console.error('Erro ao enviar email:', emailResult);
         setMessage({ 
-          text: 'Atendimento concluído, mas houve um erro ao enviar o email',
+          text: 'Atendimento concluído, mas houve um erro ao enviar o email: ' + emailResult.error,
           type: 'error'
         });
         return;
       }
 
+      console.log('Email enviado com sucesso');
       setMessage({ 
         text: 'Atendimento concluído com sucesso! Email enviado.',
         type: 'success'
@@ -95,8 +113,8 @@ export default function AtualizarCINPage() {
       }, 2000);
 
     } catch (error) {
-      console.error('Erro:', error);
-      setMessage({ text: 'Erro ao processar a solicitação', type: 'error' });
+      console.error('Erro ao processar solicitação:', error);
+      setMessage({ text: 'Erro ao processar a solicitação: ' + (error as Error).message, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -138,6 +156,7 @@ export default function AtualizarCINPage() {
               pattern="[0-9]{11}"
               title="Digite um CPF válido com 11 dígitos numéricos"
             />
+            <p className="mt-1 text-sm text-gray-500">Digite apenas os números do CPF, sem pontos ou traços</p>
           </div>
 
           <div className="flex justify-end gap-4">

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/sendEmail';
 
+interface EmailError extends Error {
+  message: string;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -26,7 +30,7 @@ export async function POST(request: Request) {
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <img src="/logoautismo.png" alt="Logo Autismo" style="max-width: 150px;" />
+              <img src="https://alece.ce.gov.br/wp-content/uploads/2023/04/logo-alece-horizontal.png" alt="Logo ALECE" style="max-width: 150px;" />
             </div>
             <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);">
               <h1 style="color: #333333; font-size: 24px; margin-bottom: 20px; text-align: center;">Atendimento Realizado, ${nome}! 🎉</h1>
@@ -48,13 +52,23 @@ export async function POST(request: Request) {
           </div>
         `;
 
-        await sendEmail(to, 'Confirmação de Atendimento', emailHtml);
+        try {
+          await sendEmail(to, 'Confirmação de Atendimento', emailHtml);
+          return NextResponse.json({ message: 'E-mail enviado com sucesso' }, { status: 200 });
+        } catch (emailError) {
+          const error = emailError as EmailError;
+          console.error('Erro detalhado ao enviar e-mail:', error);
+          return NextResponse.json(
+            { error: `Erro ao enviar e-mail: ${error.message}` },
+            { status: 500 }
+          );
+        }
       } else {
         // Template para cadastrar-cin (quando protocolo não está presente)
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <img src="/logoautismo.png" alt="Logo Autismo" style="max-width: 150px;" />
+              <img src="https://alece.ce.gov.br/wp-content/uploads/2023/04/logo-alece-horizontal.png" alt="Logo ALECE" style="max-width: 150px;" />
             </div>
             <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);">
               <h1 style="color: #333333; font-size: 24px; margin-bottom: 20px; text-align: center;">Sua Carteira Está Pronta, ${nome}! 🎉</h1>
@@ -72,11 +86,6 @@ export async function POST(request: Request) {
               <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
                 Retiradas por terceiros podem ser feitas por parentes de 1º ou 2º grau (pai, mãe, filho, irmãos, tios ou avós) mediante apresentação de documento original com foto e certidão de nascimento ou casamento do titular.
               </p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="https://www.gov.br" style="background-color: #4CAF50; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
-                  Acessar gov.br
-                </a>
-              </div>
             </div>
             <div style="text-align: center; margin-top: 20px;">
               <p style="color: #999999; font-size: 14px;">© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
@@ -84,10 +93,18 @@ export async function POST(request: Request) {
           </div>
         `;
 
-        await sendEmail(to, 'Sua Carteira de Identificação Nacional Está Pronta!', emailHtml);
+        try {
+          await sendEmail(to, 'Sua Carteira de Identificação Nacional Está Pronta!', emailHtml);
+          return NextResponse.json({ message: 'E-mail enviado com sucesso' }, { status: 200 });
+        } catch (emailError) {
+          const error = emailError as EmailError;
+          console.error('Erro detalhado ao enviar e-mail:', error);
+          return NextResponse.json(
+            { error: `Erro ao enviar e-mail: ${error.message}` },
+            { status: 500 }
+          );
+        }
       }
-
-      return NextResponse.json({ message: 'E-mail enviado com sucesso' }, { status: 200 });
     }
 
     return NextResponse.json(
@@ -95,6 +112,11 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao enviar e-mail: ' + (error as Error).message }, { status: 500 });
+    const err = error as EmailError;
+    console.error('Erro na rota de envio de e-mail:', err);
+    return NextResponse.json(
+      { error: `Erro ao processar requisição: ${err.message}` },
+      { status: 500 }
+    );
   }
 }
