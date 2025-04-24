@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 // Tipo para os atendimentos
 interface Atendimento {
@@ -112,7 +113,14 @@ export default function Relatorios() {
     <div className="container">
       {/* Cabeçalho */}
       <header className="header">
-        <img src="/logoautismo.png" alt="Logo Sala Sensorial / ALECE" className="logo" />
+        <Image 
+          src="/logoautismo.png" 
+          alt="Logo Sala Sensorial / ALECE" 
+          className="logo" 
+          width={200}
+          height={60}
+          priority
+        />
         {isAuthenticated && (
           <div className="button-group">
             <button onClick={() => router.push('/dashboard')}>Dashboard</button>
