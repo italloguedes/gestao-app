@@ -7,13 +7,12 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function getDb() {
   return {
-    async run(query: string, params: any[] = []) {
+    async run(query: string, params: string[] = []) {
       const { data, error } = await supabase.from('images').upsert([
         {
-          url: params[0],
-          filename: params[1],
-          username: params[2],
-          created_at: new Date().toISOString(),
+          filename: params[0],
+          username: params[1],
+          created_at: params[2],
         },
       ]);
 

@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { uploadImage } from '@/lib/cloudinary';
 import { getDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file');
+    const file = formData.get('file') as File;
     const username = formData.get('username');
 
     if (!file || !username) {
@@ -15,19 +14,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upload to Cloudinary
-    const cloudinaryResponse = await uploadImage(file);
-
     // Save to database
     const db = await getDb();
     await db.run(
-      'INSERT INTO images (url, filename, username) VALUES (?, ?, ?)',
-      [cloudinaryResponse.secure_url, cloudinaryResponse.original_filename, username]
+      'INSERT INTO images (filename, username, created_at) VALUES (?, ?, ?)',
+      [file.name, username, new Date().toISOString()]
     );
 
     return NextResponse.json({
       message: 'Upload successful',
-      url: cloudinaryResponse.secure_url,
+      filename: file.name
     });
   } catch (error) {
     console.error('Error in upload route:', error);
