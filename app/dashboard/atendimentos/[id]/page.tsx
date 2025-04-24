@@ -27,14 +27,6 @@ export default function AtendimentoDetalhesPage({ params }: { params: { id: stri
   const [message, setMessage] = useState<string | null>(null);
   const [status, setStatus] = useState('');
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-    } else {
-      fetchAtendimento();
-    }
-  }, [user, params.id, router]);
-
   const fetchAtendimento = async () => {
     try {
       setLoading(true);
@@ -45,17 +37,22 @@ export default function AtendimentoDetalhesPage({ params }: { params: { id: stri
         .single();
 
       if (error) throw error;
-      if (data) {
-        setAtendimento(data);
-        setStatus(data.status || '');
-      }
-    } catch (error: any) {
+      setAtendimento(data);
+    } catch (error: unknown) {
       console.error('Erro ao buscar atendimento:', error);
-      setMessage('Erro ao carregar atendimento: ' + error.message);
+      setMessage('Erro ao carregar atendimento');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    } else {
+      fetchAtendimento();
+    }
+  }, [user, router, fetchAtendimento]);
 
   const handleStatusUpdate = async () => {
     if (!atendimento) return;

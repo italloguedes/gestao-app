@@ -14,52 +14,43 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
   return (
-    <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white/80 backdrop-blur-sm px-6 pb-4 border-r border-gray-200">
-        <div className="flex h-16 shrink-0 items-center">
-          <Logo />
-        </div>
-        <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
-            <li>
-              <ul role="list" className="-mx-2 space-y-1">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={`group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-all duration-200 ${
-                          isActive
-                            ? "bg-emerald-50 text-emerald-600 shadow-sm"
-                            : "text-gray-700 hover:bg-gray-50 hover:text-emerald-600"
-                        }`}
-                      >
-                        <svg
-                          className={`h-6 w-6 shrink-0 transition-colors duration-200 ${
-                            isActive ? "text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
-                          }`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                        </svg>
-                        {item.name}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </div>
+    <aside className="bg-white w-64 min-h-screen p-4 border-r">
+      <Logo />
+      <nav className="mt-8">
+        <ul className="space-y-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={`group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-all duration-200 ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-600 shadow-sm"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-emerald-600"
+                  }`}
+                >
+                  <svg
+                    className={`h-6 w-6 shrink-0 transition-colors duration-200 ${
+                      isActive ? "text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                  </svg>
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </aside>
   );
 } 

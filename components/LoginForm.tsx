@@ -7,6 +7,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -14,21 +15,15 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Credenciais inválidas");
-      }
-
+      setLoading(true);
+      const { error } = await signIn(email, password);
+      if (error) throw error;
       router.push("/dashboard");
-    } catch (err) {
-      setError("Email ou senha incorretos");
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      setError('Email ou senha inválidos');
+    } finally {
+      setLoading(false);
     }
   };
 

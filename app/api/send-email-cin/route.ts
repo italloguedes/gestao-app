@@ -18,8 +18,8 @@ export async function POST(request: Request) {
       port: 465,
       secure: true, // true para 465, false para outras portas
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
       },
       tls: {
         rejectUnauthorized: false
@@ -62,26 +62,23 @@ export async function POST(request: Request) {
 
     // Configuração do email
     const mailOptions = {
-      from: {
-        name: 'Sala Sensorial - ALECE',
-        address: process.env.SMTP_USER as string
-      },
+      from: process.env.EMAIL_USER,
       to,
       subject: 'Sua Carteira de Identificação Nacional Está Pronta!',
       html: emailContent,
     };
 
     // Enviar email
-    const info = await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
     return NextResponse.json(
       { message: 'Email enviado com sucesso' },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao enviar email:', error);
     return NextResponse.json(
-      { error: 'Erro ao enviar email: ' + error.message },
+      { error: 'Falha ao enviar email' },
       { status: 500 }
     );
   }

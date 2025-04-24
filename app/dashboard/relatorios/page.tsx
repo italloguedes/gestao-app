@@ -3,9 +3,10 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function RelatoriosPage() {
-  const router = useRouter();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -11,8 +11,9 @@ export default function NovoAtendimentoPage() {
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [solicitante, setSolicitante] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
   const router = useRouter();
   const { user } = useAuth();
 

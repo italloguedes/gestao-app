@@ -11,6 +11,7 @@ export default function CadastrarAtendimento() {
   const [solicitante, setSolicitante] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 

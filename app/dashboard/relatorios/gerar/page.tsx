@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 interface Atendimento {
   id: string;
@@ -132,12 +133,13 @@ const RelatorioPDF = ({ atendimentos, dataInicio, dataFim, total }: {
 };
 
 export default function GerarRelatorioPage() {
-  const router = useRouter();
+  const { user } = useAuth();
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

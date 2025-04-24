@@ -20,6 +20,7 @@ export default function CadastrarCIN() {
   const [userId, setUserId] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
   // Obtém o ID do usuário logado
   useEffect(() => {
@@ -104,6 +105,42 @@ export default function CadastrarCIN() {
       setMensagem('CIN cadastrada com sucesso! E-mail enviado para ' + email + '.');
     } catch (err) {
       setMensagem('Erro ao processar a solicitação. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAtualizarStatus = async () => {
+    setMensagem(null);
+    setLoading(true);
+
+    if (!userId) {
+      setMensagem('Usuário não autenticado. Faça login novamente.');
+      setLoading(false);
+      return;
+    }
+
+    if (!cpf) {
+      setMensagem('Por favor, insira o CPF.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('atendimentos')
+        .update({ status: 'concluído' })
+        .eq('cpf', cpf);
+
+      if (error) throw error;
+
+      setMensagem('Status atualizado com sucesso!');
+      setMessageType('success');
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      setMensagem('Erro ao atualizar status');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
