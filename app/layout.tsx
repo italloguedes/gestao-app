@@ -6,8 +6,8 @@ import { AuthProvider } from '../contexts/AuthContext';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gestão App",
-  description: "Sistema de gestão empresarial",
+  title: "Sala Sensorial - ALECE",
+  description: "Sistema de gestão empresarial desenvolvido para a Sala Sensorial da ALECE por Itallo Guedes",
 };
 
 export default function RootLayout({
