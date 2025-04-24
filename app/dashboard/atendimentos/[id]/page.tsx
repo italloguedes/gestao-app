@@ -18,7 +18,14 @@ interface Atendimento {
   status: string;
 }
 
-export default function AtendimentoDetalhesPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default function AtendimentoDetalhesPage({ params, searchParams }: PageProps) {
   const [atendimento, setAtendimento] = useState<Atendimento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
