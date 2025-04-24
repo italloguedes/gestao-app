@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -15,15 +15,15 @@ export default function LoginForm() {
     setError("");
 
     try {
-      setLoading(true);
-      const { error } = await signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       if (error) throw error;
       router.push("/dashboard");
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       setError('Email ou senha inválidos');
-    } finally {
-      setLoading(false);
     }
   };
 

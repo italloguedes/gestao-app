@@ -84,7 +84,7 @@ export default function NovoAtendimentoPage() {
       } else {
         setMessage('Atendimento cadastrado, mas erro ao enviar e-mail: ' + result.error);
       }
-    } catch (emailError) {
+    } catch {
       setMessage('Atendimento cadastrado, mas houve erro ao enviar o e-mail.');
     }
 

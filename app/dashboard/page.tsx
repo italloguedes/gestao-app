@@ -14,6 +14,18 @@ interface DashboardStats {
   hoje: number;
 }
 
+interface Atendimento {
+  id: number;
+  nome: string;
+  cpf: string;
+  email: string;
+  solicitante: string;
+  protocolo: string;
+  dia_atual: string;
+  horario: string;
+  status: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -25,7 +37,7 @@ export default function DashboardPage() {
     hoje: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [recentAtendimentos, setRecentAtendimentos] = useState<any[]>([]);
+  const [recentAtendimentos, setRecentAtendimentos] = useState<Atendimento[]>([]);
 
   useEffect(() => {
     if (!user) {

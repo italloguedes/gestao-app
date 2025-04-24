@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import Header from '@/components/Header';
-import { sendEmail } from '@/lib/sendEmail';
 import Loading from '@/app/components/Loading';
 
 export default function AtualizarCINPage() {

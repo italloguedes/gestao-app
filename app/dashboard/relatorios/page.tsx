@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function RelatoriosPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const {} = useAuth();
 
   return (
     <div className="space-y-6">

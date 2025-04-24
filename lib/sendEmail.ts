@@ -1,5 +1,11 @@
 import nodemailer from 'nodemailer';
 
+interface EmailError extends Error {
+  code?: string;
+  command?: string;
+  response?: string;
+}
+
 export async function sendEmail(to: string, subject: string, content: string) {
   console.log('Starting email send process...');
   
@@ -39,21 +45,22 @@ export async function sendEmail(to: string, subject: string, content: string) {
     });
     
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const emailError = error as EmailError;
     console.error('Detailed email error:', {
-      code: error.code,
-      command: error.command,
-      message: error.message,
-      response: error.response,
-      stack: error.stack
+      code: emailError.code,
+      command: emailError.command,
+      message: emailError.message,
+      response: emailError.response,
+      stack: emailError.stack
     });
     
-    if (error.code === 'EAUTH') {
+    if (emailError.code === 'EAUTH') {
       throw new Error('Email authentication failed. Please check your email credentials and make sure you are using an App Password for Gmail.');
-    } else if (error.code === 'ESOCKET') {
+    } else if (emailError.code === 'ESOCKET') {
       throw new Error('Network error while sending email. Please check your internet connection.');
     } else {
-      throw new Error(`Failed to send email: ${error.message}`);
+      throw new Error(`Failed to send email: ${emailError.message}`);
     }
   }
 } 
