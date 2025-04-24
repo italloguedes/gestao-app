@@ -29,7 +29,7 @@ export default function AtendimentosPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/');
+      router.push('/dashboard');
       return;
     }
     fetchAtendimentos();

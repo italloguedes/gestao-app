@@ -80,7 +80,7 @@ export default function NovoAtendimentoPage() {
       const result = await res.json();
       if (res.ok) {
         setMessage('Atendimento cadastrado com sucesso! E-mail enviado.');
-        setTimeout(() => router.push('/dashboard/atendimentos'), 2000);
+        setTimeout(() => router.push('/dashboard'), 2000);
       } else {
         setMessage('Atendimento cadastrado, mas erro ao enviar e-mail: ' + result.error);
       }
