@@ -1,8 +1,13 @@
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from '../contexts/AuthContext';
 
-export const metadata = {
-  title: 'Sala Sensorial-app',
-  description: 'Aplicação de gestão com autenticação Supabase',
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Gestão App",
+  description: "Sistema de gestão empresarial",
 };
 
 export default function RootLayout({
@@ -12,7 +17,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body className={`${inter.className} min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 antialiased`}>
+        <AuthProvider>
+          <div className="fixed inset-0 bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] -z-10" />
+          <div className="min-h-screen flex flex-col">
+            {children}
+          </div>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

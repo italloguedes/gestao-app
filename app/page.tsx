@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
-import Slider from 'react-slick'; // Importa o carrossel
-import 'slick-carousel/slick/slick.css'; // Estilos do carrossel
-import 'slick-carousel/slick/slick-theme.css'; // Tema do carrossel
+import Link from 'next/link';
+import Image from 'next/image';
 
 interface Postagem {
   id: string;
@@ -13,399 +12,328 @@ interface Postagem {
   descricao: string;
   imagem_url: string;
   created_at: string;
+  categoria: string;
 }
 
-export default function Home() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+const Home: React.FC = () => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [postagens, setPostagens] = useState<Postagem[]>([]);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('todas');
+  const [tempoRestante, setTempoRestante] = useState<string>('');
   const router = useRouter();
 
-  // Carrega as postagens e verifica autenticação (apenas para exibir botões de login/logout)
   useEffect(() => {
     const fetchSessionAndPosts = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) setIsAuthenticated(true);
+      if (session && session.expires_at) {
+        setIsAuthenticated(true);
+        // Inicia o timer quando o usuário está autenticado
+        iniciarTimer(session.expires_at);
+      }
 
-      // Carrega as postagens independentemente da autenticação
       const { data, error } = await supabase
         .from('postagens')
         .select('*')
         .order('created_at', { ascending: false });
+      
       if (error) {
         console.error('Erro ao carregar postagens:', error);
       } else {
         setPostagens(data || []);
+        // Extrai categorias únicas
+        const cats = [...new Set(data?.map(post => post.categoria) || [])];
+        setCategorias(cats);
       }
     };
     fetchSessionAndPosts();
-
-    // Efeito de mudança de cor no fundo
-    const colors = ['#f3e8ff', '#e0f2fe', '#dcfce7', '#fef3c7'];
-    let currentIndex = 0;
-    const changeBackgroundColor = () => {
-      document.body.style.backgroundColor = colors[currentIndex];
-      currentIndex = (currentIndex + 1) % colors.length;
-    };
-    changeBackgroundColor();
-    const interval = setInterval(changeBackgroundColor, 5000);
-    document.body.style.transition = 'background-color 1s ease-in-out';
-    return () => clearInterval(interval);
   }, []);
 
-  // Função de login
+  const iniciarTimer = (expiresAt: number) => {
+    const atualizarTimer = () => {
+      const agora = Math.floor(Date.now() / 1000);
+      const tempoRestanteSegundos = expiresAt - agora;
+      
+      if (tempoRestanteSegundos <= 0) {
+        // Sessão expirada
+        supabase.auth.signOut();
+        setIsAuthenticated(false);
+        setTempoRestante('');
+        return;
+      }
+
+      const horas = Math.floor(tempoRestanteSegundos / 3600);
+      const minutos = Math.floor((tempoRestanteSegundos % 3600) / 60);
+      const segundos = tempoRestanteSegundos % 60;
+
+      setTempoRestante(`${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`);
+    };
+
+    // Atualiza o timer a cada segundo
+    const timerId = setInterval(atualizarTimer, 1000);
+    atualizarTimer(); // Atualiza imediatamente
+
+    // Limpa o timer quando o componente é desmontado
+    return () => clearInterval(timerId);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
       alert('Erro ao fazer login: ' + error.message);
-    } else {
+    } else if (data.session && data.session.expires_at) {
       setIsAuthenticated(true);
+      iniciarTimer(data.session.expires_at);
       router.push('/dashboard');
     }
   };
 
-  // Configurações do carrossel
-  const settings = {
-    dots: true, // Mostra os pontos de navegação
-    infinite: true, // Loop infinito
-    speed: 500, // Velocidade da transição
-    slidesToShow: 3, // Quantidade de slides visíveis (web)
-    slidesToScroll: 1, // Quantidade de slides para rolar por vez
-    autoplay: true, // Ativa o autoplay
-    autoplaySpeed: 3000, // Tempo entre transições (3 segundos)
-    vertical: false, // Garante que o carrossel seja horizontal
-    verticalSwiping: false, // Desativa o swipe vertical
-    responsive: [
-      {
-        breakpoint: 1024, // Para telas menores que 1024px (tablets)
-        settings: {
-          slidesToShow: 2,
-          slidesToScroll: 1,
-        },
-      },
-      {
-        breakpoint: 600, // Para telas menores que 600px (mobile)
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-          dots: true, // Mantém os pontos de navegação no mobile
-        },
-      },
-    ],
-  };
+  const postagensFiltradas = categoriaSelecionada === 'todas'
+    ? postagens
+    : postagens.filter(post => post.categoria === categoriaSelecionada);
 
   return (
-    <div className="container">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Cabeçalho */}
-      <header className="header">
-        <img src="/logoautismo.png" alt="Logo Sala Sensorial / ALECE" className="logo" />
-        {!isAuthenticated ? (
-          <form onSubmit={handleLogin} className="login-form">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit">Login</button>
-          </form>
-        ) : (
-          <div className="button-group">
-            <button onClick={() => router.push('/dashboard')}>Painel de Controle</button>
-            <button
-              className="logout"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setIsAuthenticated(false);
-                router.push('/');
-              }}
-            >
-              Deslogar
-            </button>
+      <header className="bg-white shadow-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-4">
+              <img 
+                src="/logoautismo.png" 
+                alt="Logo Sala Sensorial / ALECE" 
+                className="h-16 w-auto object-contain" 
+              />
+              <h1 className="text-2xl font-bold text-gray-800">Sala Sensorial</h1>
+            </div>
+            
+            {!isAuthenticated ? (
+              <form onSubmit={handleLogin} className="hidden md:flex items-center space-x-4">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="input"
+                />
+                <input
+                  type="password"
+                  placeholder="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="input"
+                />
+                <button type="submit" className="btn-primary">Login</button>
+              </form>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
+                  <svg 
+                    className="w-5 h-5 text-gray-600" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">
+                    Sessão expira em: {tempoRestante}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="btn-secondary"
+                >
+                  Painel de Controle
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setIsAuthenticated(false);
+                    setTempoRestante('');
+                    router.push('/');
+                  }}
+                  className="btn-danger"
+                >
+                  Deslogar
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="main">
-        <h2>Últimas Notícias</h2>
-        {postagens.length > 0 ? (
-          <Slider {...settings}>
-            {postagens.map((postagem) => (
-              <div key={postagem.id} className="postagem-card">
-                <img src={postagem.imagem_url} alt={postagem.titulo} />
-                <div className="postagem-content">
-                  <h3>{postagem.titulo}</h3>
-                  <p className="descricao">{postagem.descricao}</p>
-                  <p className="data">
-                    Publicado em {new Date(postagem.created_at).toLocaleDateString('pt-BR')}
-                  </p>
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        {/* Banner Principal */}
+        <div className="relative h-[500px] mb-16 rounded-2xl overflow-hidden shadow-xl">
+          <Image
+            src="/logoautismo.png"
+            alt="Banner Principal"
+            fill
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+            <div className="max-w-2xl px-8">
+              <h2 className="text-5xl font-bold text-white mb-6">Bem-vindo à Sala Sensorial</h2>
+              <p className="text-xl text-white/90">Promovendo inclusão e acessibilidade para todos</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Categorias */}
+        <div className="mb-12 flex flex-wrap gap-3">
+          <button
+            key="todas"
+            onClick={() => setCategoriaSelecionada('todas')}
+            className={`px-6 py-3 rounded-full transition-all duration-300 ${
+              categoriaSelecionada === 'todas'
+                ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
+            }`}
+          >
+            Todas
+          </button>
+          {categorias.map((cat) => (
+            <button
+              key={`cat-${cat}`}
+              onClick={() => setCategoriaSelecionada(cat)}
+              className={`px-6 py-3 rounded-full transition-all duration-300 ${
+                categoriaSelecionada === cat
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid de Postagens */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {postagensFiltradas.map((postagem) => (
+            <article 
+              key={postagem.id} 
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group"
+            >
+              <div className="relative h-64 overflow-hidden">
+                <Image
+                  src={postagem.categoria === 'Notícias' ? '/placeholder1.jpg' : '/placeholder2.jpg'}
+                  alt={postagem.titulo}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <span className="absolute top-4 right-4 px-3 py-1 text-sm font-semibold text-white bg-primary/90 rounded-full backdrop-blur-sm">
+                  {postagem.categoria}
+                </span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-primary transition-colors">
+                  {postagem.titulo}
+                </h3>
+                <p className="text-gray-600 mb-4 line-clamp-3">
+                  {postagem.descricao}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    {new Date(postagem.created_at).toLocaleDateString('pt-BR')}
+                  </span>
+                  <Link
+                    href={`/post/${postagem.id}`}
+                    className="inline-flex items-center text-primary hover:text-primary-dark font-medium group-hover:translate-x-1 transition-transform"
+                  >
+                    Ler mais
+                    <svg 
+                      className="w-4 h-4 ml-1" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M9 5l7 7-7 7" 
+                      />
+                    </svg>
+                  </Link>
                 </div>
               </div>
-            ))}
-          </Slider>
-        ) : (
-          <p className="no-postagens">Nenhuma postagem disponível no momento.</p>
+            </article>
+          ))}
+        </div>
+
+        {postagensFiltradas.length === 0 && (
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <svg 
+                className="w-8 h-8 text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+            </div>
+            <p className="text-gray-500 text-lg">
+              Nenhuma postagem disponível nesta categoria.
+            </p>
+          </div>
         )}
       </main>
 
       {/* Rodapé */}
-      <footer className="footer">
-        <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
-        <p>Entre em contato: (85) 2180-6587</p>
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Sala Sensorial</h3>
+              <p className="text-gray-400">
+                Promovendo inclusão e acessibilidade para pessoas com autismo.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Contato</h3>
+              <p className="text-gray-400">
+                Telefone: (85) 2180-6587<br />
+                Email: contato@salasensorial.com.br
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Localização</h3>
+              <p className="text-gray-400">
+                Prédio da Assembleia Legislativa<br />
+                Anexo III, Sala Sensorial<br />
+                Fortaleza - CE
+              </p>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
+            <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
+          </div>
+        </div>
       </footer>
-
-     <style jsx>{`
-  .container {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: #f8f9fa;
-  }
-
-  .header {
-    background: linear-gradient(135deg, #008751 0%, #006B40 100%);
-    color: white;
-    padding: 20px 40px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .logo {
-    height: 60px;
-    width: auto;
-    object-fit: contain;
-    transition: transform 0.3s ease;
-  }
-
-  .logo:hover {
-    transform: scale(1.05);
-  }
-
-  .login-form {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .login-form input {
-    width: 220px;
-  }
-
-  .button-group {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .button-group button,
-  .login-form button {
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
-  }
-
-  .button-group .logout {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  }
-
-  .main {
-    flex: 1;
-    padding: 20px;
-    animation: fadeIn 0.8s ease-out;
-  }
-
-  .main h2 {
-    font-size: 32px;
-    font-weight: 800;
-    color: #008751;
-    text-align: center;
-    margin: 40px 0;
-    position: relative;
-    padding-bottom: 15px;
-  }
-
-  .main h2:after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(90deg, #008751, #00b76a);
-    border-radius: 2px;
-  }
-
-  .postagem-card {
-    background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: all 0.3s ease;
-    margin: 15px;
-    height: 100%;
-  }
-
-  .postagem-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
-  }
-
-  .postagem-card img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-  }
-
-  .postagem-card:hover img {
-    transform: scale(1.05);
-  }
-
-  .postagem-content {
-    padding: 25px;
-  }
-
-  .postagem-content h3 {
-    font-size: 24px;
-    color: #1a1a1a;
-    margin-bottom: 15px;
-    font-weight: 700;
-  }
-
-  .postagem-content .descricao {
-    color: #4b5563;
-    font-size: 16px;
-    line-height: 1.6;
-    margin-bottom: 16px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .postagem-content .data {
-    font-size: 14px;
-    color: #6b7280;
-  }
-
-  .no-postagens {
-    text-align: center;
-    color: #6b7280;
-    font-size: 18px;
-    padding: 40px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  }
-
-  .footer {
-    background: linear-gradient(135deg, #008751 0%, #006B40 100%);
-    color: rgba(255, 255, 255, 0.9);
-    padding: 30px 20px;
-    text-align: center;
-    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .footer p {
-    font-size: 15px;
-    line-height: 1.6;
-    letter-spacing: 0.5px;
-    margin: 5px 0;
-  }
-
-  /* Estilização dos pontos de navegação do carrossel */
-  :global(.slick-dots li button:before) {
-    color: #008751;
-    font-size: 12px;
-  }
-
-  :global(.slick-dots li.slick-active button:before) {
-    color: #006B40;
-  }
-
-  :global(.slick-prev),
-  :global(.slick-next) {
-    z-index: 1;
-  }
-
-  :global(.slick-prev:before),
-  :global(.slick-next:before) {
-    color: #008751;
-    font-size: 24px;
-  }
-
-  /* Ajustes para dispositivos móveis */
-  @media (max-width: 600px) {
-    .header {
-      padding: 15px;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .logo {
-      height: 45px;
-    }
-
-    .login-form {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .login-form input {
-      width: 100%;
-    }
-
-    .button-group {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .button-group button {
-      width: 100%;
-    }
-
-    .main {
-      padding: 15px;
-    }
-
-    .main h2 {
-      font-size: 24px;
-      margin: 20px 0;
-    }
-
-    .postagem-content {
-      padding: 15px;
-    }
-
-    .postagem-content h3 {
-      font-size: 20px;
-    }
-
-    .footer {
-      padding: 20px 15px;
-    }
-  }
-`}</style>
     </div>
   );
-}
+};
+
+export default Home;
