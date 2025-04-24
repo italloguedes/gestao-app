@@ -60,7 +60,8 @@ export default function NovoAtendimentoPage() {
         horario, 
         dia_atual: diaAtual, 
         usuario_id: user.id, 
-        protocolo 
+        protocolo,
+        status: 'em_andamento'
       }
     ]);
 
