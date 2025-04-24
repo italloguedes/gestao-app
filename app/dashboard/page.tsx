@@ -75,7 +75,7 @@ export default function DashboardPage() {
       const { count: concluidos } = await supabase
         .from('atendimentos')
         .select('*', { count: 'exact' })
-        .eq('status', 'concluido');
+        .or('status.eq.concluido,status.eq.concluído');
 
       // Atendimentos de hoje
       const { count: hoje } = await supabase
@@ -88,6 +88,7 @@ export default function DashboardPage() {
         .from('atendimentos')
         .select('*')
         .order('dia_atual', { ascending: false })
+        .order('horario', { ascending: false })
         .limit(5);
 
       setStats({
