@@ -107,8 +107,8 @@ export default function AtualizarCINPage() {
       // Limpar formulário e redirecionar após 2 segundos
       setCpf('');
       setTimeout(() => {
-        router.push('/dashboard/atendimentos');
-      }, 2000);
+        router.push('/dashboard/atendimentos/atualizar-cin');
+      }, 500);
 
     } catch (error) {
       console.error('Erro ao processar solicitação:', error);
