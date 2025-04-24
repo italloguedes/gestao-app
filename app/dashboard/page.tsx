@@ -72,10 +72,13 @@ export default function DashboardPage() {
         .eq('status', 'em_andamento');
 
       // Atendimentos concluídos
-      const { count: concluidos } = await supabase
+      const { count: concluidos, data: concluidosData } = await supabase
         .from('atendimentos')
         .select('*', { count: 'exact' })
-        .or('status.eq.concluido,status.eq.concluído');
+        .in('status', ['concluido', 'concluído', 'Concluido', 'Concluído']);
+
+      console.log('Status dos atendimentos concluídos:', concluidosData?.map(a => a.status));
+      console.log('Total de concluídos:', concluidos);
 
       // Atendimentos de hoje
       const { count: hoje } = await supabase
