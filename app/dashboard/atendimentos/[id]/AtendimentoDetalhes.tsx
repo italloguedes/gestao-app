@@ -114,7 +114,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
                 <select
                   className="border rounded px-2 py-1"
                   value={atendimento.status}
-                  onChange={(e) => updateStatus(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateStatus(e.target.value)}
                 >
                   <option value="em_andamento">Em andamento</option>
                   <option value="concluido">Concluído</option>
