@@ -26,7 +26,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [atendimento, setAtendimento] = useState<Atendimento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingStatus, setEditingStatus] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedAtendimento, setEditedAtendimento] = useState<Partial<Atendimento>>({});
   const router = useRouter();
   const { user } = useAuth();
 
@@ -35,7 +36,6 @@ export default function AtendimentoDetalhes({ id }: Props) {
       router.push('/');
       return;
     }
-
     fetchAtendimento();
   }, [user, id]);
 
@@ -50,6 +50,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
       if (error) throw error;
       setAtendimento(data);
+      setEditedAtendimento(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -57,18 +58,25 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
   };
 
-  const updateStatus = async (newStatus: string) => {
+  const handleInputChange = (field: keyof Atendimento, value: string) => {
+    setEditedAtendimento(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
     try {
       setLoading(true);
       const { error } = await supabase
         .from('atendimentos')
-        .update({ status: newStatus })
+        .update(editedAtendimento)
         .eq('id', id);
 
       if (error) throw error;
       
-      setAtendimento((prev: Atendimento | null) => prev ? { ...prev, status: newStatus } : null);
-      setEditingStatus(false);
+      setAtendimento(prev => prev ? { ...prev, ...editedAtendimento } : null);
+      setIsEditing(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -77,16 +85,41 @@ export default function AtendimentoDetalhes({ id }: Props) {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    const [datePart] = dateString.split('T');
+    const date = new Date(datePart + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Fortaleza'
+    });
   };
 
   const formatTime = (timeString: string) => {
     return timeString.substring(0, 5);
   };
 
-  const handleStatusChange = (event: { target: { value: string } }) => {
-    updateStatus(event.target.value);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'concluido':
+        return 'bg-green-100 text-green-800';
+      case 'em_andamento':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'correcao':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'concluido':
+        return 'Concluído';
+      case 'em_andamento':
+        return 'Em andamento';
+      case 'correcao':
+        return 'Correção';
+      default:
+        return status;
+    }
   };
 
   if (loading) return <Loading />;
@@ -95,84 +128,150 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <button
           onClick={() => router.back()}
-          className="text-blue-500 hover:text-blue-700 mb-4"
+          className="flex items-center text-blue-500 hover:text-blue-700"
         >
-          ← Voltar
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Voltar
         </button>
         <h1 className="text-2xl font-bold">Detalhes do Atendimento</h1>
+        <button
+          onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+          className={`px-4 py-2 rounded-md ${
+            isEditing 
+              ? 'bg-green-500 text-white hover:bg-green-600' 
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          {isEditing ? 'Salvar' : 'Editar'}
+        </button>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <h2 className="text-gray-600">Protocolo</h2>
-            <p className="font-semibold">{atendimento.protocolo}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">Status</h2>
-            {editingStatus ? (
-              <div className="flex gap-2">
+      <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Protocolo</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedAtendimento.protocolo || ''}
+                  onChange={(e) => handleInputChange('protocolo', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{atendimento.protocolo}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              {isEditing ? (
                 <select
-                  className="border rounded px-2 py-1"
-                  value={atendimento.status}
-                  onChange={handleStatusChange}
+                  value={editedAtendimento.status || ''}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="em_andamento">Em andamento</option>
                   <option value="concluido">Concluído</option>
+                  <option value="correcao">Correção</option>
                 </select>
-                <button
-                  onClick={() => setEditingStatus(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2 py-1 rounded text-sm ${
-                    atendimento.status === 'concluido'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
-                  {atendimento.status === 'concluido' ? 'Concluído' : 'Em andamento'}
+              ) : (
+                <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
+                  {getStatusLabel(atendimento.status)}
                 </span>
-                <button
-                  onClick={() => setEditingStatus(true)}
-                  className="text-blue-500 hover:text-blue-700 text-sm"
-                >
-                  Editar
-                </button>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedAtendimento.nome || ''}
+                  onChange={(e) => handleInputChange('nome', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{atendimento.nome}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedAtendimento.cpf || ''}
+                  onChange={(e) => handleInputChange('cpf', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{atendimento.cpf}</p>
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-gray-600">Nome do Cliente</h2>
-            <p className="font-semibold">{atendimento.nome}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">CPF</h2>
-            <p className="font-semibold">{atendimento.cpf}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">E-mail</h2>
-            <p className="font-semibold">{atendimento.email}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">Solicitante</h2>
-            <p className="font-semibold">{atendimento.solicitante}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">Data</h2>
-            <p className="font-semibold">{formatDate(atendimento.dia_atual)}</p>
-          </div>
-          <div>
-            <h2 className="text-gray-600">Horário</h2>
-            <p className="font-semibold">{formatTime(atendimento.horario)}</p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  value={editedAtendimento.email || ''}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{atendimento.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Solicitante</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedAtendimento.solicitante || ''}
+                  onChange={(e) => handleInputChange('solicitante', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{atendimento.solicitante}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={editedAtendimento.dia_atual?.split('T')[0] || ''}
+                  onChange={(e) => handleInputChange('dia_atual', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{formatDate(atendimento.dia_atual)}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+              {isEditing ? (
+                <input
+                  type="time"
+                  value={editedAtendimento.horario || ''}
+                  onChange={(e) => handleInputChange('horario', e.target.value)}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="font-semibold">{formatTime(atendimento.horario)}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

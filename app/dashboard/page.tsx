@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardStats {
   total: number;
-  pendentes: number;
+  correcoes: number;
   emAndamento: number;
   concluidos: number;
   hoje: number;
@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
-    pendentes: 0,
+    correcoes: 0,
     emAndamento: 0,
     concluidos: 0,
     hoje: 0,
@@ -59,11 +59,11 @@ export default function DashboardPage() {
         .from('atendimentos')
         .select('*', { count: 'exact' });
 
-      // Atendimentos pendentes
-      const { count: pendentes } = await supabase
+      // Atendimentos em correção
+      const { count: correcoes } = await supabase
         .from('atendimentos')
         .select('*', { count: 'exact' })
-        .eq('status', 'pendente');
+        .eq('status', 'correcao');
 
       // Atendimentos em andamento
       const { count: emAndamento } = await supabase
@@ -72,13 +72,10 @@ export default function DashboardPage() {
         .eq('status', 'em_andamento');
 
       // Atendimentos concluídos
-      const { count: concluidos, data: concluidosData } = await supabase
+      const { count: concluidos } = await supabase
         .from('atendimentos')
         .select('*', { count: 'exact' })
         .in('status', ['concluido', 'concluído', 'Concluido', 'Concluído']);
-
-      console.log('Status dos atendimentos concluídos:', concluidosData?.map(a => a.status));
-      console.log('Total de concluídos:', concluidos);
 
       // Atendimentos de hoje
       const { count: hoje } = await supabase
@@ -96,7 +93,7 @@ export default function DashboardPage() {
 
       setStats({
         total: total || 0,
-        pendentes: pendentes || 0,
+        correcoes: correcoes || 0,
         emAndamento: emAndamento || 0,
         concluidos: concluidos || 0,
         hoje: hoje || 0,
@@ -111,7 +108,13 @@ export default function DashboardPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // Split the date string to get the date part only
+    const [datePart] = dateString.split('T');
+    // Create a new date object using the date part only
+    const date = new Date(datePart + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Fortaleza'
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -122,7 +125,7 @@ export default function DashboardPage() {
         return 'text-blue-600 bg-blue-50';
       case 'concluido':
         return 'text-green-600 bg-green-50';
-      case 'cancelado':
+      case 'correcao':
         return 'text-red-600 bg-red-50';
       default:
         return 'text-gray-600 bg-gray-50';
@@ -151,8 +154,8 @@ export default function DashboardPage() {
           <p className="mt-2 text-3xl font-bold text-gray-900">{stats.total}</p>
         </div>
         <div className="card p-4">
-          <h3 className="text-sm font-medium text-gray-500">Pendentes</h3>
-          <p className="mt-2 text-3xl font-bold text-yellow-600">{stats.pendentes}</p>
+          <h3 className="text-sm font-medium text-gray-500">Correções</h3>
+          <p className="mt-2 text-3xl font-bold text-red-600">{stats.correcoes}</p>
         </div>
         <div className="card p-4">
           <h3 className="text-sm font-medium text-gray-500">Em Andamento</h3>
@@ -206,6 +209,20 @@ export default function DashboardPage() {
             </Link>
 
             <Link 
+              href="/dashboard/atendimentos/correcoes" 
+              className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-500 to-pink-500 p-0.5 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg"
+            >
+              <div className="relative rounded-[7px] bg-white p-4 transition-all duration-300 ease-out group-hover:bg-opacity-90">
+                <div className="flex items-center space-x-3">
+                  <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-lg font-semibold text-gray-800">Ver Correções</span>
+                </div>
+              </div>
+            </Link>
+
+            <Link 
               href="/dashboard/atendimentos" 
               className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 p-0.5 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg"
             >
@@ -243,7 +260,10 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
-                    {atendimento.status || 'pendente'}
+                    {atendimento.status === 'correcao' ? 'Correção' : 
+                     atendimento.status === 'concluido' ? 'Concluído' : 
+                     atendimento.status === 'em_andamento' ? 'Em andamento' : 
+                     atendimento.status}
                   </span>
                 </div>
               ))

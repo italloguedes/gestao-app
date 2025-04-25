@@ -161,14 +161,14 @@ export default function AtendimentosPage() {
                 <td className="px-6 py-4">
                   <span
                     className={`px-2 py-1 rounded text-sm ${
-                      atendimento.status === 'Concluído'
+                      atendimento.status === 'concluido'
                         ? 'bg-green-100 text-green-800'
-                        : atendimento.status === 'Em andamento'
+                        : atendimento.status === 'em_andamento'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}
                   >
-                    {atendimento.status}
+                    {atendimento.status === 'concluido' ? 'Concluído' : 'Em andamento'}
                   </span>
                 </td>
                 <td className="px-6 py-4">
