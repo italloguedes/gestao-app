@@ -1,79 +1,77 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import type { NextApiRequestContext } from 'next'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: NextApiRequestContext
 ) {
+  const { params } = context
+  const id = params.id as string
+
   try {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', params.id)
-      .single();
+      .eq('id', id)
+      .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(user)
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: NextApiRequestContext
 ) {
+  const { params } = context
+  const id = params.id as string
+
   try {
-    const body = await request.json();
+    const body = await request.json()
     const { data: user, error } = await supabase
       .from('users')
       .update(body)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
-      .single();
+      .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(user)
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: NextApiRequestContext
 ) {
+  const { params } = context
+  const id = params.id as string
+
   try {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', params.id);
+    const { error } = await supabase.from('users').delete().eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ message: 'User deleted successfully' });
+    return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
