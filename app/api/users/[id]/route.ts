@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-type Params = {
-  params: {
-    id: string;
-  };
-};
-
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { data: user, error } = await supabase
       .from('users')
@@ -32,7 +29,10 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const body = await request.json();
     const { data: user, error } = await supabase
@@ -55,7 +55,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { error } = await supabase
       .from('users')
