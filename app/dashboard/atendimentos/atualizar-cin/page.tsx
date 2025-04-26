@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/app/components/Loading';
 
-export default function AtualizarCINPage() {
+function AtualizarCINForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -119,63 +119,71 @@ export default function AtualizarCINPage() {
   };
 
   return (
+    <div className="card p-6">
+      {message && (
+        <div className={`mb-4 p-4 rounded-md ${
+          message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-600'
+            : 'bg-red-50 border border-red-200 text-red-600'
+        }`}>
+          <p>{message.text}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="cpf" className="block text-sm font-medium text-gray-700">
+            CPF do Atendimento
+          </label>
+          <input
+            type="text"
+            id="cpf"
+            value={cpf}
+            onChange={(e) => setCpf(e.target.value)}
+            className="input mt-1"
+            placeholder="Digite apenas números"
+            required
+            autoFocus
+            maxLength={11}
+            pattern="[0-9]{11}"
+            title="Digite um CPF válido com 11 dígitos numéricos"
+          />
+          <p className="mt-1 text-sm text-gray-500">Digite apenas os números do CPF, sem pontos ou traços</p>
+        </div>
+
+        <div className="flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={loading}
+          >
+            {loading ? <Loading /> : 'Atualizar CIN'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default function AtualizarCINPage() {
+  return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Atualizar CIN</h1>
         <p className="text-gray-600 mt-2">Atualize o status do atendimento e envie o email de CIN pronta</p>
       </div>
 
-      <div className="card p-6">
-        {message && (
-          <div className={`mb-4 p-4 rounded-md ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-600'
-              : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
-            <p>{message.text}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="cpf" className="block text-sm font-medium text-gray-700">
-              CPF do Atendimento
-            </label>
-            <input
-              type="text"
-              id="cpf"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              className="input mt-1"
-              placeholder="Digite apenas números"
-              required
-              autoFocus
-              maxLength={11}
-              pattern="[0-9]{11}"
-              title="Digite um CPF válido com 11 dígitos numéricos"
-            />
-            <p className="mt-1 text-sm text-gray-500">Digite apenas os números do CPF, sem pontos ou traços</p>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="btn-secondary"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-            >
-              {loading ? <Loading /> : 'Atualizar CIN'}
-            </button>
-          </div>
-        </form>
-      </div>
+      <Suspense fallback={<Loading />}>
+        <AtualizarCINForm />
+      </Suspense>
     </div>
   );
 } 
