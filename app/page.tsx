@@ -52,9 +52,9 @@ export default function Home() {
         <div className="w-full max-w-md">
           <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
             <div className="flex items-center justify-center lg:hidden mb-8">
-              <Image
-                src="/logoautismo.png"
-                alt="Logo Sala Sensorial / ALECE"
+              <Image 
+                src="/logoautismo.png" 
+                alt="Logo Sala Sensorial / ALECE" 
                 width={150}
                 height={150}
                 className="object-contain"
@@ -87,12 +87,12 @@ export default function Home() {
                   Email
                 </label>
                 <div className="relative">
-                  <input
-                    type="email"
+                <input
+                  type="email"
                     id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                     placeholder="seu@email.com"
                   />
@@ -104,12 +104,12 @@ export default function Home() {
                   Senha
                 </label>
                 <div className="relative">
-                  <input
-                    type="password"
+                <input
+                  type="password"
                     id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                     placeholder="••••••••"
                   />
@@ -135,7 +135,7 @@ export default function Home() {
                 </div>
               )}
 
-              <button
+                <button 
                 type="submit"
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
@@ -151,11 +151,11 @@ export default function Home() {
                 ) : (
                   <span>{isRegistering ? 'Criar Conta' : 'Entrar'}</span>
                 )}
-              </button>
+                </button>
             </form>
 
             <div className="mt-8 text-center">
-              <button
+                <button
                 onClick={() => {
                   setIsRegistering(!isRegistering);
                   setError(null);
@@ -164,27 +164,30 @@ export default function Home() {
                 className="text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
               >
                 {isRegistering ? 'Já tem uma conta? Entre aqui' : 'Não tem conta? Crie uma agora'}
-              </button>
-            </div>
+                </button>
+              </div>
           </div>
         </div>
 
         {/* Right side - Logo and Text */}
         <div className="hidden lg:flex flex-col items-center lg:items-start space-y-12">
-          <div className="flex flex-col items-center space-y-6">
-            <Image
-              src="/logoautismo.png"
-              alt="Logo Sala Sensorial / ALECE"
-              width={250}
-              height={250}
-              className="object-contain"
-              priority
-            />
-            <div className="text-center">
-              <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-amber-500 bg-clip-text text-transparent">
-                Sala Sensorial
-              </h2>
-              <p className="text-2xl text-blue-600 font-semibold mt-2">ALECE</p>
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-8">
+              <Image
+                src="/logoautismo.png"
+                alt="Logo Sala Sensorial / ALECE"
+                width={220}
+                height={220}
+                className="object-contain"
+                priority
+              />
+              <div className="flex flex-col">
+                <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-amber-500 bg-clip-text text-transparent">
+                  Sala Sensorial
+                </h2>
+                <p className="text-2xl text-blue-600 font-semibold mt-2">ALECE</p>
+                <div className="h-1 w-32 bg-gradient-to-r from-blue-600 to-amber-500 mt-4 rounded-full"></div>
+              </div>
             </div>
           </div>
           <div className="max-w-md bg-white/40 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
