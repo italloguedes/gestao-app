@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-type Props = {
-  params: { id: string };
-};
-
 export async function GET(
   request: NextRequest,
-  props: Props
-): Promise<NextResponse> {
+  { params }: { params: { id: string } }
+) {
   try {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', props.params.id)
+      .eq('id', params.id)
       .single();
 
     if (error) {
@@ -35,14 +31,14 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  props: Props
-): Promise<NextResponse> {
+  { params }: { params: { id: string } }
+) {
   try {
     const body = await request.json();
     const { data: user, error } = await supabase
       .from('users')
       .update(body)
-      .eq('id', props.params.id)
+      .eq('id', params.id)
       .select()
       .single();
 
@@ -61,13 +57,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  props: Props
-): Promise<NextResponse> {
+  { params }: { params: { id: string } }
+) {
   try {
     const { error } = await supabase
       .from('users')
       .delete()
-      .eq('id', props.params.id);
+      .eq('id', params.id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
