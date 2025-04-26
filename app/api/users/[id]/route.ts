@@ -1,48 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserById, updateUser, deleteUser } from '../services/userService'
+import { supabase } from '@/lib/supabase'
 
-type RouteContext = {
-  params: {
-    id: string
+export async function GET(request: NextRequest) {
+  const id = request.url.split('/').pop()
+  
+  if (!id) {
+    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
   }
-}
 
-export async function GET(
-  request: NextRequest,
-  context: RouteContext
-) {
   try {
-    const user = await getUserById(context.params.id)
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     return NextResponse.json(user)
   } catch (error: any) {
-    if (error.message === 'User not found') {
-      return NextResponse.json({ error: error.message }, { status: 404 })
-    }
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function PUT(request: NextRequest) {
+  const id = request.url.split('/').pop()
+  
+  if (!id) {
+    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  }
+
   try {
     const body = await request.json()
-    const user = await updateUser(context.params.id, body)
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(body)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
     return NextResponse.json(user)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function DELETE(request: NextRequest) {
+  const id = request.url.split('/').pop()
+  
+  if (!id) {
+    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  }
+
   try {
-    const result = await deleteUser(context.params.id)
-    return NextResponse.json(result)
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
