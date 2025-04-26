@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+type Params = {
+  params: {
+    id: string;
+  };
+};
+
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', context.params.id)
+      .eq('id', params.id)
       .single();
 
     if (error) {
@@ -29,7 +32,7 @@ export async function GET(
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const { data: user, error } = await supabase
@@ -52,7 +55,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const { error } = await supabase
       .from('users')
@@ -70,4 +73,4 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       { status: 500 }
     );
   }
-} 
+}
