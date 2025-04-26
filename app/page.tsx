@@ -1,21 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 
-interface Postagem {
-  id: string;
-  titulo: string;
-  descricao: string;
-  imagem_url: string;
-  created_at: string;
-  categoria: string;
-}
-
-const Home: React.FC = () => {
+export default function Home() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -23,446 +13,198 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [postagens, setPostagens] = useState<Postagem[]>([]);
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('todas');
-  const [tempoRestante, setTempoRestante] = useState<string>('');
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchSessionAndPosts = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.expires_at) {
-        setIsAuthenticated(true);
-        iniciarTimer(session.expires_at);
-      }
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setLoading(true);
 
-      const { data, error } = await supabase
-        .from('postagens')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Erro ao carregar postagens:', error);
+    try {
+      if (isRegistering) {
+        if (password !== confirmPassword) {
+          setError('As senhas não coincidem');
+          setLoading(false);
+          return;
+        }
+        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) throw signUpError;
+        setMessage('Verifique seu email para confirmar o cadastro');
       } else {
-        setPostagens(data || []);
-        const cats = [...new Set(data?.map(post => post.categoria) || [])];
-        setCategorias(cats);
-      }
-    };
-    fetchSessionAndPosts();
-  }, []);
-
-  const iniciarTimer = (expiresAt: number) => {
-    const atualizarTimer = () => {
-      const agora = Math.floor(Date.now() / 1000);
-      const tempoRestanteSegundos = expiresAt - agora;
-      
-      if (tempoRestanteSegundos <= 0) {
-        // Sessão expirada
-        supabase.auth.signOut();
-        setIsAuthenticated(false);
-        setTempoRestante('');
-        return;
-      }
-
-      const horas = Math.floor(tempoRestanteSegundos / 3600);
-      const minutos = Math.floor((tempoRestanteSegundos % 3600) / 60);
-      const segundos = tempoRestanteSegundos % 60;
-
-      setTempoRestante(`${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`);
-    };
-
-    // Atualiza o timer a cada segundo
-    const timerId = setInterval(atualizarTimer, 1000);
-    atualizarTimer(); // Atualiza imediatamente
-
-    // Limpa o timer quando o componente é desmontado
-    return () => clearInterval(timerId);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        setIsAuthenticated(true);
-        if (data.session.expires_at) {
-          iniciarTimer(data.session.expires_at);
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        if (data.session) {
+          router.push('/dashboard');
         }
-        router.push('/dashboard');
       }
-    } catch (error: any) {
-      setError(error.message || 'Erro ao fazer login');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao autenticar');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        }
-      });
-
-      if (error) throw error;
-
-      setMessage('Verifique seu email para confirmar o cadastro');
-      setIsRegistering(false);
-    } catch (error: any) {
-      setError(error.message || 'Erro ao criar conta');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const postagensFiltradas = categoriaSelecionada === 'todas'
-    ? postagens
-    : postagens.filter(post => post.categoria === categoriaSelecionada);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Cabeçalho */}
-      <header className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Image 
-                src="/logoautismo.png" 
-                alt="Logo Sala Sensorial / ALECE" 
-                className="h-16 w-auto object-contain" 
-                width={200}
-                height={60}
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-amber-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl flex flex-col-reverse lg:flex-row items-center justify-center gap-8 lg:gap-16">
+        {/* Left side - Form */}
+        <div className="w-full max-w-md">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
+            <div className="flex items-center justify-center lg:hidden mb-8">
+              <Image
+                src="/logoautismo.png"
+                alt="Logo Sala Sensorial / ALECE"
+                width={150}
+                height={150}
+                className="object-contain"
                 priority
               />
-              <h1 className="text-2xl font-bold text-gray-800">Sala Sensorial</h1>
             </div>
+            <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-amber-500 bg-clip-text text-transparent mb-2 text-center lg:text-left">
+              {isRegistering ? 'Criar nova conta' : 'Bem-vindo de volta!'}
+            </h3>
+            <p className="text-gray-600 mb-8 text-center lg:text-left">
+              {isRegistering 
+                ? 'Preencha seus dados para começar sua jornada'
+                : 'Entre com suas credenciais para continuar sua jornada'}
+            </p>
             
-            {!isAuthenticated && (
-              <div className="hidden md:block">
-                {isRegistering ? (
-                  <form onSubmit={handleRegister} className="flex items-center space-x-4">
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="input"
-                    />
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+            {message && (
+              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                <p className="text-green-700 text-sm">{message}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Senha
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              {isRegistering && (
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirmar Senha
+                  </label>
+                  <div className="relative">
                     <input
                       type="password"
-                      placeholder="Senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="input"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Confirmar Senha"
+                      id="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="input"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      placeholder="••••••••"
                     />
-                    <button 
-                      type="submit" 
-                      disabled={loading}
-                      className="btn-primary"
-                    >
-                      {loading ? 'Criando...' : 'Criar Conta'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegistering(false);
-                        setError(null);
-                        setMessage(null);
-                      }}
-                      className="btn-secondary"
-                    >
-                      Voltar
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleLogin} className="flex items-center space-x-4">
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="input"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="input"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={loading}
-                      className="btn-primary"
-                    >
-                      {loading ? 'Entrando...' : 'Entrar'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegistering(true);
-                        setError(null);
-                        setMessage(null);
-                      }}
-                      className="btn-secondary"
-                    >
-                      Criar Conta
-                    </button>
-                  </form>
-                )}
-                {error && (
-                  <div className="absolute mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                    {error}
                   </div>
-                )}
-                {message && (
-                  <div className="absolute mt-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded">
-                    {message}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isAuthenticated && (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
-                  <svg 
-                    className="w-5 h-5 text-gray-600" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-700">
-                    Sessão expira em: {tempoRestante}
-                  </span>
                 </div>
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="btn-secondary"
-                >
-                  Painel de Controle
-                </button>
-                <button
-                  onClick={async () => {
-                    await supabase.auth.signOut();
-                    setIsAuthenticated(false);
-                    setTempoRestante('');
-                    router.push('/');
-                  }}
-                  className="btn-danger"
-                >
-                  Deslogar
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+              )}
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        {/* Banner Principal */}
-        <div className="relative h-[500px] mb-16 rounded-2xl overflow-hidden shadow-xl">
-          <Image
-            src="/logoautismo.png"
-            alt="Banner Principal"
-            fill
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-            <div className="max-w-2xl px-8">
-              <h2 className="text-5xl font-bold text-white mb-6">Bem-vindo à Sala Sensorial</h2>
-              <p className="text-xl text-white/90">Promovendo inclusão e acessibilidade para todos</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Categorias */}
-        <div className="mb-12 flex flex-wrap gap-3">
-          <button
-            key="todas"
-            onClick={() => setCategoriaSelecionada('todas')}
-            className={`px-6 py-3 rounded-full transition-all duration-300 ${
-              categoriaSelecionada === 'todas'
-                ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
-            }`}
-          >
-            Todas
-          </button>
-          {categorias.map((cat) => (
-            <button
-              key={`cat-${cat}`}
-              onClick={() => setCategoriaSelecionada(cat)}
-              className={`px-6 py-3 rounded-full transition-all duration-300 ${
-                categoriaSelecionada === cat
-                  ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Grid de Postagens */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {postagensFiltradas.map((postagem) => (
-            <article 
-              key={postagem.id} 
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group"
-            >
-              <div className="relative h-64 overflow-hidden">
-                <Image
-                  src={postagem.categoria === 'Notícias' ? '/placeholder1.jpg' : '/placeholder2.jpg'}
-                  alt={postagem.titulo}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <span className="absolute top-4 right-4 px-3 py-1 text-sm font-semibold text-white bg-primary/90 rounded-full backdrop-blur-sm">
-                  {postagem.categoria}
-                </span>
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-primary transition-colors">
-                  {postagem.titulo}
-                </h3>
-                <p className="text-gray-600 mb-4 line-clamp-3">
-                  {postagem.descricao}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
-                    {new Date(postagem.created_at).toLocaleDateString('pt-BR')}
-                  </span>
-                  <Link
-                    href={`/post/${postagem.id}`}
-                    className="inline-flex items-center text-primary hover:text-primary-dark font-medium group-hover:translate-x-1 transition-transform"
-                  >
-                    Ler mais
-                    <svg 
-                      className="w-4 h-4 ml-1" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M9 5l7 7-7 7" 
-                      />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {postagensFiltradas.length === 0 && (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <svg 
-                className="w-8 h-8 text-gray-400" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-                />
-              </svg>
-            </div>
-            <p className="text-gray-500 text-lg">
-              Nenhuma postagem disponível nesta categoria.
-            </p>
-          </div>
-        )}
-      </main>
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Processando...</span>
+                  </>
+                ) : (
+                  <span>{isRegistering ? 'Criar Conta' : 'Entrar'}</span>
+                )}
+              </button>
+            </form>
 
-      {/* Rodapé */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Sala Sensorial</h3>
-              <p className="text-gray-400">
-                Promovendo inclusão e acessibilidade para pessoas com autismo.
-              </p>
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
+              >
+                {isRegistering ? 'Já tem uma conta? Entre aqui' : 'Não tem conta? Crie uma agora'}
+              </button>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Contato</h3>
-              <p className="text-gray-400">
-                Telefone: (85) 2180-6587<br />
-                Email: contato@salasensorial.com.br
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Localização</h3>
-              <p className="text-gray-400">
-                Prédio da Assembleia Legislativa<br />
-                Anexo III, Sala Sensorial<br />
-                Fortaleza - CE
-              </p>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
-            <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
           </div>
         </div>
-      </footer>
+
+        {/* Right side - Logo and Text */}
+        <div className="hidden lg:flex flex-col items-center lg:items-start space-y-12">
+          <div className="flex flex-col items-center space-y-6">
+            <Image
+              src="/logoautismo.png"
+              alt="Logo Sala Sensorial / ALECE"
+              width={250}
+              height={250}
+              className="object-contain"
+              priority
+            />
+            <div className="text-center">
+              <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-amber-500 bg-clip-text text-transparent">
+                Sala Sensorial
+              </h2>
+              <p className="text-2xl text-blue-600 font-semibold mt-2">ALECE</p>
+            </div>
+          </div>
+          <div className="max-w-md bg-white/40 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+            <h3 className="text-2xl font-semibold text-blue-700 mb-4">
+              Sistema de Gestão Integrado
+            </h3>
+            <p className="text-gray-700 leading-relaxed text-lg">
+              Bem-vindo à plataforma dedicada ao gerenciamento da Sala Sensorial. 
+              Nossa missão é proporcionar um ambiente acolhedor e organizado para 
+              o desenvolvimento e acompanhamento das atividades.
+            </p>
+            <div className="mt-6 flex items-center space-x-2 text-amber-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">Compromisso com a inclusão e o cuidado</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Home;
+}
