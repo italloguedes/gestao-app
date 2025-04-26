@@ -18,6 +18,11 @@ interface Postagem {
 const Home: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [postagens, setPostagens] = useState<Postagem[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -30,7 +35,6 @@ const Home: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.expires_at) {
         setIsAuthenticated(true);
-        // Inicia o timer quando o usuário está autenticado
         iniciarTimer(session.expires_at);
       }
 
@@ -43,7 +47,6 @@ const Home: React.FC = () => {
         console.error('Erro ao carregar postagens:', error);
       } else {
         setPostagens(data || []);
-        // Extrai categorias únicas
         const cats = [...new Set(data?.map(post => post.categoria) || [])];
         setCategorias(cats);
       }
@@ -81,16 +84,61 @@ const Home: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      alert('Erro ao fazer login: ' + error.message);
-    } else if (data.session && data.session.expires_at) {
-      setIsAuthenticated(true);
-      iniciarTimer(data.session.expires_at);
-      router.push('/dashboard');
+    setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        setIsAuthenticated(true);
+        if (data.session.expires_at) {
+          iniciarTimer(data.session.expires_at);
+        }
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+
+      if (error) throw error;
+
+      setMessage('Verifique seu email para confirmar o cadastro');
+      setIsRegistering(false);
+    } catch (error: any) {
+      setError(error.message || 'Erro ao criar conta');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,27 +164,105 @@ const Home: React.FC = () => {
               <h1 className="text-2xl font-bold text-gray-800">Sala Sensorial</h1>
             </div>
             
-            {!isAuthenticated ? (
-              <form onSubmit={handleLogin} className="hidden md:flex items-center space-x-4">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="input"
-                />
-                <input
-                  type="password"
-                  placeholder="Senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input"
-                />
-                <button type="submit" className="btn-primary">Login</button>
-              </form>
-            ) : (
+            {!isAuthenticated && (
+              <div className="hidden md:block">
+                {isRegistering ? (
+                  <form onSubmit={handleRegister} className="flex items-center space-x-4">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="input"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Senha"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="input"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirmar Senha"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="input"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={loading}
+                      className="btn-primary"
+                    >
+                      {loading ? 'Criando...' : 'Criar Conta'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegistering(false);
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="btn-secondary"
+                    >
+                      Voltar
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLogin} className="flex items-center space-x-4">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="input"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Senha"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="input"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="btn-primary"
+                    >
+                      {loading ? 'Entrando...' : 'Entrar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegistering(true);
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="btn-secondary"
+                    >
+                      Criar Conta
+                    </button>
+                  </form>
+                )}
+                {error && (
+                  <div className="absolute mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {error}
+                  </div>
+                )}
+                {message && (
+                  <div className="absolute mt-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded">
+                    {message}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isAuthenticated && (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
                   <svg 
