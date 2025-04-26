@@ -13,24 +13,17 @@ export async function GET(
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Erro ao buscar usuário' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -42,7 +35,6 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-
     const { data: user, error } = await supabase
       .from('users')
       .update(body)
@@ -51,17 +43,13 @@ export async function PUT(
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Erro ao atualizar usuário' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -78,17 +66,13 @@ export async function DELETE(
       .eq('id', params.id);
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Erro ao excluir usuário' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ message: 'Usuário excluído com sucesso' });
+    return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error deleting user:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
