@@ -17,6 +17,7 @@ interface Atendimento {
   dia_atual: string;
   horario: string;
   status: string;
+  solicitante: string;
 }
 
 export default function GerarRelatorioPage() {
@@ -65,12 +66,12 @@ export default function GerarRelatorioPage() {
     doc.text(total, (doc.internal.pageSize.width - totalWidth) / 2, 60);
     
     // Configuração da tabela
-    const tableColumn = ['Data', 'Nome do Solicitante', 'CPF', 'Protocolo'];
+    const tableColumn = ['Data', 'Nome', 'CPF', 'Solicitante'];
     const tableRows = atendimentos.map(atendimento => [
       formatDate(atendimento.dia_atual),
       atendimento.nome,
       atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
-      atendimento.protocolo
+      atendimento.solicitante
     ]);
 
     autoTable(doc, {
@@ -78,28 +79,28 @@ export default function GerarRelatorioPage() {
       body: tableRows,
       startY: 70,
       styles: {
-        fontSize: 10,
-        cellPadding: 6,
+        fontSize: 8,
+        cellPadding: 4,
         lineColor: [200, 200, 200],
         lineWidth: 0.1,
       },
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 11,
+        fontSize: 9,
         fontStyle: 'bold',
         halign: 'center'
       },
       columnStyles: {
-        0: { cellWidth: 30 }, // Data
-        1: { cellWidth: 80 }, // Nome
-        2: { cellWidth: 40 }, // CPF
-        3: { cellWidth: 40 }  // Protocolo
+        0: { cellWidth: 25 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 50 }
       },
       alternateRowStyles: {
         fillColor: secondaryColor
       },
-      margin: { top: 70, right: 15, bottom: 20, left: 15 }
+      margin: { top: 70, right: 10, bottom: 20, left: 10 }
     });
 
     // Adicionar rodapé
@@ -151,7 +152,8 @@ export default function GerarRelatorioPage() {
         .select('*')
         .gte('dia_atual', dataInicioAjustada)
         .lte('dia_atual', dataFimAjustada)
-        .order('dia_atual', { ascending: true });
+        .order('dia_atual', { ascending: true })
+        .order('horario', { ascending: true });
 
       if (error) {
         console.error('Erro ao buscar atendimentos:', error);
