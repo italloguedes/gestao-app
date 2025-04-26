@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
-  const id = request.url.split('/').pop()
+  const id = parseInt(request.url.split('/').pop() || '0')
   
-  if (!id) {
-    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  if (!id || isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
 
   try {
@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const id = request.url.split('/').pop()
+  const id = parseInt(request.url.split('/').pop() || '0')
   
-  if (!id) {
-    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  if (!id || isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
 
   try {
@@ -56,10 +56,10 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const id = request.url.split('/').pop()
+  const id = parseInt(request.url.split('/').pop() || '0')
   
-  if (!id) {
-    return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  if (!id || isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
 
   try {

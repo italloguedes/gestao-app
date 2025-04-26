@@ -80,7 +80,7 @@ export const useUserOperations = () => {
     }
   };
 
-  const updateUser = async (id: string, userData: Partial<User>) => {
+  const updateUser = async (id: number, userData: Partial<User>) => {
     try {
       setLoading(true);
       setError(null);
@@ -121,7 +121,7 @@ export const useUserOperations = () => {
     }
   };
 
-  const deleteUser = async (id: string) => {
+  const deleteUser = async (id: number) => {
     try {
       setLoading(true);
       setError(null);
