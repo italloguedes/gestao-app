@@ -74,6 +74,7 @@ export default function AtendimentosPage() {
 
       const { data, error, count } = await query
         .order('dia_atual', { ascending: false })
+        .order('horario', { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
@@ -90,8 +91,11 @@ export default function AtendimentosPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    const [datePart] = dateString.split('T');
+    const date = new Date(datePart + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Fortaleza'
+    });
   };
 
   const formatTime = (timeString: string) => {
