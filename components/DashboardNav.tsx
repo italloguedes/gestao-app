@@ -241,29 +241,33 @@ export default function DashboardNav() {
           </div>
 
           {/* Desktop user menu */}
-          <div className="hidden sm:flex sm:items-center sm:space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                <span className="text-emerald-600 font-medium text-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </span>
+          <div className="hidden sm:flex sm:items-center">
+            <div className="flex items-center px-4 py-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <span className="text-emerald-600 font-medium text-sm">
+                    {userName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700">{userName}</span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut();
+                        router.push('/');
+                      } catch (error) {
+                        console.error('Erro ao fazer logout:', error);
+                        setError('Erro ao fazer logout');
+                      }
+                    }}
+                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    Sair
+                  </button>
+                </div>
               </div>
-              <span className="text-sm font-medium text-gray-700">{userName}</span>
             </div>
-            <button
-              onClick={async () => {
-                try {
-                  await supabase.auth.signOut();
-                  router.push('/');
-                } catch (error) {
-                  console.error('Erro ao fazer logout:', error);
-                  setError('Erro ao fazer logout');
-                }
-              }}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-emerald-700 bg-emerald-50 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-              Sair
-            </button>
           </div>
         </div>
       </div>
@@ -296,33 +300,31 @@ export default function DashboardNav() {
             )}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="flex items-center px-4">
-              <div className="flex-shrink-0">
+            <div className="px-4 py-3 bg-gray-50 rounded-lg mx-3">
+              <div className="flex items-center space-x-3">
                 <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
                   <span className="text-emerald-600 font-medium">
                     {userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
+                <div className="flex flex-col">
+                  <div className="text-base font-medium text-gray-800">{userName}</div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut();
+                        router.push('/');
+                      } catch (error) {
+                        console.error('Erro ao fazer logout:', error);
+                        setError('Erro ao fazer logout');
+                      }
+                    }}
+                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium text-left"
+                  >
+                    Sair
+                  </button>
+                </div>
               </div>
-              <div className="ml-3">
-                <div className="text-base font-medium text-gray-800">{userName}</div>
-              </div>
-            </div>
-            <div className="mt-3 space-y-1">
-              <button
-                onClick={async () => {
-                  try {
-                    await supabase.auth.signOut();
-                    router.push('/');
-                  } catch (error) {
-                    console.error('Erro ao fazer logout:', error);
-                    setError('Erro ao fazer logout');
-                  }
-                }}
-                className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              >
-                Sair
-              </button>
             </div>
           </div>
         </div>
