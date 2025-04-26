@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
+type Props = {
+  params: { id: string };
+};
 
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  props: Props
 ): Promise<NextResponse> {
   try {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', context.params.id)
+      .eq('id', props.params.id)
       .single();
 
     if (error) {
@@ -37,14 +35,14 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  props: Props
 ): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { data: user, error } = await supabase
       .from('users')
       .update(body)
-      .eq('id', context.params.id)
+      .eq('id', props.params.id)
       .select()
       .single();
 
@@ -63,13 +61,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  props: Props
 ): Promise<NextResponse> {
   try {
     const { error } = await supabase
       .from('users')
       .delete()
-      .eq('id', context.params.id);
+      .eq('id', props.params.id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
