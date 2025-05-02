@@ -51,7 +51,7 @@ export default function AtendimentosPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // Aguarda 500ms após a última digitação
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -90,6 +90,20 @@ export default function AtendimentosPage() {
     }
   };
 
+  // Adiciona um listener para atualizações em tempo real
+  useEffect(() => {
+    const channel = supabase
+      .channel('atendimentos_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'atendimentos' }, () => {
+        fetchAtendimentos();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const formatDate = (dateString: string) => {
     const [datePart] = dateString.split('T');
     const date = new Date(datePart + 'T00:00:00');
@@ -100,6 +114,32 @@ export default function AtendimentosPage() {
 
   const formatTime = (timeString: string) => {
     return timeString.substring(0, 5);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'concluido':
+        return 'bg-green-100 text-green-800';
+      case 'em_andamento':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'correcao':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'concluido':
+        return 'Concluído';
+      case 'em_andamento':
+        return 'Em andamento';
+      case 'correcao':
+        return 'Correção';
+      default:
+        return status;
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -163,16 +203,8 @@ export default function AtendimentosPage() {
                 <td className="px-6 py-4">{formatDate(atendimento.dia_atual)}</td>
                 <td className="px-6 py-4">{formatTime(atendimento.horario)}</td>
                 <td className="px-6 py-4">
-                  <span
-                    className={`px-2 py-1 rounded text-sm ${
-                      atendimento.status === 'concluido'
-                        ? 'bg-green-100 text-green-800'
-                        : atendimento.status === 'em_andamento'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}
-                  >
-                    {atendimento.status === 'concluido' ? 'Concluído' : 'Em andamento'}
+                  <span className={`px-2 py-1 rounded text-sm ${getStatusColor(atendimento.status)}`}>
+                    {getStatusLabel(atendimento.status)}
                   </span>
                 </td>
                 <td className="px-6 py-4">

@@ -14,8 +14,61 @@ export default function DashboardNav() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sessionTime, setSessionTime] = useState(() => {
+    // Tenta recuperar o tempo restante do localStorage
+    const savedTime = localStorage.getItem('sessionTime');
+    if (savedTime) {
+      const timeLeft = parseInt(savedTime);
+      // Se o tempo salvo já expirou, retorna 0
+      if (timeLeft <= 0) return 0;
+      return timeLeft;
+    }
+    // Se não houver tempo salvo, inicia com 2 horas
+    return 7200;
+  });
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    // Salva o tempo inicial no localStorage quando o componente monta
+    if (!localStorage.getItem('sessionTime')) {
+      localStorage.setItem('sessionTime', '7200');
+    }
+
+    const timer = setInterval(() => {
+      setSessionTime((prevTime) => {
+        if (prevTime <= 0) {
+          clearInterval(timer);
+          localStorage.removeItem('sessionTime');
+          handleLogout();
+          return 0;
+        }
+        const newTime = prevTime - 1;
+        localStorage.setItem('sessionTime', newTime.toString());
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem('sessionTime');
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      setError('Erro ao fazer logout');
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -241,7 +294,10 @@ export default function DashboardNav() {
           </div>
 
           {/* Desktop user menu */}
-          <div className="hidden sm:flex sm:items-center">
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-500">
+              Sessão expira em: {formatTime(sessionTime)}
+            </div>
             <div className="flex items-center px-4 py-2 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -251,22 +307,14 @@ export default function DashboardNav() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-700">{userName}</span>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut();
-                        router.push('/');
-                      } catch (error) {
-                        console.error('Erro ao fazer logout:', error);
-                        setError('Erro ao fazer logout');
-                      }
-                    }}
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                  >
-                    Sair
-                  </button>
                 </div>
               </div>
+              <button
+                onClick={handleLogout}
+                className="ml-4 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Sair
+              </button>
             </div>
           </div>
         </div>
@@ -301,29 +349,26 @@ export default function DashboardNav() {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="px-4 py-3 bg-gray-50 rounded-lg mx-3">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <span className="text-emerald-600 font-medium">
-                    {userName.charAt(0).toUpperCase()}
-                  </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <span className="text-emerald-600 font-medium">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="text-base font-medium text-gray-800">{userName}</div>
+                    <div className="text-sm text-gray-500">
+                      Sessão expira em: {formatTime(sessionTime)}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <div className="text-base font-medium text-gray-800">{userName}</div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut();
-                        router.push('/');
-                      } catch (error) {
-                        console.error('Erro ao fazer logout:', error);
-                        setError('Erro ao fazer logout');
-                      }
-                    }}
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium text-left"
-                  >
-                    Sair
-                  </button>
-                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  Sair
+                </button>
               </div>
             </div>
           </div>

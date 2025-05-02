@@ -28,6 +28,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedAtendimento, setEditedAtendimento] = useState<Partial<Atendimento>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const { user } = useAuth();
 
@@ -58,7 +59,35 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
   };
 
+  const validateCPF = (cpf: string) => {
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) return 'CPF deve ter 11 dígitos';
+    return null;
+  };
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'E-mail inválido';
+    return null;
+  };
+
   const handleInputChange = (field: keyof Atendimento, value: string) => {
+    setValidationErrors(prev => ({ ...prev, [field]: '' }));
+    
+    if (field === 'cpf') {
+      const error = validateCPF(value);
+      if (error) {
+        setValidationErrors(prev => ({ ...prev, [field]: error }));
+      }
+    }
+    
+    if (field === 'email') {
+      const error = validateEmail(value);
+      if (error) {
+        setValidationErrors(prev => ({ ...prev, [field]: error }));
+      }
+    }
+
     setEditedAtendimento(prev => ({
       ...prev,
       [field]: value
@@ -67,6 +96,36 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
   const handleSave = async () => {
     try {
+      // Validar campos antes de salvar
+      const errors: Record<string, string> = {};
+      
+      if (!editedAtendimento.nome?.trim()) {
+        errors.nome = 'Nome é obrigatório';
+      }
+      
+      if (!editedAtendimento.cpf?.trim()) {
+        errors.cpf = 'CPF é obrigatório';
+      } else {
+        const cpfError = validateCPF(editedAtendimento.cpf);
+        if (cpfError) errors.cpf = cpfError;
+      }
+      
+      if (!editedAtendimento.email?.trim()) {
+        errors.email = 'E-mail é obrigatório';
+      } else {
+        const emailError = validateEmail(editedAtendimento.email);
+        if (emailError) errors.email = emailError;
+      }
+      
+      if (!editedAtendimento.solicitante?.trim()) {
+        errors.solicitante = 'Solicitante é obrigatório';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
       setLoading(true);
       const { error } = await supabase
         .from('atendimentos')
@@ -77,6 +136,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       
       setAtendimento(prev => prev ? { ...prev, ...editedAtendimento } : null);
       setIsEditing(false);
+      setValidationErrors({});
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -139,139 +199,180 @@ export default function AtendimentoDetalhes({ id }: Props) {
           Voltar
         </button>
         <h1 className="text-2xl font-bold">Detalhes do Atendimento</h1>
-        <button
-          onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-          className={`px-4 py-2 rounded-md ${
-            isEditing 
-              ? 'bg-green-500 text-white hover:bg-green-600' 
-              : 'bg-blue-500 text-white hover:bg-blue-600'
-          }`}
-        >
-          {isEditing ? 'Salvar' : 'Editar'}
-        </button>
+        <div className="flex gap-2">
+          {isEditing && (
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setEditedAtendimento(atendimento);
+                setValidationErrors({});
+              }}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+            >
+              Cancelar
+            </button>
+          )}
+          <button
+            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+            className={`px-4 py-2 rounded-md ${
+              isEditing 
+                ? 'bg-green-500 text-white hover:bg-green-600' 
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            {isEditing ? 'Salvar' : 'Editar'}
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Protocolo</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedAtendimento.protocolo || ''}
-                  onChange={(e) => handleInputChange('protocolo', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <p className="font-semibold">{atendimento.protocolo}</p>
-              )}
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Protocolo</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedAtendimento.protocolo || ''}
+                onChange={(e) => handleInputChange('protocolo', e.target.value)}
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                disabled
+              />
+            ) : (
+              <p className="font-semibold">{atendimento.protocolo}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              {isEditing ? (
-                <select
-                  value={editedAtendimento.status || ''}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="em_andamento">Em andamento</option>
-                  <option value="concluido">Concluído</option>
-                  <option value="correcao">Correção</option>
-                </select>
-              ) : (
-                <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
-                  {getStatusLabel(atendimento.status)}
-                </span>
-              )}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            {isEditing ? (
+              <select
+                value={editedAtendimento.status || ''}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="em_andamento">Em andamento</option>
+                <option value="concluido">Concluído</option>
+                <option value="correcao">Correção</option>
+              </select>
+            ) : (
+              <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
+                {getStatusLabel(atendimento.status)}
+              </span>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-              {isEditing ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+            {isEditing ? (
+              <div>
                 <input
                   type="text"
                   value={editedAtendimento.nome || ''}
                   onChange={(e) => handleInputChange('nome', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.nome ? 'border-red-500' : ''
+                  }`}
                 />
-              ) : (
-                <p className="font-semibold">{atendimento.nome}</p>
-              )}
-            </div>
+                {validationErrors.nome && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.nome}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-semibold">{atendimento.nome}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-              {isEditing ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+            {isEditing ? (
+              <div>
                 <input
                   type="text"
                   value={editedAtendimento.cpf || ''}
                   onChange={(e) => handleInputChange('cpf', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.cpf ? 'border-red-500' : ''
+                  }`}
                 />
-              ) : (
-                <p className="font-semibold">{atendimento.cpf}</p>
-              )}
-            </div>
+                {validationErrors.cpf && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.cpf}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-semibold">{atendimento.cpf}</p>
+            )}
           </div>
+        </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-              {isEditing ? (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            {isEditing ? (
+              <div>
                 <input
                   type="email"
                   value={editedAtendimento.email || ''}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.email ? 'border-red-500' : ''
+                  }`}
                 />
-              ) : (
-                <p className="font-semibold">{atendimento.email}</p>
-              )}
-            </div>
+                {validationErrors.email && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-semibold">{atendimento.email}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Solicitante</label>
-              {isEditing ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Solicitante</label>
+            {isEditing ? (
+              <div>
                 <input
                   type="text"
                   value={editedAtendimento.solicitante || ''}
                   onChange={(e) => handleInputChange('solicitante', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.solicitante ? 'border-red-500' : ''
+                  }`}
                 />
-              ) : (
-                <p className="font-semibold">{atendimento.solicitante}</p>
-              )}
-            </div>
+                {validationErrors.solicitante && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.solicitante}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-semibold">{atendimento.solicitante}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-              {isEditing ? (
-                <input
-                  type="date"
-                  value={editedAtendimento.dia_atual?.split('T')[0] || ''}
-                  onChange={(e) => handleInputChange('dia_atual', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <p className="font-semibold">{formatDate(atendimento.dia_atual)}</p>
-              )}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+            {isEditing ? (
+              <input
+                type="date"
+                value={editedAtendimento.dia_atual?.split('T')[0] || ''}
+                onChange={(e) => handleInputChange('dia_atual', e.target.value)}
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="font-semibold">{formatDate(atendimento.dia_atual)}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
-              {isEditing ? (
-                <input
-                  type="time"
-                  value={editedAtendimento.horario || ''}
-                  onChange={(e) => handleInputChange('horario', e.target.value)}
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <p className="font-semibold">{formatTime(atendimento.horario)}</p>
-              )}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+            {isEditing ? (
+              <input
+                type="time"
+                value={editedAtendimento.horario || ''}
+                onChange={(e) => handleInputChange('horario', e.target.value)}
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="font-semibold">{formatTime(atendimento.horario)}</p>
+            )}
           </div>
         </div>
       </div>
