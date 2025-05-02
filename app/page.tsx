@@ -200,7 +200,7 @@ export default function Home() {
               <text x="0" y="40" fontSize="48" fill="#FFA726">“</text>
             </svg>
             <p className="text-2xl font-light mb-4" style={{ color: '#23B4E7' }}>
-              Bem-vindo à plataforma dedicada ao gerenciamento do CIADI.<br />
+              Bem-vindo à plataforma dedicada ao gerenciamento da Sala Sensorial / ALECE.<br />
               Nossa missão é proporcionar um ambiente acolhedor e organizado para o desenvolvimento e acompanhamento das atividades.
             </p>
             <div className="flex items-center justify-center gap-3">
