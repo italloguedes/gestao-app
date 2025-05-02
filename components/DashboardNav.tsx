@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getUserByAuthId, createUser, hasAccessToDashboard, isAdmin, type UserRole } from '@/lib/models/User';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardNav() {
   const [isAdminUser, setIsAdminUser] = useState(false);
@@ -14,52 +15,50 @@ export default function DashboardNav() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [sessionTime, setSessionTime] = useState(() => {
-    // Tenta recuperar o tempo restante do localStorage
-    const savedTime = localStorage.getItem('sessionTime');
-    if (savedTime) {
-      const timeLeft = parseInt(savedTime);
-      // Se o tempo salvo já expirou, retorna 0
-      if (timeLeft <= 0) return 0;
-      return timeLeft;
-    }
-    // Se não houver tempo salvo, inicia com 2 horas
-    return 7200;
-  });
+  const [sessionTime, setSessionTime] = useState<number>(7200);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Salva o tempo inicial no localStorage quando o componente monta
-    if (!localStorage.getItem('sessionTime')) {
-      localStorage.setItem('sessionTime', '7200');
+    setIsClient(true);
+    const savedTime = localStorage.getItem('sessionTime');
+    if (savedTime) {
+      setSessionTime(parseInt(savedTime, 10));
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
 
     const timer = setInterval(() => {
-      setSessionTime((prevTime) => {
-        if (prevTime <= 0) {
+      setSessionTime(prev => {
+        const newTime = prev - 1;
+        localStorage.setItem('sessionTime', newTime.toString());
+        if (newTime <= 0) {
           clearInterval(timer);
-          localStorage.removeItem('sessionTime');
           handleLogout();
           return 0;
         }
-        const newTime = prevTime - 1;
-        localStorage.setItem('sessionTime', newTime.toString());
         return newTime;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isClient]);
 
   const handleLogout = async () => {
     try {
       localStorage.removeItem('sessionTime');
-      await supabase.auth.signOut();
+      await signOut();
       router.push('/');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      setError('Erro ao fazer logout');
     }
   };
 
@@ -295,9 +294,11 @@ export default function DashboardNav() {
 
           {/* Desktop user menu */}
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-500">
-              Sessão expira em: {formatTime(sessionTime)}
-            </div>
+            {isClient && (
+              <div className="mr-4 text-sm text-gray-600">
+                Tempo restante: {formatTime(sessionTime)}
+              </div>
+            )}
             <div className="flex items-center px-4 py-2 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
