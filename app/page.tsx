@@ -55,18 +55,111 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
-        if (signUpError) throw signUpError;
-        setMessage('Verifique seu email para confirmar o cadastro');
+
+        if (password.length < 6) {
+          setError('A senha deve ter pelo menos 6 caracteres');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Iniciando processo de signup...', { email });
+
+        // Tenta criar o usuário no Supabase Auth
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              email,
+              role: 'user',
+              status: 'active'
+            }
+          }
+        });
+
+        console.log('Resposta do signup:', { 
+          success: !!authData, 
+          error: signUpError ? {
+            code: signUpError.code,
+            message: signUpError.message,
+            status: signUpError.status
+          } : null,
+          data: authData
+        });
+
+        if (signUpError) {
+          console.error('Erro detalhado do signup:', signUpError);
+          
+          // Tratamento específico para erros comuns
+          if (signUpError.message.includes('already registered')) {
+            setError('Este email já está cadastrado');
+          } else if (signUpError.message.includes('password')) {
+            setError('A senha não atende aos requisitos mínimos');
+          } else {
+            setError('Erro ao criar conta. Por favor, tente novamente.');
+          }
+          
+          throw signUpError;
+        }
+
+        if (authData?.user) {
+          console.log('Usuário criado com sucesso:', authData.user);
+          setMessage('Verifique seu email para confirmar o cadastro');
+        }
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        console.log('Iniciando processo de login...', { email });
+        
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+
+        console.log('Resposta do login:', { 
+          success: !!data, 
+          error: signInError ? {
+            code: signInError.code,
+            message: signInError.message,
+            status: signInError.status
+          } : null
+        });
+
+        if (signInError) {
+          console.error('Erro detalhado do login:', signInError);
+          throw signInError;
+        }
+
         if (data.session) {
-          router.push('/dashboard');
+          console.log('Login bem sucedido, verificando permissões...');
+          
+          // Busca o usuário no banco de dados
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', email)
+            .single();
+
+          if (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            throw error;
+          }
+
+          // Se for admin, redireciona para o dashboard
+          if (userData?.role === 'admin') {
+            console.log('Usuário admin, redirecionando para o dashboard...');
+            router.push('/dashboard');
+          } else {
+            // Para outros usuários, redireciona para o agendamento
+            console.log('Usuário comum, redirecionando para o agendamento...');
+            router.push('/agendamento');
+          }
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao autenticar');
+      console.error('Erro completo na autenticação:', err);
+      if (!error) { // Só define o erro se ainda não foi definido
+        setError(err.message || 'Erro ao autenticar');
+      }
     } finally {
       setLoading(false);
     }

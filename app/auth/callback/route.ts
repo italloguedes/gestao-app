@@ -8,9 +8,22 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createRouteHandlerClient({ cookies });
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data: { session } } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (session?.user) {
+      // Busca o usuário no banco de dados
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', session.user.email)
+        .single();
+
+      if (!error && userData?.role === 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
   }
 
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Para outros usuários ou em caso de erro, redireciona para o agendamento
+  return NextResponse.redirect(new URL('/agendamento', request.url));
 } 

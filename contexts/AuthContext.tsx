@@ -23,13 +23,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Se o usuário estiver autenticado e estiver na página inicial, redireciona para o dashboard
       if (session?.user && window.location.pathname === '/') {
-        router.push('/dashboard');
+        try {
+          // Busca o usuário no banco de dados
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', session.user.email)
+            .single();
+
+          if (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            return;
+          }
+
+          // Se for admin, redireciona para o dashboard
+          if (userData?.role === 'admin') {
+            router.push('/dashboard');
+          } else {
+            // Para outros usuários, redireciona para o agendamento
+            router.push('/agendamento');
+          }
+        } catch (error) {
+          console.error('Erro ao verificar permissões:', error);
+          // Em caso de erro, redireciona para o agendamento por padrão
+          router.push('/agendamento');
+        }
       }
     });
 

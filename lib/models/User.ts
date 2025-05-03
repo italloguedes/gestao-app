@@ -16,6 +16,25 @@ export interface User {
 export async function initializeDatabase() {
   try {
     console.log('Iniciando inicialização do banco de dados...');
+    console.log('Verificando conexão com o Supabase...');
+
+    // Test connection first
+    const { data: testData, error: testError } = await supabase
+      .from('users')
+      .select('count')
+      .limit(1);
+
+    if (testError) {
+      console.error('Erro na conexão com o Supabase:', {
+        code: testError.code,
+        message: testError.message,
+        details: testError.details,
+        hint: testError.hint
+      });
+      return { success: false, error: testError };
+    }
+
+    console.log('Conexão com o Supabase estabelecida com sucesso');
 
     // Check if the users table exists and has the correct structure
     const { data: tableCheck, error: queryError } = await supabase
@@ -23,13 +42,24 @@ export async function initializeDatabase() {
       .select('id')
       .limit(1);
 
-    console.log('Verificação da tabela:', { data: tableCheck, error: queryError });
+    console.log('Verificação da tabela:', { 
+      data: tableCheck, 
+      error: queryError,
+      hasData: !!tableCheck,
+      errorDetails: queryError ? {
+        code: queryError.code,
+        message: queryError.message,
+        details: queryError.details,
+        hint: queryError.hint
+      } : null
+    });
 
     if (queryError) {
       console.error('Erro ao acessar tabela users:', {
         code: queryError.code,
         message: queryError.message,
-        details: queryError.details
+        details: queryError.details,
+        hint: queryError.hint
       });
       return { success: false, error: queryError };
     }
@@ -43,14 +73,22 @@ export async function initializeDatabase() {
 
     console.log('Verificação de admin existente:', { 
       exists: !!existingAdmin,
-      error: adminCheckError 
+      adminData: existingAdmin,
+      error: adminCheckError,
+      errorDetails: adminCheckError ? {
+        code: adminCheckError.code,
+        message: adminCheckError.message,
+        details: adminCheckError.details,
+        hint: adminCheckError.hint
+      } : null
     });
 
     if (adminCheckError && adminCheckError.code !== 'PGRST116') {
       console.error('Erro ao verificar usuário admin:', {
         code: adminCheckError.code,
         message: adminCheckError.message,
-        details: adminCheckError.details
+        details: adminCheckError.details,
+        hint: adminCheckError.hint
       });
       return { success: false, error: adminCheckError };
     }
@@ -68,6 +106,8 @@ export async function initializeDatabase() {
         updated_at: new Date().toISOString()
       };
 
+      console.log('Dados do admin a serem inseridos:', adminData);
+
       const { data: newAdmin, error: insertError } = await supabase
         .from('users')
         .insert([adminData])
@@ -77,14 +117,21 @@ export async function initializeDatabase() {
       console.log('Resultado da criação do admin:', {
         success: !!newAdmin,
         error: insertError,
-        admin: newAdmin
+        admin: newAdmin,
+        errorDetails: insertError ? {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        } : null
       });
 
       if (insertError) {
         console.error('Erro ao criar usuário admin:', {
           code: insertError.code,
           message: insertError.message,
-          details: insertError.details
+          details: insertError.details,
+          hint: insertError.hint
         });
         return { success: false, error: insertError };
       }
@@ -170,16 +217,87 @@ export async function getUserByAuthId(authId: string) {
 
 export async function createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>) {
   try {
+    console.log('Iniciando criação de usuário com dados:', userData);
+
+    // Validate required fields
+    if (!userData.name || !userData.email || !userData.role || !userData.status) {
+      const error = new Error('Todos os campos são obrigatórios');
+      console.error('Erro de validação:', error);
+      throw error;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      const error = new Error('Formato de email inválido');
+      console.error('Erro de validação de email:', error);
+      throw error;
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'atendente', 'user'];
+    if (!validRoles.includes(userData.role)) {
+      const error = new Error('Função inválida');
+      console.error('Erro de validação de função:', error);
+      throw error;
+    }
+
+    // Validate status
+    const validStatuses = ['active', 'inactive'];
+    if (!validStatuses.includes(userData.status)) {
+      const error = new Error('Status inválido');
+      console.error('Erro de validação de status:', error);
+      throw error;
+    }
+
+    console.log('Dados validados com sucesso, tentando inserir no banco...');
+
     const { data, error } = await supabase
       .from('users')
-      .insert([userData])
+      .insert([{
+        ...userData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
       .select()
       .single();
 
-    if (error) throw error;
+    console.log('Resposta do Supabase:', {
+      success: !!data,
+      error: error ? {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      } : null,
+      data
+    });
+
+    if (error) {
+      console.error('Erro ao criar usuário no Supabase:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // Handle specific error cases
+      if (error.code === '23505') {
+        throw new Error('Este email já está em uso');
+      }
+      throw error;
+    }
+
+    if (!data) {
+      const error = new Error('Nenhum dado retornado após a criação do usuário');
+      console.error('Erro na criação do usuário:', error);
+      throw error;
+    }
+
+    console.log('Usuário criado com sucesso:', data);
     return data as User;
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Erro na função createUser:', error);
     throw error;
   }
 }
