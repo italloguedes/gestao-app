@@ -12,6 +12,9 @@ interface DashboardStats {
   emAndamento: number;
   concluidos: number;
   hoje: number;
+  agendamentosPendentes: number;
+  agendamentosConfirmados: number;
+  agendamentosCancelados: number;
 }
 
 interface Atendimento {
@@ -35,6 +38,9 @@ export default function DashboardPage() {
     emAndamento: 0,
     concluidos: 0,
     hoje: 0,
+    agendamentosPendentes: 0,
+    agendamentosConfirmados: 0,
+    agendamentosCancelados: 0,
   });
   const [loading, setLoading] = useState(true);
   const [recentAtendimentos, setRecentAtendimentos] = useState<Atendimento[]>([]);
@@ -83,6 +89,24 @@ export default function DashboardPage() {
         .select('*', { count: 'exact' })
         .eq('dia_atual', today);
 
+      // Agendamentos pendentes
+      const { count: agendamentosPendentes } = await supabase
+        .from('agendamentos')
+        .select('*', { count: 'exact' })
+        .eq('status', 'pendente');
+
+      // Agendamentos confirmados
+      const { count: agendamentosConfirmados } = await supabase
+        .from('agendamentos')
+        .select('*', { count: 'exact' })
+        .eq('status', 'confirmado');
+
+      // Agendamentos cancelados
+      const { count: agendamentosCancelados } = await supabase
+        .from('agendamentos')
+        .select('*', { count: 'exact' })
+        .eq('status', 'cancelado');
+
       // Buscar atendimentos recentes
       const { data: recent } = await supabase
         .from('atendimentos')
@@ -97,6 +121,9 @@ export default function DashboardPage() {
         emAndamento: emAndamento || 0,
         concluidos: concluidos || 0,
         hoje: hoje || 0,
+        agendamentosPendentes: agendamentosPendentes || 0,
+        agendamentosConfirmados: agendamentosConfirmados || 0,
+        agendamentosCancelados: agendamentosCancelados || 0,
       });
 
       setRecentAtendimentos(recent || []);
@@ -168,6 +195,22 @@ export default function DashboardPage() {
         <div className="card p-4">
           <h3 className="text-sm font-medium text-gray-500">Hoje</h3>
           <p className="mt-2 text-3xl font-bold text-emerald-600">{stats.hoje}</p>
+        </div>
+      </div>
+
+      {/* Cards de Agendamentos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div className="card p-4">
+          <h3 className="text-sm font-medium text-gray-500">Agendamentos Pendentes</h3>
+          <p className="mt-2 text-3xl font-bold text-yellow-600">{stats.agendamentosPendentes}</p>
+        </div>
+        <div className="card p-4">
+          <h3 className="text-sm font-medium text-gray-500">Agendamentos Confirmados</h3>
+          <p className="mt-2 text-3xl font-bold text-green-600">{stats.agendamentosConfirmados}</p>
+        </div>
+        <div className="card p-4">
+          <h3 className="text-sm font-medium text-gray-500">Agendamentos Cancelados</h3>
+          <p className="mt-2 text-3xl font-bold text-red-600">{stats.agendamentosCancelados}</p>
         </div>
       </div>
 

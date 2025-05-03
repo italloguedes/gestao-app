@@ -37,6 +37,7 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,6 +50,17 @@ export default function Home() {
     setLoading(true);
 
     try {
+      if (isRecovering) {
+        const { error: recoverError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+
+        if (recoverError) throw recoverError;
+        setMessage('Email de recuperação enviado. Verifique sua caixa de entrada.');
+        setIsRecovering(false);
+        return;
+      }
+
       if (isRegistering) {
         if (password !== confirmPassword) {
           setError('As senhas não coincidem');
@@ -157,13 +169,13 @@ export default function Home() {
       }
     } catch (err: any) {
       console.error('Erro completo na autenticação:', err);
-      if (!error) { // Só define o erro se ainda não foi definido
+      if (!error) {
         setError(err.message || 'Erro ao autenticar');
       }
     } finally {
       setLoading(false);
     }
-  }, [email, password, confirmPassword, isRegistering, router]);
+  }, [email, password, confirmPassword, isRegistering, isRecovering, router]);
 
   // Desabilita o botão se campos obrigatórios não estão preenchidos
   const isSubmitDisabled = loading || !email || !password || (isRegistering && !confirmPassword);
@@ -191,10 +203,12 @@ export default function Home() {
               />
             </div>
             <h2 className="text-2xl font-bold text-center" style={{ color: '#23B4E7' }}>
-              {isRegistering ? 'Criar nova conta' : 'Bem-vindo de volta'}
+              {isRecovering ? 'Recuperar Senha' : isRegistering ? 'Criar nova conta' : 'Bem-vindo de volta'}
             </h2>
             <p className="text-center" style={{ color: '#8A9A91' }}>
-              {isRegistering
+              {isRecovering
+                ? 'Digite seu email para receber as instruções de recuperação'
+                : isRegistering
                 ? 'Preencha seus dados para começar'
                 : 'Entre com suas credenciais para acessar o sistema'}
             </p>
@@ -222,20 +236,22 @@ export default function Home() {
                   placeholder="seu@email.com"
                 />
               </div>
-              <div>
-                <label htmlFor="password" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Senha</label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete={isRegistering ? "new-password" : "current-password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 rounded-lg bg-[#E3F7FD] border border-[#23B4E7] focus:border-[#3AC28D] focus:outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
-              {isRegistering && (
+              {!isRecovering && (
+                <div>
+                  <label htmlFor="password" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Senha</label>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete={isRegistering ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-lg bg-[#E3F7FD] border border-[#23B4E7] focus:border-[#3AC28D] focus:outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              )}
+              {isRegistering && !isRecovering && (
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Confirmar Senha</label>
                   <input
@@ -255,22 +271,52 @@ export default function Home() {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-[#FFA726] via-[#FFD600] to-[#3AC28D] hover:from-[#FFA726] hover:to-[#23B4E7] text-white font-bold py-2 rounded-lg shadow-md transition disabled:opacity-50"
               >
-                {loading ? 'Processando...' : isRegistering ? 'Criar Conta' : 'Entrar'}
+                {loading ? 'Processando...' : isRecovering ? 'Enviar Email' : isRegistering ? 'Criar Conta' : 'Entrar'}
               </button>
             </form>
-            <div className="text-center mt-2">
-              <button
-                onClick={() => {
-                  setIsRegistering(!isRegistering);
-                  setError(null);
-                  setMessage(null);
-                }}
-                className="font-semibold underline"
-                style={{ color: '#3AC28D' }}
-                type="button"
-              >
-                {isRegistering ? 'Já tem uma conta? Entre aqui' : 'Não tem conta? Crie uma agora'}
-              </button>
+            <div className="text-center mt-2 space-y-2">
+              {!isRecovering && (
+                <button
+                  onClick={() => {
+                    setIsRegistering(!isRegistering);
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className="font-semibold underline"
+                  style={{ color: '#3AC28D' }}
+                  type="button"
+                >
+                  {isRegistering ? 'Já tem uma conta? Entre aqui' : 'Não tem conta? Crie uma agora'}
+                </button>
+              )}
+              {!isRegistering && !isRecovering && (
+                <button
+                  onClick={() => {
+                    setIsRecovering(true);
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className="font-semibold underline block w-full"
+                  style={{ color: '#FFA726' }}
+                  type="button"
+                >
+                  Esqueceu sua senha?
+                </button>
+              )}
+              {isRecovering && (
+                <button
+                  onClick={() => {
+                    setIsRecovering(false);
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className="font-semibold underline"
+                  style={{ color: '#3AC28D' }}
+                  type="button"
+                >
+                  Voltar para o login
+                </button>
+              )}
             </div>
           </div>
         </div>

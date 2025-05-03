@@ -9,6 +9,8 @@ import { FiInfo } from "react-icons/fi";
 import { sendEmailConfirmation } from '@/lib/emailService';
 
 const UNIDADE = "Sala Sensorial ALECE";
+const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
+const ENDERECO_COMPLETO = "Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238";
 const HORARIOS = [
   "08:00", "09:00", "10:00", "11:00", // manhã
   "13:00", "14:00", "15:00", "16:00", // tarde
@@ -141,99 +143,109 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
   };
 
   const handleImprimir = (agendamento: any) => {
-    const win = window.open("", "_blank");
+    const win = window.open('', '_blank');
     win!.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>Comprovante de Agendamento</title>
           <style>
-            @page {
-              size: A4;
-              margin: 0.5cm;
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              color: #333;
             }
-            body { 
-              font-family: Arial, sans-serif; 
-              padding: 10px;
-              font-size: 10pt;
-              line-height: 1.2;
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
             }
-            .header { 
-              text-align: center; 
+            .logo {
+              max-width: 150px;
               margin-bottom: 10px;
             }
-            .header h2 {
-              margin: 0;
-              font-size: 14pt;
+            .title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #047857;
+              margin-bottom: 5px;
             }
-            .section { 
-              margin-bottom: 8px;
-              page-break-inside: avoid;
-            }
-            .section-title { 
-              font-weight: bold; 
-              margin-bottom: 5px; 
-              color: #23B4E7;
-              font-size: 11pt;
-            }
-            .info { 
-              margin-bottom: 3px;
-              font-size: 9pt;
-            }
-            .warning { 
-              background-color: #FFF3CD; 
-              padding: 5px; 
-              border-left: 3px solid #FFA726; 
-              margin: 5px 0;
-              font-size: 9pt;
-            }
-            .notice { 
-              background-color: #E3F7FD; 
-              padding: 5px; 
-              border-left: 3px solid #23B4E7; 
-              margin: 5px 0;
-              font-size: 9pt;
-            }
-            .list { 
-              margin-left: 15px;
-              padding-left: 5px;
-            }
-            .list li { 
-              margin-bottom: 2px;
-              font-size: 9pt;
-            }
-            .footer { 
-              margin-top: 10px; 
-              font-size: 8pt; 
+            .subtitle {
+              font-size: 16px;
               color: #666;
-              text-align: center;
+              margin-bottom: 20px;
+            }
+            .info-container {
+              background-color: #f0fdf4;
+              padding: 20px;
+              border-radius: 5px;
+              margin-bottom: 20px;
+            }
+            .info {
+              margin-bottom: 10px;
+            }
+            .info b {
+              color: #047857;
             }
             .two-columns {
               display: flex;
-              gap: 10px;
+              gap: 20px;
+              margin-bottom: 20px;
             }
             .column {
               flex: 1;
             }
+            .section {
+              background-color: #f8fafc;
+              padding: 15px;
+              border-radius: 5px;
+              margin-bottom: 15px;
+            }
+            .section-title {
+              font-weight: bold;
+              color: #047857;
+              margin-bottom: 10px;
+            }
+            .warning {
+              color: #b45309;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .list {
+              margin: 0;
+              padding-left: 20px;
+            }
+            .list li {
+              margin-bottom: 5px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              font-size: 12px;
+              color: #666;
+            }
             @media print {
               body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                padding: 0;
+              }
+              .no-print {
+                display: none;
               }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h2>Comprovante de Agendamento</h2>
-            <p>Sala Sensorial / ALECE</p>
+            <img src="/logoautismo.png" alt="Logo CIADI" class="logo">
+            <div class="title">Comprovante de Agendamento</div>
+            <div class="subtitle">Sala Sensorial ALECE</div>
           </div>
 
-          <div class="notice">
-            <strong>Importante:</strong> O agendamento de emissão de documentos na sala sensorial / ALECE é exclusiva para pessoas autistas, com síndrome de Down e TDAH.
-          </div>
-
-          <div class="section">
-            <div class="section-title">Dados do Agendamento</div>
+          <div class="info-container">
+            <div class="info"><b>Local:</b> ${ENDERECO}</div>
+            <div class="info"><b>Endereço:</b> ${ENDERECO_COMPLETO}</div>
             <div class="info"><b>Nome:</b> ${agendamento.nome}</div>
             <div class="info"><b>E-mail:</b> ${agendamento.email}</div>
             <div class="info"><b>CPF:</b> ${agendamento.cpf}</div>
@@ -509,6 +521,7 @@ export default function AgendamentoPage() {
         data_nascimento: dataNascimento,
         data: formatDate(selectedDate),
         horario: horario + ":00", // Adicionar segundos ao salvar
+        status: 'confirmado' // Definindo como confirmado por padrão
       }).select().single();
       
       if (insertError) {
@@ -669,7 +682,8 @@ export default function AgendamentoPage() {
           {/* Horários */}
           <div className="flex-1 bg-white rounded-lg shadow p-8">
             <h2 className="text-2xl font-bold text-emerald-700 mb-2">Agendamento para emissão da CIN</h2>
-            <p className="text-lg text-gray-700 mb-1">Local: <span className="font-semibold text-emerald-700">Sala Sensorial / ALECE</span></p>
+            <p className="text-lg text-gray-700 mb-1">Local: <span className="font-semibold text-emerald-700">{ENDERECO}</span></p>
+            <p className="text-sm text-gray-600 mb-1">Endereço: <span className="text-emerald-700">{ENDERECO_COMPLETO}</span></p>
             <div className="mt-4">
               <h3 className="text-lg font-semibold text-emerald-700 mb-2">
                 Horários disponíveis
@@ -839,3 +853,4 @@ export default function AgendamentoPage() {
     </Fragment>
   );
 }
+

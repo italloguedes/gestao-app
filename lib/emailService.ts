@@ -14,12 +14,51 @@ interface Agendamento {
   cpf: string;
   telefone: string;
   data_nascimento: string;
+  status: string;
 }
 
 export async function sendEmailConfirmation(agendamento: Agendamento) {
   try {
     console.log('Iniciando envio de email para:', agendamento.email);
     
+    const subject = 'Confirmação de Agendamento - Sala Sensorial ALECE';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #047857;">Confirmação de Agendamento</h2>
+        <p>Olá ${agendamento.nome},</p>
+        <p>Seu agendamento foi confirmado com sucesso!</p>
+        
+        <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #047857; margin-top: 0;">Detalhes do Agendamento:</h3>
+          <p><strong>Local:</strong> Prédio da Assembleia Legislativa Anexo III, Sala Sensorial</p>
+          <p><strong>Endereço:</strong> Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238</p>
+          <p><strong>Data:</strong> ${new Date(agendamento.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p><strong>Horário:</strong> ${agendamento.horario}</p>
+        </div>
+
+        <div style="background-color: #eff6ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #1e40af; margin-top: 0;">Documentos Necessários:</h3>
+          <ul>
+            <li>CPF</li>
+            <li>Endereço com CEP válido</li>
+            <li>Número de telefone</li>
+            <li>Certidão conforme o estado civil</li>
+          </ul>
+        </div>
+
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #92400e; margin-top: 0;">Importante:</h3>
+          <p>O agendamento é exclusivo para pessoas autistas, com síndrome de Down e TDAH.</p>
+          <p>Chegue com 15 minutos de antecedência.</p>
+          <p>Traga todos os documentos originais e legíveis.</p>
+        </div>
+
+        <p>Em caso de dúvidas, entre em contato pelo telefone: (85) 3101-XXXX</p>
+        
+        <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
+      </div>
+    `;
+
     const response = await fetch('/api/send-email', {
       method: 'POST',
       headers: {
@@ -27,54 +66,18 @@ export async function sendEmailConfirmation(agendamento: Agendamento) {
       },
       body: JSON.stringify({
         to: agendamento.email,
-        subject: 'Confirmação de Agendamento - Sala Sensorial ALECE',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #047857;">Confirmação de Agendamento</h2>
-            <p>Olá ${agendamento.nome},</p>
-            <p>Seu agendamento foi confirmado com sucesso!</p>
-            
-            <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="color: #047857; margin-top: 0;">Detalhes do Agendamento:</h3>
-              <p><strong>Data:</strong> ${new Date(agendamento.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-              <p><strong>Horário:</strong> ${agendamento.horario}</p>
-              <p><strong>Local:</strong> Sala Sensorial / ALECE</p>
-            </div>
-
-            <div style="background-color: #eff6ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="color: #1e40af; margin-top: 0;">Documentos Necessários:</h3>
-              <ul>
-                <li>CPF</li>
-                <li>Endereço com CEP válido</li>
-                <li>Número de telefone</li>
-                <li>Certidão conforme o estado civil</li>
-              </ul>
-            </div>
-
-            <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="color: #92400e; margin-top: 0;">Importante:</h3>
-              <p>O agendamento é exclusivo para pessoas autistas, com síndrome de Down e TDAH.</p>
-              <p>Chegue com 15 minutos de antecedência.</p>
-              <p>Traga todos os documentos originais e legíveis.</p>
-            </div>
-
-            <p>Em caso de dúvidas, entre em contato pelo telefone: (85) 3101-XXXX</p>
-            
-            <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
-          </div>
-        `
+        subject,
+        html,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Falha ao enviar email');
+      throw new Error('Erro ao enviar email');
     }
 
-    const data = await response.json();
-    console.log('Email enviado com sucesso:', data);
-    return data;
+    console.log('Email enviado com sucesso para:', agendamento.email);
   } catch (error) {
-    console.error('Erro detalhado ao enviar email:', error);
+    console.error('Erro ao enviar email:', error);
     throw error;
   }
 }
@@ -114,7 +117,7 @@ export async function sendReminderEmail(agendamento: Agendamento) {
             <p>Em caso de impossibilidade de comparecimento, cancele o agendamento com antecedência.</p>
           </div>
 
-          <p>Em caso de dúvidas, entre em contato pelo telefone: (85) 3101-XXXX</p>
+          <p>Em caso de dúvidas, entre em contato pelo telefone: (85)2180-6587.</p>
           
           <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
         </div>
