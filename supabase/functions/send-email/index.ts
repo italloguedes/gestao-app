@@ -5,17 +5,24 @@ import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { 
+      headers: corsHeaders,
+      status: 200 
+    })
   }
 
   try {
     // Get the request body
     const { to, subject, html } = await req.json()
+
+    console.log('Tentando enviar email para:', to)
+    console.log('Assunto:', subject)
 
     // Create SMTP client
     const client = new SMTPClient({
@@ -30,6 +37,8 @@ serve(async (req) => {
       },
     })
 
+    console.log('Cliente SMTP criado')
+
     // Send email
     await client.send({
       from: Deno.env.get('GMAIL_USER')!,
@@ -38,6 +47,8 @@ serve(async (req) => {
       content: html,
       html: true,
     })
+
+    console.log('Email enviado com sucesso')
 
     // Close connection
     await client.close()
@@ -50,8 +61,13 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Erro ao enviar email:', error)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        details: error.stack
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

@@ -17,54 +17,66 @@ interface Agendamento {
 }
 
 export async function sendEmailConfirmation(agendamento: Agendamento) {
-  const { data, error } = await supabase.functions.invoke('send-email', {
-    body: {
-      to: agendamento.email,
-      subject: 'Confirmação de Agendamento - Sala Sensorial ALECE',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #047857;">Confirmação de Agendamento</h2>
-          <p>Olá ${agendamento.nome},</p>
-          <p>Seu agendamento foi confirmado com sucesso!</p>
-          
-          <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h3 style="color: #047857; margin-top: 0;">Detalhes do Agendamento:</h3>
-            <p><strong>Data:</strong> ${new Date(agendamento.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            <p><strong>Horário:</strong> ${agendamento.horario}</p>
-            <p><strong>Local:</strong> Sala Sensorial / ALECE</p>
-          </div>
+  try {
+    console.log('Iniciando envio de email para:', agendamento.email);
+    
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: agendamento.email,
+        subject: 'Confirmação de Agendamento - Sala Sensorial ALECE',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #047857;">Confirmação de Agendamento</h2>
+            <p>Olá ${agendamento.nome},</p>
+            <p>Seu agendamento foi confirmado com sucesso!</p>
+            
+            <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="color: #047857; margin-top: 0;">Detalhes do Agendamento:</h3>
+              <p><strong>Data:</strong> ${new Date(agendamento.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              <p><strong>Horário:</strong> ${agendamento.horario}</p>
+              <p><strong>Local:</strong> Sala Sensorial / ALECE</p>
+            </div>
 
-          <div style="background-color: #eff6ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h3 style="color: #1e40af; margin-top: 0;">Documentos Necessários:</h3>
-            <ul>
-              <li>CPF</li>
-              <li>Endereço com CEP válido</li>
-              <li>Número de telefone</li>
-              <li>Certidão conforme o estado civil</li>
-            </ul>
-          </div>
+            <div style="background-color: #eff6ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="color: #1e40af; margin-top: 0;">Documentos Necessários:</h3>
+              <ul>
+                <li>CPF</li>
+                <li>Endereço com CEP válido</li>
+                <li>Número de telefone</li>
+                <li>Certidão conforme o estado civil</li>
+              </ul>
+            </div>
 
-          <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h3 style="color: #92400e; margin-top: 0;">Importante:</h3>
-            <p>O agendamento é exclusivo para pessoas autistas, com síndrome de Down e TDAH.</p>
-            <p>Chegue com 15 minutos de antecedência.</p>
-            <p>Traga todos os documentos originais e legíveis.</p>
-          </div>
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="color: #92400e; margin-top: 0;">Importante:</h3>
+              <p>O agendamento é exclusivo para pessoas autistas, com síndrome de Down e TDAH.</p>
+              <p>Chegue com 15 minutos de antecedência.</p>
+              <p>Traga todos os documentos originais e legíveis.</p>
+            </div>
 
-          <p>Em caso de dúvidas, entre em contato pelo telefone: (85) 3101-XXXX</p>
-          
-          <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
-        </div>
-      `
+            <p>Em caso de dúvidas, entre em contato pelo telefone: (85) 3101-XXXX</p>
+            
+            <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
+          </div>
+        `
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Falha ao enviar email');
     }
-  });
 
-  if (error) {
-    console.error('Erro ao enviar email de confirmação:', error);
+    const data = await response.json();
+    console.log('Email enviado com sucesso:', data);
+    return data;
+  } catch (error) {
+    console.error('Erro detalhado ao enviar email:', error);
     throw error;
   }
-
-  return data;
 }
 
 export async function sendReminderEmail(agendamento: Agendamento) {
