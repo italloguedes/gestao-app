@@ -1,47 +1,54 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
+    setError('');
+    setSuccess('');
     setLoading(true);
 
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    if (!token) {
+      setError('Token inválido');
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (password !== confirmPassword) {
-        setError('As senhas não coincidem');
-        return;
-      }
-
-      if (password.length < 6) {
-        setError('A senha deve ter pelo menos 6 caracteres');
-        return;
-      }
-
-      const { error: resetError } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (resetError) throw resetError;
+      if (error) throw error;
 
-      setMessage('Senha redefinida com sucesso! Redirecionando para o login...');
-      setTimeout(() => router.push('/'), 2000);
-    } catch (err: any) {
-      console.error('Erro ao redefinir senha:', err);
-      setError(err.message || 'Erro ao redefinir senha');
+      setSuccess('Senha alterada com sucesso!');
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 2000);
+    } catch (err) {
+      console.error('Erro ao resetar senha:', err);
+      setError('Erro ao resetar senha. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -71,12 +78,12 @@ export default function ResetPasswordPage() {
             {error}
           </div>
         )}
-        {message && (
+        {success && (
           <div className="mb-2 p-3 bg-[#3AC28D]/20 border-l-4 border-[#3AC28D] rounded text-[#3AC28D] text-sm">
-            {message}
+            {success}
           </div>
         )}
-        <form onSubmit={handleResetPassword} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="password" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Nova Senha</label>
             <input
@@ -121,5 +128,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 } 
