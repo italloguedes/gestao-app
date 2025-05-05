@@ -22,9 +22,7 @@ export default function NovoAtendimentoPage() {
     }
   }, [user, router]);
 
-  const isValidCpf = (cpf: string) => {
-    return /^[0-9]{11}$/.test(cpf);
-  };
+  const isValidCpf = (cpf: string) => /^[0-9]{11}$/.test(cpf);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +34,7 @@ export default function NovoAtendimentoPage() {
       setMessage('CPF inválido. Use apenas números, sem pontos ou traços.');
       return;
     }
+
     setLoading(true);
     setMessage('');
 
@@ -52,17 +51,17 @@ export default function NovoAtendimentoPage() {
 
     const protocolo = protocolData;
     const { error } = await supabase.from('atendimentos').insert([
-      { 
-        nome, 
-        cpf, 
-        email, 
-        solicitante, 
-        horario, 
-        dia_atual: diaAtual, 
-        usuario_id: user.id, 
+      {
+        nome,
+        cpf,
+        email,
+        solicitante,
+        horario,
+        dia_atual: diaAtual,
+        usuario_id: user.id,
         protocolo,
-        status: 'em_andamento'
-      }
+        status: 'em_andamento',
+      },
     ]);
 
     if (error) {
@@ -75,8 +74,26 @@ export default function NovoAtendimentoPage() {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: email, nome, cpf, protocolo })
+        body: JSON.stringify({
+          to: email,
+          subject: `Atendimento Realizado, ${nome}! 🎉`,
+          html: `
+  <div style="font-family: Arial, sans-serif; font-size: 16px; color: #333;">
+    <h2 style="color: #4CAF50;">Atendimento Realizado, ${nome}! 🎉</h2>
+    <p>Olá, <strong>${nome}</strong>! Seu atendimento foi realizado com sucesso.</p>
+    <p>O prazo para retirada é de <strong>20 dias</strong>.</p>
+    <br/>
+    <p><strong>Nome:</strong> ${nome}</p>
+    <p><strong>CPF:</strong> ${cpf}</p>
+    <p><strong>Número de Protocolo:</strong> ${protocolo}</p>
+    <br/>
+    <p>Para dúvidas, entre em contato pelo telefone <strong>(85) 2180-6587</strong>.</p>
+    <p style="margin-top: 20px;">Obrigado por utilizar nossos serviços.</p>
+  </div>
+`,
+        }),
       });
+
 
       const result = await res.json();
       if (res.ok) {
@@ -85,7 +102,7 @@ export default function NovoAtendimentoPage() {
       } else {
         setMessage('Atendimento cadastrado, mas erro ao enviar e-mail: ' + result.error);
       }
-    } catch {
+    } catch (err) {
       setMessage('Atendimento cadastrado, mas houve erro ao enviar o e-mail.');
     }
 
@@ -101,11 +118,10 @@ export default function NovoAtendimentoPage() {
 
       <div className="card p-6">
         {message && (
-          <div className={`mb-4 p-4 rounded-md ${
-            message.includes('sucesso') 
+          <div className={`mb-4 p-4 rounded-md ${message.includes('sucesso')
               ? 'bg-green-50 border border-green-200 text-green-600'
               : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
+            }`}>
             <p>{message}</p>
           </div>
         )}
@@ -193,4 +209,4 @@ export default function NovoAtendimentoPage() {
       </div>
     </div>
   );
-} 
+}

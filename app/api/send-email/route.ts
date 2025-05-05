@@ -5,7 +5,6 @@ export async function POST(request: Request) {
   try {
     const { to, subject, html } = await request.json();
 
-    // Configurar o transporter do nodemailer
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -14,15 +13,28 @@ export async function POST(request: Request) {
       },
     });
 
-    // Configurar o email
+    // Fallback em texto puro, removendo tags do HTML
+    const plainText = html.replace(/<[^>]*>/g, '');
+
     const mailOptions = {
-      from: process.env.GMAIL_USER,
+      from: `"Atendimento realizado com sucesso!! " <${process.env.GMAIL_USER}>`,
       to,
       subject,
-      html,
+      text: plainText,
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="UTF-8" />
+            <title>${subject}</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; font-size: 16px; color: #333;">
+            ${html}
+          </body>
+        </html>
+      `,
     };
 
-    // Enviar o email
     const info = await transporter.sendMail(mailOptions);
     console.log('Email enviado:', info.messageId);
 

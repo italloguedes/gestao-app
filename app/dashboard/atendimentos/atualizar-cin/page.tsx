@@ -75,7 +75,7 @@ function AtualizarCINForm() {
       console.log('Status atualizado, enviando email...');
 
       // Enviar email de conclusão
-      const response = await fetch('/api/send-email', {
+      const response = await fetch('/api/cin-pronta', {  // Ajustando para a rota correta /api/cin-pronta
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,4 +186,4 @@ export default function AtualizarCINPage() {
       </Suspense>
     </div>
   );
-} 
+}
