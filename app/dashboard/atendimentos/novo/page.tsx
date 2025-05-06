@@ -78,17 +78,29 @@ export default function NovoAtendimentoPage() {
           to: email,
           subject: `Atendimento Realizado, ${nome}! 🎉`,
           html: `
-  <div style="font-family: Arial, sans-serif; font-size: 16px; color: #333;">
-    <h2 style="color: #4CAF50;">Atendimento Realizado, ${nome}! 🎉</h2>
-    <p>Olá, <strong>${nome}</strong>! Seu atendimento foi realizado com sucesso.</p>
-    <p>O prazo para retirada é de <strong>20 dias</strong>.</p>
-    <br/>
-    <p><strong>Nome:</strong> ${nome}</p>
-    <p><strong>CPF:</strong> ${cpf}</p>
-    <p><strong>Número de Protocolo:</strong> ${protocolo}</p>
-    <br/>
-    <p>Para dúvidas, entre em contato pelo telefone <strong>(85) 2180-6587</strong>.</p>
-    <p style="margin-top: 20px;">Obrigado por utilizar nossos serviços.</p>
+  <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
+    </div>
+    <div style="background: #fff; border-radius: 10px; padding: 32px 24px; box-shadow: 0 2px 8px #0001;">
+      <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 18px;">
+        Atendimento para emissão da CIN (Carteira de Identidade Nacional)
+      </h2>
+      <p style="margin-bottom: 18px;">
+        Olá, ${nome}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
+      </p>
+      <p style="margin-bottom: 10px;">
+        <b>Nome:</b> ${nome}<br>
+        <b>CPF:</b> ${cpf}<br>
+        <b>Número de Protocolo:</b> ${protocolo}
+      </p>
+      <p style="margin-bottom: 0;">
+        Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
+      </p>
+    </div>
+    <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
+      © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+    </div>
   </div>
 `,
         }),

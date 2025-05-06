@@ -32,7 +32,7 @@ export async function sendEmailConfirmation(agendamento: Agendamento) {
           <h3 style="color: #047857; margin-top: 0;">Detalhes do Agendamento:</h3>
           <p><strong>Local:</strong> Prédio da Assembleia Legislativa Anexo III, Sala Sensorial</p>
           <p><strong>Endereço:</strong> Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238</p>
-          <p><strong>Data:</strong> ${new Date(agendamento.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p><strong>Data:</strong> ${new Date(agendamento.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           <p><strong>Horário:</strong> ${agendamento.horario}</p>
         </div>
 

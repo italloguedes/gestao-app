@@ -250,8 +250,8 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
             <div class="info"><b>E-mail:</b> ${agendamento.email}</div>
             <div class="info"><b>CPF:</b> ${agendamento.cpf}</div>
             <div class="info"><b>Telefone:</b> ${agendamento.telefone}</div>
-            <div class="info"><b>Data de Nascimento:</b> ${agendamento.data_nascimento}</div>
-            <div class="info"><b>Data do Atendimento:</b> ${agendamento.data}</div>
+            <div class="info"><b>Data de Nascimento:</b> ${new Date(agendamento.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+            <div class="info"><b>Data do Atendimento:</b> ${new Date(agendamento.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
             <div class="info"><b>Horário:</b> ${agendamento.horario.slice(0,5)}</div>
           </div>
 
@@ -395,8 +395,26 @@ async function getHorariosDisponiveis(data: Date) {
       return `${hora}:${minuto}`;
     }) || [];
 
+    // Verificar se é o dia atual
+    const hoje = new Date();
+    const isHoje = data.getDate() === hoje.getDate() && 
+                  data.getMonth() === hoje.getMonth() && 
+                  data.getFullYear() === hoje.getFullYear();
+
+    // Filtrar horários que já passaram no dia atual
+    const horariosFiltrados = HORARIOS.filter(h => {
+      if (!isHoje) return true; // Se não for hoje, retorna todos os horários
+      
+      const [hora, minuto] = h.split(':');
+      const horarioAtual = new Date();
+      const horarioAgendamento = new Date();
+      horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
+      
+      return horarioAgendamento > horarioAtual;
+    });
+
     console.log("Horários ocupados:", horariosOcupados);
-    return HORARIOS.filter(h => !horariosOcupados.includes(h));
+    return horariosFiltrados.filter(h => !horariosOcupados.includes(h));
   } catch (err) {
     console.error("Erro ao buscar horários disponíveis:", err);
     return [];
@@ -642,9 +660,14 @@ export default function AgendamentoPage() {
                   <div key={i}></div>
                 ))}
                 {days.map((date) => {
+                  const today = new Date();
                   const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                  const isToday = date.getDate() === today.getDate() && 
+                                date.getMonth() === today.getMonth() && 
+                                date.getFullYear() === today.getFullYear();
+                  const isAfter4PM = isToday && today.getHours() >= 16;
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                  const isDisabled = isPast || isWeekend;
+                  const isDisabled = isPast || isWeekend || isAfter4PM;
                   const isSelected = selectedDate && formatDate(date) === formatDate(selectedDate);
                   
                   // Verificar se há horários disponíveis para este dia
@@ -667,7 +690,7 @@ export default function AgendamentoPage() {
                       `}
                       disabled={isDisabled || !hasAvailableTimes}
                       onClick={() => setSelectedDate(date)}
-                      title={isDisabled ? "Data indisponível" : hasAvailableTimes ? "Clique para ver horários disponíveis" : "Sem horários disponíveis"}
+                      title={isDisabled ? (isAfter4PM ? "Horário de agendamento encerrado para hoje" : "Data indisponível") : hasAvailableTimes ? "Clique para ver horários disponíveis" : "Sem horários disponíveis"}
                     >
                       {date.getDate()}
                       {hasAvailableTimes && !isDisabled && (
