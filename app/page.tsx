@@ -92,7 +92,7 @@ export default function Home() {
         // Validação de senha
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.isValid) {
-          setError(passwordValidation.message);
+          setError(passwordValidation.message || AUTH_CONFIG.ERROR_MESSAGES.WEAK_PASSWORD);
           setLoading(false);
           return;
         }
