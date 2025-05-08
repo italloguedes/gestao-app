@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase-client";
 import Header from "./Header";
 import DocumentosInfo from '@/components/DocumentosInfo';
 import { FiInfo } from "react-icons/fi";
