@@ -79,7 +79,7 @@ export default function Home() {
 
       if (isRecovering) {
         const { error: recoverError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}${AUTH_CONFIG.REDIRECT_URLS.RESET_PASSWORD}`,
+          redirectTo: `${window.location.origin}/auth/callback/reset-password`,
         });
 
         if (recoverError) throw recoverError;
@@ -311,6 +311,10 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* Footer */}
+      <footer className="w-full py-4 text-center text-sm text-gray-600 absolute bottom-0 z-10">
+        <p>© {new Date().getFullYear()} Roar Projects | Desenvolvido por Itallo Guedes | v1.0.3</p>
+      </footer>
     </div>
   );
 }
