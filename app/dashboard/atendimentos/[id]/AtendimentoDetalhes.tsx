@@ -29,6 +29,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAtendimento, setEditedAtendimento] = useState<Partial<Atendimento>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -144,6 +145,24 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('atendimentos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      router.push('/dashboard/atendimentos');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const [datePart] = dateString.split('T');
     const date = new Date(datePart + 'T00:00:00');
@@ -222,8 +241,37 @@ export default function AtendimentoDetalhes({ id }: Props) {
           >
             {isEditing ? 'Salvar' : 'Editar'}
           </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+          >
+            Excluir
+          </button>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Confirmar Exclusão</h3>
+            <p className="mb-6">Tem certeza que deseja excluir este atendimento? Esta ação não pode ser desfeita.</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
