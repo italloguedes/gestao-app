@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         .eq('email', session.user.email)
         .single();
 
-      if (!error && userData?.role === 'admin') {
+      if (!error && (userData?.role === 'admin' || userData?.role === 'atendente')) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }

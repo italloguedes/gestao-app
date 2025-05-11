@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          // Se for admin, redireciona para o dashboard
-          if (userData?.role === 'admin') {
+          // Verifica se o usuário tem acesso ao dashboard
+          if (userData?.role === 'admin' || userData?.role === 'atendente') {
             router.push('/dashboard');
           } else {
             // Para outros usuários, redireciona para o agendamento
