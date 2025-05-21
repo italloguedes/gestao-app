@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 import UserForm from './UserForm';
 import { FiEdit2, FiTrash2, FiSearch, FiUserPlus, FiRefreshCw } from 'react-icons/fi';
 import { Badge } from './ui/Badge';

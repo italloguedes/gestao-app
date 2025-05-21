@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { useUser } from '@/contexts/UserContext';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 
 export const useUserOperations = () => {
   const { users, setUsers, setLoading, setError } = useUser();

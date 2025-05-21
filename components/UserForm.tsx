@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { User } from '@/lib/models/User';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle } from 'react-icons/fi';
 
 interface UserFormProps {

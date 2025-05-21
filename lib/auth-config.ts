@@ -13,6 +13,8 @@ export const AUTH_CONFIG = {
       RESET_PASSWORD: '/auth/reset-password',
       EMAIL_CONFIRMATION: '/auth/callback',
       AGENDAMENTO: '/agendamento',
+      DASHBOARD: '/dashboard',
+      ATENDIMENTOS: '/dashboard/atendimentos'
     },
   
     // Mensagens de erro

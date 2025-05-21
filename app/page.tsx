@@ -123,13 +123,37 @@ export default function Home() {
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({ 
           email, 
-          password 
+          password
         });
 
         if (signInError) throw signInError;
 
         if (data.session) {
-          router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
+          // Força um refresh na sessão para atualizar o tempo de expiração
+          await supabase.auth.refreshSession();
+          
+          // Armazena o timestamp de quando a sessão deve expirar (2 horas)
+          localStorage.setItem('session-expiry', String(Date.now() + 7200000)); // 2 horas em milissegundos
+
+          // Verifica a role do usuário para redirecionar corretamente
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', email)
+            .single();
+
+          if (userError) {
+            console.error('Erro ao buscar dados do usuário:', userError);
+            router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
+            return;
+          }
+
+          // Redireciona baseado na role
+          if (userData?.role === 'admin' || userData?.role === 'atendente') {
+            router.push(AUTH_CONFIG.REDIRECT_URLS.DASHBOARD);
+          } else {
+            router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
+          }
         }
       }
     } catch (err: any) {

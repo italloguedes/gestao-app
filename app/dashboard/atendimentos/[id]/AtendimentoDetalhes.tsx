@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
-import Loading from '@/app/components/Loading';
+import Loading from '@/components/Loading';
 
 interface Atendimento {
   id: number;
@@ -39,7 +39,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       return;
     }
     fetchAtendimento();
-  }, [user, id]);
+  }, [user, router, id]);
 
   const fetchAtendimento = async () => {
     try {
@@ -51,6 +51,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Atendimento não encontrado');
+
       setAtendimento(data);
       setEditedAtendimento(data);
     } catch (err: any) {
@@ -96,48 +98,27 @@ export default function AtendimentoDetalhes({ id }: Props) {
   };
 
   const handleSave = async () => {
+    if (!atendimento) return;
+
     try {
-      // Validar campos antes de salvar
-      const errors: Record<string, string> = {};
-      
-      if (!editedAtendimento.nome?.trim()) {
-        errors.nome = 'Nome é obrigatório';
-      }
-      
-      if (!editedAtendimento.cpf?.trim()) {
-        errors.cpf = 'CPF é obrigatório';
-      } else {
-        const cpfError = validateCPF(editedAtendimento.cpf);
-        if (cpfError) errors.cpf = cpfError;
-      }
-      
-      if (!editedAtendimento.email?.trim()) {
-        errors.email = 'E-mail é obrigatório';
-      } else {
-        const emailError = validateEmail(editedAtendimento.email);
-        if (emailError) errors.email = emailError;
-      }
-      
-      if (!editedAtendimento.solicitante?.trim()) {
-        errors.solicitante = 'Solicitante é obrigatório';
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return;
-      }
-
       setLoading(true);
       const { error } = await supabase
         .from('atendimentos')
-        .update(editedAtendimento)
+        .update({
+          nome: atendimento.nome,
+          cpf: atendimento.cpf,
+          email: atendimento.email,
+          solicitante: atendimento.solicitante,
+          protocolo: atendimento.protocolo,
+          dia_atual: atendimento.dia_atual,
+          horario: atendimento.horario,
+          status: atendimento.status
+        })
         .eq('id', id);
 
       if (error) throw error;
       
-      setAtendimento(prev => prev ? { ...prev, ...editedAtendimento } : null);
-      setIsEditing(false);
-      setValidationErrors({});
+      router.push('/dashboard/atendimentos');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -185,7 +166,6 @@ export default function AtendimentoDetalhes({ id }: Props) {
         return 'bg-red-100 text-red-800';
       case 'cancelado':
         return 'bg-red-100 text-red-800';
-      
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -212,222 +192,57 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex justify-between items-center">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-blue-500 hover:text-blue-700"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Voltar
-        </button>
-        <h1 className="text-2xl font-bold">Detalhes do Atendimento</h1>
-        <div className="flex gap-2">
-          {isEditing && (
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                setEditedAtendimento(atendimento);
-                setValidationErrors({});
-              }}
-              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-            >
-              Cancelar
-            </button>
-          )}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Detalhes do Atendimento</h1>
           <button
-            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            className={`px-4 py-2 rounded-md ${
-              isEditing 
-                ? 'bg-green-500 text-white hover:bg-green-600' 
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
+            onClick={() => router.back()}
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
           >
-            {isEditing ? 'Salvar' : 'Editar'}
-          </button>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-          >
-            Excluir
+            Voltar
           </button>
         </div>
-      </div>
 
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Confirmar Exclusão</h3>
-            <p className="mb-6">Tem certeza que deseja excluir este atendimento? Esta ação não pode ser desfeita.</p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-              >
-                Confirmar Exclusão
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Informações Pessoais</h2>
+            <div className="space-y-3">
+              <p><span className="font-medium">Nome:</span> {atendimento.nome}</p>
+              <p><span className="font-medium">CPF:</span> {atendimento.cpf}</p>
+              <p><span className="font-medium">Email:</span> {atendimento.email}</p>
+              <p><span className="font-medium">Solicitante:</span> {atendimento.solicitante}</p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Informações do Atendimento</h2>
+            <div className="space-y-3">
+              <p><span className="font-medium">Protocolo:</span> {atendimento.protocolo}</p>
+              <p><span className="font-medium">Data:</span> {formatDate(atendimento.dia_atual)}</p>
+              <p><span className="font-medium">Horário:</span> {formatTime(atendimento.horario)}</p>
+              <p>
+                <span className="font-medium">Status:</span>{' '}
+                <span className={`px-2 py-1 rounded text-sm ${getStatusColor(atendimento.status)}`}>
+                  {getStatusLabel(atendimento.status)}
+                </span>
+              </p>
             </div>
           </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Protocolo</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={editedAtendimento.protocolo || ''}
-                onChange={(e) => handleInputChange('protocolo', e.target.value)}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                disabled
-              />
-            ) : (
-              <p className="font-semibold">{atendimento.protocolo}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            {isEditing ? (
-              <select
-                value={editedAtendimento.status || ''}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="em_andamento">Em andamento</option>
-                <option value="concluido">Concluído</option>
-                <option value="correcao">Correção</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
-            ) : (
-              <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
-                {getStatusLabel(atendimento.status)}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-            {isEditing ? (
-              <div>
-                <input
-                  type="text"
-                  value={editedAtendimento.nome || ''}
-                  onChange={(e) => handleInputChange('nome', e.target.value)}
-                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.nome ? 'border-red-500' : ''
-                  }`}
-                />
-                {validationErrors.nome && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.nome}</p>
-                )}
-              </div>
-            ) : (
-              <p className="font-semibold">{atendimento.nome}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-            {isEditing ? (
-              <div>
-                <input
-                  type="text"
-                  value={editedAtendimento.cpf || ''}
-                  onChange={(e) => handleInputChange('cpf', e.target.value)}
-                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.cpf ? 'border-red-500' : ''
-                  }`}
-                />
-                {validationErrors.cpf && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.cpf}</p>
-                )}
-              </div>
-            ) : (
-              <p className="font-semibold">{atendimento.cpf}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-            {isEditing ? (
-              <div>
-                <input
-                  type="email"
-                  value={editedAtendimento.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.email ? 'border-red-500' : ''
-                  }`}
-                />
-                {validationErrors.email && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
-                )}
-              </div>
-            ) : (
-              <p className="font-semibold">{atendimento.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Solicitante</label>
-            {isEditing ? (
-              <div>
-                <input
-                  type="text"
-                  value={editedAtendimento.solicitante || ''}
-                  onChange={(e) => handleInputChange('solicitante', e.target.value)}
-                  className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.solicitante ? 'border-red-500' : ''
-                  }`}
-                />
-                {validationErrors.solicitante && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.solicitante}</p>
-                )}
-              </div>
-            ) : (
-              <p className="font-semibold">{atendimento.solicitante}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-            {isEditing ? (
-              <input
-                type="date"
-                value={editedAtendimento.dia_atual?.split('T')[0] || ''}
-                onChange={(e) => handleInputChange('dia_atual', e.target.value)}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-              />
-            ) : (
-              <p className="font-semibold">{formatDate(atendimento.dia_atual)}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
-            {isEditing ? (
-              <input
-                type="time"
-                value={editedAtendimento.horario || ''}
-                onChange={(e) => handleInputChange('horario', e.target.value)}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-              />
-            ) : (
-              <p className="font-semibold">{formatTime(atendimento.horario)}</p>
-            )}
-          </div>
+        <div className="mt-8 flex justify-end space-x-4">
+          <button
+            onClick={handleDelete}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Excluir
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Salvar Alterações
+          </button>
         </div>
       </div>
     </div>

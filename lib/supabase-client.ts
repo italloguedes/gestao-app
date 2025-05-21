@@ -8,6 +8,47 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY não está definido');
 }
 
+// Verifica se estamos no navegador
+const isBrowser = typeof window !== 'undefined';
+
+// Função para manipular o storage com segurança
+const customStorage = {
+  getItem: (key: string) => {
+    if (!isBrowser) return null;
+    const value = localStorage.getItem(key);
+    if (value) {
+      try {
+        const session = JSON.parse(value);
+        // Se a sessão expirou (2 horas), remove ela
+        if (session.expires_at && new Date(session.expires_at * 1000) < new Date()) {
+          localStorage.removeItem(key);
+          return null;
+        }
+      } catch (error) {
+        console.error('Erro ao processar sessão:', error);
+        return null;
+      }
+    }
+    return value;
+  },
+  setItem: (key: string, value: string) => {
+    if (!isBrowser) return;
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.error('Erro ao salvar no localStorage:', error);
+    }
+  },
+  removeItem: (key: string) => {
+    if (!isBrowser) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error('Erro ao remover do localStorage:', error);
+    }
+  }
+};
+
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -15,7 +56,9 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      storageKey: 'app-session',
+      storage: customStorage
     },
     db: {
       schema: 'public'

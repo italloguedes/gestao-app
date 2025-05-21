@@ -1,5 +1,4 @@
-import { supabase } from '@/lib/supabase'
-
+import { supabase } from '@/lib/supabase-client'
 export async function getUserById(id: string) {
   const { data: user, error } = await supabase
     .from('users')

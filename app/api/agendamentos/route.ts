@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 import { sendEmailConfirmation } from '@/lib/emailService';
 
 export async function PUT(request: Request) {

@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/db';
+import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
+import { hasAccessToDashboard } from '@/lib/models/User';
 
 interface Atendimento {
   id: number;
@@ -32,19 +33,43 @@ export default function AtendimentosPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  // Efeito para autenticação
+  // Efeito para autenticação e verificação de permissões
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndPermissions = async () => {
       if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          router.push('/dashboard');
+        router.push('/');
+        return;
+      }
+
+      try {
+        // Busca o usuário e sua role
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('email', user.email)
+          .single();
+
+        if (userError || !userData) {
+          console.error('Erro ao buscar dados do usuário:', userError);
+          router.push('/');
           return;
         }
+
+        // Verifica se tem acesso ao dashboard
+        if (!hasAccessToDashboard(userData.role)) {
+          router.push('/agendamento');
+          return;
+        }
+
+        // Se chegou aqui, tem permissão, então busca os atendimentos
+        fetchAtendimentos();
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        router.push('/');
       }
     };
-    
-    checkAuth();
+
+    checkAuthAndPermissions();
   }, [user, router]);
 
   // Debounce para o termo de busca
