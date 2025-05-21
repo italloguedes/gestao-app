@@ -183,6 +183,9 @@ export default function AtendimentoDetalhes({ id }: Props) {
         return 'bg-yellow-100 text-yellow-800';
       case 'correcao':
         return 'bg-red-100 text-red-800';
+      case 'cancelado':
+        return 'bg-red-100 text-red-800';
+      
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -196,6 +199,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
         return 'Em andamento';
       case 'correcao':
         return 'Correção';
+      case 'cancelado':
+        return 'Cancelado';
       default:
         return status;
     }
