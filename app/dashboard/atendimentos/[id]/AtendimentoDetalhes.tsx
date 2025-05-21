@@ -301,6 +301,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
                 <option value="em_andamento">Em andamento</option>
                 <option value="concluido">Concluído</option>
                 <option value="correcao">Correção</option>
+                <option value="cancelado">Cancelado</option>
               </select>
             ) : (
               <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
