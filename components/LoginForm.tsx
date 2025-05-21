@@ -2,39 +2,70 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase-client";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
+    setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
+
       if (error) throw error;
-      router.push("/dashboard");
-    } catch (error) {
-      console.error('Erro ao fazer login:', error);
-      setError('Email ou senha inválidos');
+
+      if (data.session) {
+        // Força um refresh na sessão para atualizar o tempo de expiração
+        await supabase.auth.refreshSession();
+        
+        // Armazena o timestamp de quando a sessão deve expirar (2 horas)
+        localStorage.setItem('session-expiry', String(Date.now() + 7200000)); // 2 horas em milissegundos
+
+        // Verifica a role do usuário para redirecionar corretamente
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('email', email)
+          .single();
+
+        if (userError) {
+          console.error('Erro ao buscar dados do usuário:', userError);
+          router.push('/agendamento');
+          return;
+        }
+
+        // Redireciona baseado na role
+        if (userData?.role === 'admin' || userData?.role === 'atendente') {
+          router.push('/dashboard/atendimentos');
+        } else {
+          router.push('/agendamento');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-100">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
-      <div className="space-y-2">
+      <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
           Email
         </label>
@@ -43,11 +74,11 @@ export default function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="input w-full focus:ring-emerald-500 focus:border-emerald-500"
           required
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </div>
-      <div className="space-y-2">
+      <div>
         <label htmlFor="password" className="block text-sm font-medium text-gray-700">
           Senha
         </label>
@@ -56,15 +87,16 @@ export default function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="input w-full focus:ring-emerald-500 focus:border-emerald-500"
           required
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </div>
       <button
         type="submit"
-        className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium rounded-lg hover:from-emerald-600 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
+        disabled={loading}
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
       >
-        Entrar
+        {loading ? "Entrando..." : "Entrar"}
       </button>
     </form>
   );
