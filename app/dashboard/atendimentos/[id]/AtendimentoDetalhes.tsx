@@ -208,6 +208,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
         return 'bg-red-100 text-red-800';
       case 'cancelado':
         return 'bg-red-100 text-red-800';
+      case 'bloqueado':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -223,6 +225,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
         return 'Correção';
       case 'cancelado':
         return 'Cancelado';
+      case 'bloqueado':
+        return 'Bloqueado';
       default:
         return status;
     }
@@ -238,7 +242,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
         <div className="flex justify-between items-center mb-8 pb-6 border-b border-gray-100">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Detalhes do Atendimento</h1>
-            <p className="text-gray-500 mt-1">Protocolo: {atendimento.protocolo}</p>
+            <p className="text-gray-500 mt-1">#{atendimento.id}</p>
           </div>
           <div className="space-x-3">
             {!isEditing ? (
@@ -294,6 +298,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
             <div className="space-y-4">
               {renderField('Data', 'dia_atual', formatDate(atendimento.dia_atual))}
               {renderField('Horário', 'horario', formatTime(atendimento.horario))}
+              {renderField('Protocolo', 'protocolo', atendimento.protocolo)}
               {isEditing ? (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -308,6 +313,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
                     <option value="concluido">Concluído</option>
                     <option value="correcao">Correção</option>
                     <option value="cancelado">Cancelado</option>
+                    <option value="bloqueado">Bloqueado</option>
                   </select>
                 </div>
               ) : (

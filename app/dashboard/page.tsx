@@ -11,6 +11,7 @@ interface DashboardStats {
   correcoes: number;
   emAndamento: number;
   concluidos: number;
+  bloqueados: number;
   hoje: number;
   agendamentosPendentes: number;
   agendamentosConfirmados: number;
@@ -37,6 +38,7 @@ export default function DashboardPage() {
     correcoes: 0,
     emAndamento: 0,
     concluidos: 0,
+    bloqueados: 0,
     hoje: 0,
     agendamentosPendentes: 0,
     agendamentosConfirmados: 0,
@@ -83,6 +85,12 @@ export default function DashboardPage() {
         .select('*', { count: 'exact' })
         .in('status', ['concluido', 'concluído', 'Concluido', 'Concluído']);
 
+      // Atendimentos bloqueados
+      const { count: bloqueados } = await supabase
+        .from('atendimentos')
+        .select('*', { count: 'exact' })
+        .eq('status', 'bloqueado');
+
       // Atendimentos de hoje
       const { count: hoje } = await supabase
         .from('atendimentos')
@@ -120,6 +128,7 @@ export default function DashboardPage() {
         correcoes: correcoes || 0,
         emAndamento: emAndamento || 0,
         concluidos: concluidos || 0,
+        bloqueados: bloqueados || 0,
         hoje: hoje || 0,
         agendamentosPendentes: agendamentosPendentes || 0,
         agendamentosConfirmados: agendamentosConfirmados || 0,
@@ -175,7 +184,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="card p-4">
           <h3 className="text-sm font-medium text-gray-500">Total de Atendimentos</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">{stats.total}</p>
@@ -191,6 +200,10 @@ export default function DashboardPage() {
         <div className="card p-4">
           <h3 className="text-sm font-medium text-gray-500">Concluídos</h3>
           <p className="mt-2 text-3xl font-bold text-green-600">{stats.concluidos}</p>
+        </div>
+        <div className="card p-4">
+          <h3 className="text-sm font-medium text-gray-500">Bloqueados</h3>
+          <p className="mt-2 text-3xl font-bold text-gray-700">{stats.bloqueados}</p>
         </div>
         <div className="card p-4">
           <h3 className="text-sm font-medium text-gray-500">Hoje</h3>
@@ -280,15 +293,15 @@ export default function DashboardPage() {
             </Link>
 
             <Link 
-              href="/dashboard/atendimentos" 
-              className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 p-0.5 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg"
+              href="/dashboard/atendimentos/bloqueados" 
+              className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 p-0.5 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg"
             >
               <div className="relative rounded-[7px] bg-white p-4 transition-all duration-300 ease-out group-hover:bg-opacity-90">
                 <div className="flex items-center space-x-3">
-                  <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  <span className="text-lg font-semibold text-gray-800">Ver Todos os Atendimentos</span>
+                  <span className="text-lg font-semibold text-gray-800">Atendimentos Bloqueados</span>
                 </div>
               </div>
             </Link>

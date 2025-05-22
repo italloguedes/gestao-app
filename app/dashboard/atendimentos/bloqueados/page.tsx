@@ -18,7 +18,7 @@ interface Atendimento {
   status: string;
 }
 
-export default function CorrecoesPage() {
+export default function BloqueadosPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
@@ -29,17 +29,17 @@ export default function CorrecoesPage() {
     if (!user) {
       router.push('/');
     } else {
-      fetchCorrecoes();
+      fetchBloqueados();
     }
   }, [user, router]);
 
-  const fetchCorrecoes = async () => {
+  const fetchBloqueados = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('atendimentos')
         .select('*')
-        .eq('status', 'correcao')
+        .eq('status', 'bloqueado')
         .order('dia_atual', { ascending: false })
         .order('horario', { ascending: false });
 
@@ -60,14 +60,10 @@ export default function CorrecoesPage() {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    return timeString.substring(0, 5);
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <p className="text-gray-500">Carregando correções...</p>
+        <p className="text-gray-500">Carregando atendimentos bloqueados...</p>
       </div>
     );
   }
@@ -75,7 +71,7 @@ export default function CorrecoesPage() {
   if (error) {
     return (
       <div className="text-red-600 p-4">
-        Erro ao carregar correções: {error}
+        Erro ao carregar atendimentos bloqueados: {error}
       </div>
     );
   }
@@ -85,9 +81,9 @@ export default function CorrecoesPage() {
       <div className="bg-white shadow-lg rounded-xl p-6 space-y-8">
         <div className="flex justify-between items-center pb-6 border-b border-gray-100">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Atendimentos em Correção</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Atendimentos Bloqueados</h1>
             <p className="text-gray-500 mt-2 text-lg">
-              {atendimentos.length} atendimento{atendimentos.length !== 1 ? 's' : ''} em correção
+              {atendimentos.length} atendimento{atendimentos.length !== 1 ? 's' : ''} bloqueado{atendimentos.length !== 1 ? 's' : ''}
             </p>
           </div>
           <Link
@@ -107,7 +103,7 @@ export default function CorrecoesPage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p className="text-gray-500 text-lg">Nenhum atendimento em correção encontrado</p>
+              <p className="text-gray-500 text-lg">Nenhum atendimento bloqueado encontrado</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
