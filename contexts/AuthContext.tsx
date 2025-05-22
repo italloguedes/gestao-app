@@ -74,8 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Verifica se o usuário tem acesso ao dashboard
           if (hasAccessToDashboard(userData.role)) {
-            // Redireciona admin e atendente para a página de atendimentos
-            router.push(AUTH_CONFIG.REDIRECT_URLS.ATENDIMENTOS);
+            // Redireciona admin e atendente para o dashboard
+            router.push('/dashboard');
           } else {
             // Para outros usuários, redireciona para o agendamento
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);

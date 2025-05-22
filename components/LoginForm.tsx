@@ -46,7 +46,7 @@ export default function LoginForm() {
 
         // Redireciona baseado na role
         if (userData?.role === 'admin' || userData?.role === 'atendente') {
-          router.push('/dashboard/atendimentos');
+          router.push('/dashboard');
         } else {
           router.push('/agendamento');
         }
