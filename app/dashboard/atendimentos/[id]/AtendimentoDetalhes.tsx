@@ -98,32 +98,73 @@ export default function AtendimentoDetalhes({ id }: Props) {
   };
 
   const handleSave = async () => {
-    if (!atendimento) return;
+    if (!editedAtendimento) return;
+
+    // Validate required fields
+    const requiredFields: (keyof Atendimento)[] = ['nome', 'cpf', 'email', 'solicitante', 'protocolo', 'dia_atual', 'horario', 'status'];
+    const newValidationErrors: Record<string, string> = {};
+    
+    requiredFields.forEach(field => {
+      if (!editedAtendimento[field]) {
+        newValidationErrors[field] = 'Este campo é obrigatório';
+      }
+    });
+
+    if (Object.keys(newValidationErrors).length > 0) {
+      setValidationErrors(newValidationErrors);
+      return;
+    }
 
     try {
       setLoading(true);
       const { error } = await supabase
         .from('atendimentos')
-        .update({
-          nome: atendimento.nome,
-          cpf: atendimento.cpf,
-          email: atendimento.email,
-          solicitante: atendimento.solicitante,
-          protocolo: atendimento.protocolo,
-          dia_atual: atendimento.dia_atual,
-          horario: atendimento.horario,
-          status: atendimento.status
-        })
+        .update(editedAtendimento)
         .eq('id', id);
 
       if (error) throw error;
       
-      router.push('/dashboard/atendimentos');
+      setAtendimento(editedAtendimento as Atendimento);
+      setIsEditing(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedAtendimento(atendimento || {});
+    setValidationErrors({});
+    setIsEditing(false);
+  };
+
+  const renderField = (label: string, field: keyof Atendimento, value: string) => {
+    if (isEditing) {
+      return (
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {label}
+          </label>
+          <input
+            type={field === 'email' ? 'email' : 'text'}
+            value={editedAtendimento[field] || ''}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            className={`w-full px-3 py-2 border rounded-md ${
+              validationErrors[field] ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {validationErrors[field] && (
+            <p className="text-red-500 text-sm mt-1">{validationErrors[field]}</p>
+          )}
+        </div>
+      );
+    }
+    return (
+      <p>
+        <span className="font-medium">{label}:</span> {value}
+      </p>
+    );
   };
 
   const handleDelete = async () => {
@@ -195,55 +236,115 @@ export default function AtendimentoDetalhes({ id }: Props) {
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Detalhes do Atendimento</h1>
-          <button
-            onClick={() => router.back()}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
-          >
-            Voltar
-          </button>
+          <div className="space-x-4">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Editar
+              </button>
+            ) : (
+              <button
+                onClick={handleCancelEdit}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancelar
+              </button>
+            )}
+            <button
+              onClick={() => router.back()}
+              className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+            >
+              Voltar
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h2 className="text-lg font-semibold mb-4">Informações Pessoais</h2>
             <div className="space-y-3">
-              <p><span className="font-medium">Nome:</span> {atendimento.nome}</p>
-              <p><span className="font-medium">CPF:</span> {atendimento.cpf}</p>
-              <p><span className="font-medium">Email:</span> {atendimento.email}</p>
-              <p><span className="font-medium">Solicitante:</span> {atendimento.solicitante}</p>
+              {renderField('Nome', 'nome', atendimento.nome)}
+              {renderField('CPF', 'cpf', atendimento.cpf)}
+              {renderField('Email', 'email', atendimento.email)}
+              {renderField('Solicitante', 'solicitante', atendimento.solicitante)}
             </div>
           </div>
 
           <div>
             <h2 className="text-lg font-semibold mb-4">Informações do Atendimento</h2>
             <div className="space-y-3">
-              <p><span className="font-medium">Protocolo:</span> {atendimento.protocolo}</p>
-              <p><span className="font-medium">Data:</span> {formatDate(atendimento.dia_atual)}</p>
-              <p><span className="font-medium">Horário:</span> {formatTime(atendimento.horario)}</p>
-              <p>
-                <span className="font-medium">Status:</span>{' '}
-                <span className={`px-2 py-1 rounded text-sm ${getStatusColor(atendimento.status)}`}>
-                  {getStatusLabel(atendimento.status)}
-                </span>
-              </p>
+              {renderField('Protocolo', 'protocolo', atendimento.protocolo)}
+              {renderField('Data', 'dia_atual', formatDate(atendimento.dia_atual))}
+              {renderField('Horário', 'horario', formatTime(atendimento.horario))}
+              {isEditing ? (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editedAtendimento.status || ''}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="em_andamento">Em andamento</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="correcao">Correção</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+              ) : (
+                <p>
+                  <span className="font-medium">Status:</span>{' '}
+                  <span className={`px-2 py-1 rounded text-sm ${getStatusColor(atendimento.status)}`}>
+                    {getStatusLabel(atendimento.status)}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         <div className="mt-8 flex justify-end space-x-4">
           <button
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
           >
             Excluir
           </button>
-          <button
-            onClick={handleSave}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Salvar Alterações
-          </button>
+          {isEditing && (
+            <button
+              onClick={handleSave}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            >
+              Salvar Alterações
+            </button>
+          )}
         </div>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Confirmar exclusão</h3>
+              <p className="mb-4">Tem certeza que deseja excluir este atendimento?</p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                >
+                  Confirmar Exclusão
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
