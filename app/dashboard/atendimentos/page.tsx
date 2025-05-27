@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
@@ -25,15 +25,14 @@ export default function AtendimentosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 50;
+
   const router = useRouter();
   const { user } = useAuth();
 
-  // Efeito para autenticação e verificação de permissões
   useEffect(() => {
     const checkAuthAndPermissions = async () => {
       if (!user) {
@@ -42,7 +41,6 @@ export default function AtendimentosPage() {
       }
 
       try {
-        // Busca o usuário e sua role
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('role')
@@ -55,13 +53,11 @@ export default function AtendimentosPage() {
           return;
         }
 
-        // Verifica se tem acesso ao dashboard
         if (!hasAccessToDashboard(userData.role)) {
           router.push('/agendamento');
           return;
         }
 
-        // Se chegou aqui, tem permissão, então busca os atendimentos
         fetchAtendimentos();
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
@@ -72,19 +68,9 @@ export default function AtendimentosPage() {
     checkAuthAndPermissions();
   }, [user, router]);
 
-  // Debounce para o termo de busca
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Efeito para buscar atendimentos
   useEffect(() => {
     fetchAtendimentos();
-  }, [currentPage, debouncedSearchTerm]);
+  }, [currentPage]);
 
   const fetchAtendimentos = async () => {
     try {
@@ -93,8 +79,10 @@ export default function AtendimentosPage() {
         .from('atendimentos')
         .select('*', { count: 'exact' });
 
-      if (debouncedSearchTerm) {
-        query = query.or(`nome.ilike.%${debouncedSearchTerm}%,cpf.ilike.%${debouncedSearchTerm}%,protocolo.ilike.%${debouncedSearchTerm}%`);
+      if (searchTerm) {
+        query = query.or(
+          `nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,protocolo.ilike.%${searchTerm}%`
+        );
       }
 
       const { data, error, count } = await query
@@ -115,7 +103,6 @@ export default function AtendimentosPage() {
     }
   };
 
-  // Adiciona um listener para atualizações em tempo real
   useEffect(() => {
     const channel = supabase
       .channel('atendimentos_changes')
@@ -137,9 +124,7 @@ export default function AtendimentosPage() {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    return timeString.substring(0, 5);
-  };
+  const formatTime = (timeString: string) => timeString.substring(0, 5);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,6 +162,11 @@ export default function AtendimentosPage() {
     }
   };
 
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchAtendimentos();
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -201,29 +191,24 @@ export default function AtendimentosPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </div>
+          <div className="relative flex gap-2">
             <input
               type="text"
               placeholder="Buscar por nome, protocolo ou CPF..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <button
+              onClick={handleSearch}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            >
+              Buscar
+            </button>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -245,23 +230,11 @@ export default function AtendimentosPage() {
                 <tbody className="divide-y divide-gray-100">
                   {atendimentos.map((atendimento) => (
                     <tr key={atendimento.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-50 text-blue-800">
-                          {atendimento.protocolo}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 font-medium">{atendimento.nome}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600">{atendimento.cpf}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600">{formatDate(atendimento.dia_atual)}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600">{formatTime(atendimento.horario)}</div>
-                      </td>
+                      <td className="px-6 py-4">{atendimento.protocolo}</td>
+                      <td className="px-6 py-4">{atendimento.nome}</td>
+                      <td className="px-6 py-4">{atendimento.cpf}</td>
+                      <td className="px-6 py-4">{formatDate(atendimento.dia_atual)}</td>
+                      <td className="px-6 py-4">{formatTime(atendimento.horario)}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getStatusColor(atendimento.status)}`}>
                           {getStatusLabel(atendimento.status)}
@@ -272,10 +245,6 @@ export default function AtendimentosPage() {
                           href={`/dashboard/atendimentos/${atendimento.id}`}
                           className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-200 text-sm font-medium gap-2"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
                           Ver detalhes
                         </Link>
                       </td>
@@ -294,11 +263,8 @@ export default function AtendimentosPage() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
                 Anterior
               </button>
               <span className="px-4 py-2 text-sm text-gray-700">
@@ -307,12 +273,9 @@ export default function AtendimentosPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Próxima
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
               </button>
             </div>
           </div>
@@ -320,4 +283,4 @@ export default function AtendimentosPage() {
       </div>
     </div>
   );
-} 
+}
