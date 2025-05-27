@@ -193,12 +193,17 @@ export default function AtendimentosPage() {
         <div className="space-y-6">
           <div className="relative flex gap-2">
             <input
-              type="text"
-              placeholder="Buscar por nome, protocolo ou CPF..."
-              className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+  type="text"
+  placeholder="Buscar por nome, protocolo ou CPF..."
+  className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  }}
+/>
             <button
               onClick={handleSearch}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
