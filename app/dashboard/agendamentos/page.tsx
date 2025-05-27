@@ -82,8 +82,9 @@ export default function AgendamentosPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
 
   const formatTime = (timeString: string) => {
     return timeString.slice(0, 5);
