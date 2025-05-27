@@ -401,7 +401,7 @@ async function getHorariosDisponiveis(data: Date) {
                   data.getMonth() === hoje.getMonth() && 
                   data.getFullYear() === hoje.getFullYear();
 
-    // Filtrar horários que já passaram no dia atual
+    // Filtrar horários que já passaram no dia atual ou estão a menos de 15 minutos
     const horariosFiltrados = HORARIOS.filter(h => {
       if (!isHoje) return true; // Se não for hoje, retorna todos os horários
       
@@ -410,7 +410,10 @@ async function getHorariosDisponiveis(data: Date) {
       const horarioAgendamento = new Date();
       horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
       
-      return horarioAgendamento > horarioAtual;
+      // Adicionar 15 minutos ao horário atual para criar uma margem
+      const horarioLimite = new Date(horarioAtual.getTime() + 15 * 60000); // 15 minutos em milissegundos
+      
+      return horarioAgendamento > horarioLimite;
     });
 
     console.log("Horários ocupados:", horariosOcupados);
@@ -436,12 +439,15 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
   }, 3000);
 }
 
-export default function AgendamentoPage() {
+// Componente principal que só será renderizado no cliente
+function AgendamentoContent() {
   const router = useRouter();
+  
+  // 1. Todos os estados
   const [user, setUser] = useState<any>(null);
-  const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<number | null>(null);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [horario, setHorario] = useState("");
   const [nome, setNome] = useState("");
@@ -455,6 +461,15 @@ export default function AgendamentoPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
+  const [availableDays, setAvailableDays] = useState<{[key: string]: boolean}>({});
+
+  // 2. Todos os useEffects
+  useEffect(() => {
+    const today = new Date();
+    setCurrentDate(today);
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -462,14 +477,52 @@ export default function AgendamentoPage() {
     });
   }, []);
 
+  // Verificar disponibilidade de horários
+  useEffect(() => {
+    if (currentDate === null || currentMonth === null || currentYear === null) return;
+
+    const checkAvailability = async () => {
+      const availability: {[key: string]: boolean} = {};
+      
+      // Encontrar o início desta semana
+      const thisWeekStart = new Date(currentDate);
+      const daysSinceMonday = currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1;
+      thisWeekStart.setDate(currentDate.getDate() - daysSinceMonday);
+
+      // Verificar disponibilidade para os próximos 10 dias úteis (2 semanas)
+      for (let i = 0; i < 10; i++) {
+        const date = new Date(thisWeekStart);
+        date.setDate(thisWeekStart.getDate() + i);
+        
+        // Pular fins de semana
+        if (date.getDay() === 0 || date.getDay() === 6) continue;
+        // Pular dias passados
+        if (date < currentDate) continue;
+        
+        const formattedDate = formatDate(date);
+        try {
+          const horarios = await getHorariosDisponiveis(date);
+          availability[formattedDate] = horarios.length > 0;
+        } catch (err) {
+          console.error("Erro ao verificar disponibilidade:", err);
+          availability[formattedDate] = false;
+        }
+      }
+      
+      setAvailableDays(availability);
+    };
+
+    checkAvailability();
+  }, [currentDate, currentMonth, currentYear]);
+
+  // Verificar horários disponíveis quando a data é selecionada
   useEffect(() => {
     if (selectedDate) {
       setLoading(true);
       getHorariosDisponiveis(selectedDate)
         .then(horarios => {
-          console.log("Horários disponíveis:", horarios); // Log para debug
+          console.log("Horários disponíveis:", horarios);
           setHorariosDisponiveis(horarios);
-          // Se o horário selecionado não estiver mais disponível, limpa a seleção
           if (horario && !horarios.includes(horario)) {
             setHorario("");
             showToast("Este horário não está mais disponível. Por favor, selecione outro horário.", 'error');
@@ -485,6 +538,74 @@ export default function AgendamentoPage() {
       setHorariosDisponiveis([]);
     }
   }, [selectedDate]);
+
+  // 3. Loading state check
+  if (currentDate === null || currentMonth === null || currentYear === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-700"></div>
+      </div>
+    );
+  }
+
+  // 4. Funções auxiliares
+  const isDateAllowed = (date: Date) => {
+    if (!currentDate) return false;
+    
+    // Não permitir datas no passado
+    const today = new Date(currentDate);
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+
+    // Não permitir fins de semana
+    if (date.getDay() === 0 || date.getDay() === 6) return false;
+    
+    // Encontrar a próxima sexta-feira (fim da próxima semana)
+    const endDate = new Date(today);
+    const daysUntilFriday = (5 - today.getDay() + 7) % 7; // Dias até sexta dessa semana
+    endDate.setDate(today.getDate() + daysUntilFriday + 7); // Adiciona 7 dias para ir para próxima sexta
+    endDate.setHours(23, 59, 59, 999);
+    
+    return date <= endDate;
+  };
+
+  const prevMonth = () => {
+    if (!currentDate || !currentMonth || !currentYear) return;
+    if (currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear()) return;
+    
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (!currentDate || !currentMonth || !currentYear) return;
+    
+    const currentDay = new Date(currentDate);
+    const daysSinceMonday = currentDay.getDay() === 0 ? 6 : currentDay.getDay() - 1;
+    const thisWeekStart = new Date(currentDay);
+    thisWeekStart.setDate(currentDay.getDate() - daysSinceMonday);
+    
+    const nextWeekEnd = new Date(thisWeekStart);
+    nextWeekEnd.setDate(thisWeekStart.getDate() + 11);
+    
+    const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
+    if (nextMonthDate > nextWeekEnd) return;
+    
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const days = getMonthDays(currentYear, currentMonth);
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+  const weekDays = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
 
   const handleAgendar = async () => {
     setError("");
@@ -587,29 +708,7 @@ export default function AgendamentoPage() {
     }
   };
 
-  // Navegação do calendário
-  const prevMonth = () => {
-    if (currentMonth === today.getMonth() && currentYear === today.getFullYear()) return;
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
-  };
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  };
-
-  const days = getMonthDays(currentYear, currentMonth);
-  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
-  const weekDays = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
-
+  // 5. Render
   return (
     <Fragment>
       <Header onOpenAgendamentos={() => setModalOpen(true)} />
@@ -635,8 +734,8 @@ export default function AgendamentoPage() {
               <div className="flex items-center justify-between mb-2">
                 <button
                   onClick={prevMonth}
-                  className={`rounded-full p-1 border ${currentMonth === today.getMonth() && currentYear === today.getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-50'}`}
-                  disabled={currentMonth === today.getMonth() && currentYear === today.getFullYear()}
+                  className={`rounded-full p-1 border ${currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-50'}`}
+                  disabled={currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear()}
                   aria-label="Mês anterior"
                 >
                   <span className="text-2xl text-emerald-700">&#8592;</span>
@@ -667,18 +766,9 @@ export default function AgendamentoPage() {
                                 date.getFullYear() === today.getFullYear();
                   const isAfter4PM = isToday && today.getHours() >= 16;
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                  const isDisabled = isPast || isWeekend || isAfter4PM;
+                  const isDisabled = isPast || isWeekend || isAfter4PM || !isDateAllowed(date);
                   const isSelected = selectedDate && formatDate(date) === formatDate(selectedDate);
-                  
-                  // Verificar se há horários disponíveis para este dia
-                  const [hasAvailableTimes, setHasAvailableTimes] = useState(false);
-                  useEffect(() => {
-                    if (!isDisabled) {
-                      getHorariosDisponiveis(date)
-                        .then(horarios => setHasAvailableTimes(horarios.length > 0))
-                        .catch(() => setHasAvailableTimes(false));
-                    }
-                  }, [date, isDisabled]);
+                  const hasAvailableTimes = !isDisabled && availableDays[formatDate(date)];
 
                   return (
                     <button
@@ -875,5 +965,24 @@ export default function AgendamentoPage() {
       <DocumentosInfo />
     </Fragment>
   );
+}
+
+// Componente wrapper que evita problemas de hidratação
+export default function AgendamentoPage() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-700"></div>
+      </div>
+    );
+  }
+
+  return <AgendamentoContent />;
 }
 
