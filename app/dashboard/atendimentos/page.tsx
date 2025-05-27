@@ -76,7 +76,7 @@ export default function AtendimentosPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
