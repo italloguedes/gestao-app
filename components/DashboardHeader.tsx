@@ -73,7 +73,7 @@ export default function DashboardHeader() {
                 className="flex items-center space-x-2"
               >
                 <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white px-3 py-1 rounded-lg text-xl font-bold">
-                  CIADI
+                  Sala Sensorial / Alece
                 </span>
               </Link>
             </div>

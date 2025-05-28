@@ -117,6 +117,13 @@ export default function GestaoPage() {
       stats: `${stats.agendamentosHoje} agendamentos hoje`,
       link: '/admin/agendamentos/hoje',
       color: 'bg-orange-500'
+    },
+    {
+      title: 'Consulta Pública',
+      description: 'Link para consulta pública de documentos por CPF',
+      icon: <FiUsers className="w-8 h-8" />,
+      link: '/consulta',
+      color: 'bg-purple-500'
     }
   ];
 

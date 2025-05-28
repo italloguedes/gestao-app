@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AUTH_CONFIG } from '../lib/auth-config';
 import { validatePassword, validateEmail, handleAuthError } from '../lib/auth-utils';
 import { supabase, checkSupabaseConnection, handleSupabaseError } from '../lib/supabase-client';
+import Link from 'next/link';
 
 // Campo de input reutilizável
 function InputField({
@@ -199,111 +200,137 @@ export default function Home() {
                 ? 'Preencha seus dados para começar'
                 : 'Entre com suas credenciais para acessar o sistema'}
             </p>
-            {error && (
-              <div className="mb-2 p-3 bg-[#FFA726]/20 border-l-4 border-[#FFA726] rounded text-[#FFA726] text-sm">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div className="mb-2 p-3 bg-[#3AC28D]/20 border-l-4 border-[#3AC28D] rounded text-[#3AC28D] text-sm">
-                {message}
-              </div>
-            )}
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 rounded-lg bg-[#E3F7FD] border border-[#23B4E7] focus:border-[#3AC28D] focus:outline-none"
-                  placeholder="seu@email.com"
-                />
-              </div>
+            <form onSubmit={handleAuth} className="w-full space-y-4">
+              <InputField
+                id="email"
+                type="email"
+                label="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="Digite seu email"
+              />
+
               {!isRecovering && (
-                <div>
-                  <label htmlFor="password" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Senha</label>
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete={isRegistering ? "new-password" : "current-password"}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 rounded-lg bg-[#E3F7FD] border border-[#23B4E7] focus:border-[#3AC28D] focus:outline-none"
-                    placeholder="••••••••"
-                  />
+                <InputField
+                  id="password"
+                  type="password"
+                  label="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                  placeholder="Digite sua senha"
+                />
+              )}
+
+              {isRegistering && (
+                <InputField
+                  id="confirmPassword"
+                  type="password"
+                  label="Confirmar Senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  placeholder="Confirme sua senha"
+                />
+              )}
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  {error}
                 </div>
               )}
-              {isRegistering && !isRecovering && (
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm mb-1 font-semibold" style={{ color: '#23B4E7' }}>Confirmar Senha</label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 rounded-lg bg-[#E3F7FD] border border-[#23B4E7] focus:border-[#3AC28D] focus:outline-none"
-                    placeholder="••••••••"
-                  />
+
+              {message && (
+                <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm">
+                  {message}
                 </div>
               )}
+
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-[#FFA726] via-[#FFD600] to-[#3AC28D] hover:from-[#FFA726] hover:to-[#23B4E7] text-white font-bold py-2 rounded-lg shadow-md transition disabled:opacity-50"
+                disabled={isSubmitDisabled}
+                className={`w-full py-3 rounded-xl text-white font-medium transition-all duration-200 ${
+                  isSubmitDisabled
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-[#23B4E7] hover:bg-[#1A8AB0] active:transform active:scale-[0.98]'
+                }`}
               >
-                {loading ? 'Processando...' : isRecovering ? 'Enviar Email' : isRegistering ? 'Criar Conta' : 'Entrar'}
+                {loading
+                  ? 'Processando...'
+                  : isRecovering
+                  ? 'Enviar email de recuperação'
+                  : isRegistering
+                  ? 'Criar conta'
+                  : 'Entrar'}
               </button>
             </form>
-            <div className="text-center mt-2 space-y-2">
-              {!isRecovering && (
-                <button
-                  onClick={() => {
-                    setIsRegistering(!isRegistering);
-                    setError(null);
-                    setMessage(null);
-                  }}
-                  className="font-semibold underline"
-                  style={{ color: '#3AC28D' }}
-                  type="button"
+
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              <div className="w-full border-t border-gray-200"></div>
+              
+              <Link 
+                href="/consulta" 
+                className="flex items-center justify-center px-6 py-3 rounded-xl text-[#23B4E7] font-medium border-2 border-[#23B4E7] hover:bg-[#23B4E7] hover:text-white transition-all duration-200 w-full"
+              >
+                <svg 
+                  className="w-5 h-5 mr-2" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
                 >
-                  {isRegistering ? 'Já tem uma conta? Entre aqui' : 'Não tem conta? Crie uma agora'}
-                </button>
-              )}
-              {!isRegistering && !isRecovering && (
-                <button
-                  onClick={() => {
-                    setIsRecovering(true);
-                    setError(null);
-                    setMessage(null);
-                  }}
-                  className="font-semibold underline block w-full"
-                  style={{ color: '#FFA726' }}
-                  type="button"
-                >
-                  Esqueceu sua senha?
-                </button>
-              )}
-              {isRecovering && (
-                <button
-                  onClick={() => {
-                    setIsRecovering(false);
-                    setError(null);
-                    setMessage(null);
-                  }}
-                  className="font-semibold underline"
-                  style={{ color: '#3AC28D' }}
-                  type="button"
-                >
-                  Voltar para o login
-                </button>
-              )}
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                  />
+                </svg>
+                Consultar Status do Documento
+              </Link>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-gray-600">
+                {!isRecovering && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegistering(!isRegistering);
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="text-[#23B4E7] hover:text-[#1A8AB0] font-medium"
+                    >
+                      {isRegistering ? 'Já tem uma conta? Entre' : 'Não tem uma conta? Cadastre-se'}
+                    </button>
+                    <span className="hidden sm:inline">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecovering(true);
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="text-[#23B4E7] hover:text-[#1A8AB0] font-medium"
+                    >
+                      Esqueceu a senha?
+                    </button>
+                  </>
+                )}
+                {isRecovering && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRecovering(false);
+                      setError(null);
+                      setMessage(null);
+                    }}
+                    className="text-[#23B4E7] hover:text-[#1A8AB0] font-medium"
+                  >
+                    Voltar ao login
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
