@@ -3,10 +3,10 @@
 import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
-import Header from "./Header";
 import DocumentosInfo from '@/components/DocumentosInfo';
 import { FiInfo } from "react-icons/fi";
 import { sendEmailConfirmation } from '@/lib/emailService';
+import Header from './Header';
 
 const UNIDADE = "Sala Sensorial ALECE";
 const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
@@ -32,7 +32,17 @@ function isWeekday(date: Date) {
 }
 
 function formatDate(date: Date) {
-  return date.toISOString().split("T")[0];
+  return date.toISOString().split('T')[0];
+}
+
+// Adicionar esta função para formatação de exibição
+function formatDisplayDate(date: Date) {
+  return date.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Fortaleza',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
 }
 
 function formatCPF(cpf: string) {
@@ -379,45 +389,55 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
 // Adicionar esta função para verificar horários disponíveis
 async function getHorariosDisponiveis(data: Date) {
   try {
+    const dataFormatada = formatDate(data);
+    
+    // Busca todos os agendamentos para a data (confirmados e bloqueados)
     const { data: agendamentos, error } = await supabase
       .from("agendamentos")
-      .select("horario")
-      .eq("data", formatDate(data));
+      .select("horario, status")
+      .eq("data", dataFormatada);
 
     if (error) {
       console.error("Erro ao buscar agendamentos:", error);
       return [];
     }
 
-    // Normalizar os horários para o formato HH:mm
-    const horariosOcupados = agendamentos?.map(a => {
-      const [hora, minuto] = a.horario.split(':');
-      return `${hora}:${minuto}`;
-    }) || [];
-
     // Verificar se é o dia atual
     const hoje = new Date();
-    const isHoje = data.getDate() === hoje.getDate() && 
-                  data.getMonth() === hoje.getMonth() && 
-                  data.getFullYear() === hoje.getFullYear();
+    hoje.setHours(0, 0, 0, 0);
+    
+    const dataVerificar = new Date(data);
+    dataVerificar.setHours(0, 0, 0, 0);
 
-    // Filtrar horários que já passaram no dia atual ou estão a menos de 15 minutos
-    const horariosFiltrados = HORARIOS.filter(h => {
-      if (!isHoje) return true; // Se não for hoje, retorna todos os horários
-      
-      const [hora, minuto] = h.split(':');
-      const horarioAtual = new Date();
-      const horarioAgendamento = new Date();
-      horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
-      
-      // Adicionar 15 minutos ao horário atual para criar uma margem
-      const horarioLimite = new Date(horarioAtual.getTime() + 15 * 60000); // 15 minutos em milissegundos
-      
-      return horarioAgendamento > horarioLimite;
+    // Filtrar horários disponíveis
+    const horariosDisponiveis = HORARIOS.filter(h => {
+      // Se for hoje, verificar se o horário já passou
+      if (dataVerificar.getTime() === hoje.getTime()) {
+        const [hora, minuto] = h.split(':');
+        const horarioAtual = new Date();
+        const horarioAgendamento = new Date();
+        horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
+        
+        // Adicionar 15 minutos ao horário atual para criar uma margem
+        const horarioLimite = new Date(horarioAtual.getTime() + 15 * 60000);
+        
+        if (horarioAgendamento <= horarioLimite) {
+          return false;
+        }
+      }
+
+      // Verificar se existe agendamento para este horário
+      const horarioCompleto = h + ':00';
+      const agendamentoExistente = agendamentos?.find(a => a.horario === horarioCompleto);
+
+      // Um horário está disponível se:
+      // 1. Não existe agendamento OU
+      // 2. Não está bloqueado nem confirmado
+      return !agendamentoExistente || (agendamentoExistente.status !== 'bloqueado' && agendamentoExistente.status !== 'confirmado');
     });
 
-    console.log("Horários ocupados:", horariosOcupados);
-    return horariosFiltrados.filter(h => !horariosOcupados.includes(h));
+    console.log("Horários disponíveis:", horariosDisponiveis);
+    return horariosDisponiveis;
   } catch (err) {
     console.error("Erro ao buscar horários disponíveis:", err);
     return [];
@@ -484,29 +504,30 @@ function AgendamentoContent() {
     const checkAvailability = async () => {
       const availability: {[key: string]: boolean} = {};
       
-      // Encontrar o início desta semana
-      const thisWeekStart = new Date(currentDate);
-      const daysSinceMonday = currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1;
-      thisWeekStart.setDate(currentDate.getDate() - daysSinceMonday);
+      // Começar do dia atual
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
 
-      // Verificar disponibilidade para os próximos 10 dias úteis (2 semanas)
-      for (let i = 0; i < 10; i++) {
-        const date = new Date(thisWeekStart);
-        date.setDate(thisWeekStart.getDate() + i);
-        
+      // Verificar disponibilidade para os próximos 10 dias úteis
+      let daysChecked = 0;
+      let currentCheckDate = new Date(startDate);
+
+      while (daysChecked < 10) {
         // Pular fins de semana
-        if (date.getDay() === 0 || date.getDay() === 6) continue;
-        // Pular dias passados
-        if (date < currentDate) continue;
-        
-        const formattedDate = formatDate(date);
-        try {
-          const horarios = await getHorariosDisponiveis(date);
-          availability[formattedDate] = horarios.length > 0;
-        } catch (err) {
-          console.error("Erro ao verificar disponibilidade:", err);
-          availability[formattedDate] = false;
+        if (currentCheckDate.getDay() !== 0 && currentCheckDate.getDay() !== 6) {
+          const formattedDate = formatDate(currentCheckDate);
+          try {
+            const horarios = await getHorariosDisponiveis(currentCheckDate);
+            availability[formattedDate] = horarios.length > 0;
+            daysChecked++;
+          } catch (err) {
+            console.error("Erro ao verificar disponibilidade:", err);
+            availability[formattedDate] = false;
+          }
         }
+        
+        // Avançar para o próximo dia
+        currentCheckDate.setDate(currentCheckDate.getDate() + 1);
       }
       
       setAvailableDays(availability);
@@ -553,20 +574,24 @@ function AgendamentoContent() {
     if (!currentDate) return false;
     
     // Não permitir datas no passado
-    const today = new Date(currentDate);
+    const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (date < today) return false;
+    
+    const dateToCheck = new Date(date);
+    dateToCheck.setHours(0, 0, 0, 0);
+    
+    if (dateToCheck < today) return false;
 
     // Não permitir fins de semana
     if (date.getDay() === 0 || date.getDay() === 6) return false;
     
-    // Encontrar a próxima sexta-feira (fim da próxima semana)
-    const endDate = new Date(today);
-    const daysUntilFriday = (5 - today.getDay() + 7) % 7; // Dias até sexta dessa semana
-    endDate.setDate(today.getDate() + daysUntilFriday + 7); // Adiciona 7 dias para ir para próxima sexta
-    endDate.setHours(23, 59, 59, 999);
+    // Permitir agendamentos até 10 dias úteis à frente
+    const maxDate = new Date(today);
+    let daysToAdd = 14; // 2 semanas para garantir 10 dias úteis
+    maxDate.setDate(today.getDate() + daysToAdd);
+    maxDate.setHours(23, 59, 59, 999);
     
-    return date <= endDate;
+    return dateToCheck <= maxDate;
   };
 
   const prevMonth = () => {
@@ -639,7 +664,7 @@ function AgendamentoContent() {
         .from("agendamentos")
         .select("horario")
         .eq("data", formatDate(selectedDate))
-        .eq("horario", horario + ":00"); // Adicionar segundos para comparação
+        .eq("horario", horario + ":00");
 
       if (verificaError) {
         throw verificaError;
@@ -659,8 +684,8 @@ function AgendamentoContent() {
         telefone: telefone.replace(/\D/g, ''),
         data_nascimento: dataNascimento,
         data: formatDate(selectedDate),
-        horario: horario + ":00", // Adicionar segundos ao salvar
-        status: 'confirmado' // Definindo como confirmado por padrão
+        horario: horario + ":00",
+        status: 'confirmado'
       }).select().single();
       
       if (insertError) {
@@ -712,7 +737,7 @@ function AgendamentoContent() {
   return (
     <Fragment>
       <Header onOpenAgendamentos={() => setModalOpen(true)} />
-      <div className="pt-20"> {/* Espaço para o header fixo */}
+      <div className="pt-20">
         <div className="flex flex-col md:flex-row gap-8 max-w-5xl mx-auto py-10 px-4">
           {/* Calendário */}
           <div className="bg-white rounded-lg shadow p-6 w-full md:w-[380px]">
@@ -985,4 +1010,3 @@ export default function AgendamentoPage() {
 
   return <AgendamentoContent />;
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import DashboardNav from '@/components/DashboardNav';
+import DashboardNav from '@/components/DashboardHeader';
 import AdminGuard from '@/components/AdminGuard';
 
 export default function AdminLayout({
