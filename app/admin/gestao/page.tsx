@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { FiCalendar, FiClock, FiUsers, FiLock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import DashboardHeader from '@/components/DashboardHeader';
+import { ReactNode } from 'react';
 
 interface DashboardCard {
   title: string;
   description: string;
-  icon: JSX.Element;
+  icon: ReactNode;
   stats?: string;
   link: string;
   color: string;
