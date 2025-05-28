@@ -59,84 +59,47 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Buscar estatísticas
       const today = new Date().toISOString().split('T')[0];
-      
-      // Total de atendimentos
-      const { count: total } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' });
 
-      // Atendimentos em correção
-      const { count: correcoes } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'correcao');
+      // Fetch all atendimentos stats in parallel
+      const [
+        atendimentosData,
+        agendamentosData,
+        recentAtendimentosData
+      ] = await Promise.all([
+        // Atendimentos stats
+        supabase.rpc('get_atendimentos_stats', { data_atual: today }),
+        // Agendamentos stats
+        supabase.rpc('get_agendamentos_stats'),
+        // Recent atendimentos
+        supabase
+          .from('atendimentos')
+          .select('*')
+          .order('dia_atual', { ascending: false })
+          .order('horario', { ascending: false })
+          .limit(5)
+      ]);
 
-      // Atendimentos em andamento
-      const { count: emAndamento } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'em_andamento');
+      if (atendimentosData.error) throw atendimentosData.error;
+      if (agendamentosData.error) throw agendamentosData.error;
+      if (recentAtendimentosData.error) throw recentAtendimentosData.error;
 
-      // Atendimentos concluídos
-      const { count: concluidos } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' })
-        .in('status', ['concluido', 'concluído', 'Concluido', 'Concluído']);
-
-      // Atendimentos bloqueados
-      const { count: bloqueados } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'bloqueado');
-
-      // Atendimentos de hoje
-      const { count: hoje } = await supabase
-        .from('atendimentos')
-        .select('*', { count: 'exact' })
-        .eq('dia_atual', today);
-
-      // Agendamentos pendentes
-      const { count: agendamentosPendentes } = await supabase
-        .from('agendamentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'pendente');
-
-      // Agendamentos confirmados
-      const { count: agendamentosConfirmados } = await supabase
-        .from('agendamentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'confirmado');
-
-      // Agendamentos cancelados
-      const { count: agendamentosCancelados } = await supabase
-        .from('agendamentos')
-        .select('*', { count: 'exact' })
-        .eq('status', 'cancelado');
-
-      // Buscar atendimentos recentes
-      const { data: recent } = await supabase
-        .from('atendimentos')
-        .select('*')
-        .order('dia_atual', { ascending: false })
-        .order('horario', { ascending: false })
-        .limit(5);
+      const atendimentosStats = atendimentosData.data[0] || {};
+      const agendamentosStats = agendamentosData.data[0] || {};
 
       setStats({
-        total: total || 0,
-        correcoes: correcoes || 0,
-        emAndamento: emAndamento || 0,
-        concluidos: concluidos || 0,
-        bloqueados: bloqueados || 0,
-        hoje: hoje || 0,
-        agendamentosPendentes: agendamentosPendentes || 0,
-        agendamentosConfirmados: agendamentosConfirmados || 0,
-        agendamentosCancelados: agendamentosCancelados || 0,
+        total: atendimentosStats.total || 0,
+        correcoes: atendimentosStats.correcoes || 0,
+        emAndamento: atendimentosStats.em_andamento || 0,
+        concluidos: atendimentosStats.concluidos || 0,
+        bloqueados: atendimentosStats.bloqueados || 0,
+        hoje: atendimentosStats.hoje || 0,
+        agendamentosPendentes: agendamentosStats.pendentes || 0,
+        agendamentosConfirmados: agendamentosStats.confirmados || 0,
+        agendamentosCancelados: agendamentosStats.cancelados || 0,
       });
 
-      setRecentAtendimentos(recent || []);
+      setRecentAtendimentos(recentAtendimentosData.data || []);
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
     } finally {
@@ -146,7 +109,6 @@ export default function DashboardPage() {
 
   const formatDate = (dateString: string) => {
     try {
-      // Ajusta o fuso horário para considerar UTC
       const date = new Date(dateString + 'T12:00:00Z');
       return date.toLocaleDateString('pt-BR', {
         timeZone: 'America/Fortaleza',
@@ -156,7 +118,7 @@ export default function DashboardPage() {
       });
     } catch (error) {
       console.error('Erro ao formatar data:', error);
-      return dateString; // Retorna a string original em caso de erro
+      return dateString;
     }
   };
 
@@ -177,9 +139,26 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <p className="text-gray-500">Carregando informações...</p>
-      </div>
+      <>
+        <DashboardHeader />
+        <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse space-y-6">
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
     );
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { FiCheck, FiX, FiPrinter, FiClock, FiUser, FiPhone } from 'react-icons/fi';
@@ -29,6 +29,7 @@ export default function AgendamentosHojePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -73,10 +74,7 @@ export default function AgendamentosHojePage() {
 
   const formatDate = (dateString: string) => {
     try {
-      // Ajusta o fuso horário para considerar UTC
-      const date = new Date(dateString);
-      // Adiciona um dia para compensar a diferença do fuso horário
-      date.setDate(date.getDate() + 1);
+      const date = new Date(dateString + 'T12:00:00Z');
       return date.toLocaleDateString('pt-BR', {
         timeZone: 'America/Fortaleza',
         day: '2-digit',
@@ -85,14 +83,8 @@ export default function AgendamentosHojePage() {
       });
     } catch (error) {
       console.error('Erro ao formatar data:', error);
-      return dateString; // Retorna a string original em caso de erro
+      return dateString;
     }
-  };
-
-  const adjustDateForDB = (dateString: string) => {
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + 1);
-    return date.toISOString().split('T')[0];
   };
 
   const loadAgendamentos = async () => {
@@ -102,7 +94,7 @@ export default function AgendamentosHojePage() {
       const { data, error } = await supabase
         .from('agendamentos')
         .select('*')
-        .eq('data', adjustDateForDB(hoje.toISOString()))
+        .eq('data', hoje.toISOString().split('T')[0])
         .eq('status', 'confirmado')
         .order('horario', { ascending: true });
 
@@ -116,6 +108,7 @@ export default function AgendamentosHojePage() {
   };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
+    setActionLoading(true);
     try {
       const { error } = await supabase
         .from('agendamentos')
@@ -126,10 +119,12 @@ export default function AgendamentosHojePage() {
       await loadAgendamentos();
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const getStatusClass = (horario: string) => {
+  const getStatusClass = useMemo(() => (horario: string) => {
     const agendamento = agendamentos.find(a => a.horario.startsWith(horario));
     if (!agendamento) return 'bg-gray-100 text-gray-400';
 
@@ -149,7 +144,7 @@ export default function AgendamentosHojePage() {
     }
 
     return 'bg-emerald-100 text-emerald-800'; // Futuro
-  };
+  }, [agendamentos, currentTime]);
 
   if (!user || !isAdmin) {
     return (
@@ -183,8 +178,23 @@ export default function AgendamentosHojePage() {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                  <div className="animate-pulse p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="w-6 h-6 bg-gray-200 rounded-full mr-2"></div>
+                        <div className="h-6 bg-gray-200 rounded w-16"></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -205,22 +215,25 @@ export default function AgendamentosHojePage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleStatusChange(agendamento.id, 'confirmado')}
-                              className="p-2 rounded-full hover:bg-green-200"
+                              className="p-2 rounded-full hover:bg-green-200 disabled:opacity-50"
                               title="Confirmar presença"
+                              disabled={actionLoading}
                             >
                               <FiCheck className="w-5 h-5 text-green-700" />
                             </button>
                             <button
                               onClick={() => handleStatusChange(agendamento.id, 'cancelado')}
-                              className="p-2 rounded-full hover:bg-red-200"
+                              className="p-2 rounded-full hover:bg-red-200 disabled:opacity-50"
                               title="Marcar falta"
+                              disabled={actionLoading}
                             >
                               <FiX className="w-5 h-5 text-red-700" />
                             </button>
                             <button
                               onClick={() => window.open(`/admin/agendamentos/${agendamento.id}/imprimir`, '_blank')}
-                              className="p-2 rounded-full hover:bg-blue-200"
+                              className="p-2 rounded-full hover:bg-blue-200 disabled:opacity-50"
                               title="Imprimir comprovante"
+                              disabled={actionLoading}
                             >
                               <FiPrinter className="w-5 h-5 text-blue-700" />
                             </button>

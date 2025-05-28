@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { FiSearch, FiFilter, FiDownload, FiCheck, FiX, FiPrinter } from 'react-icons/fi';
@@ -25,6 +25,7 @@ export default function AgendamentosPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('confirmado');
@@ -69,10 +70,7 @@ export default function AgendamentosPage() {
 
   const formatDate = (dateString: string) => {
     try {
-      // Ajusta o fuso horário para considerar UTC
-      const date = new Date(dateString);
-      // Adiciona um dia para compensar a diferença do fuso horário
-      date.setDate(date.getDate() + 1);
+      const date = new Date(dateString + 'T12:00:00Z');
       return date.toLocaleDateString('pt-BR', {
         timeZone: 'America/Fortaleza',
         day: '2-digit',
@@ -81,14 +79,8 @@ export default function AgendamentosPage() {
       });
     } catch (error) {
       console.error('Erro ao formatar data:', error);
-      return dateString; // Retorna a string original em caso de erro
+      return dateString;
     }
-  };
-
-  const adjustDateForDB = (dateString: string) => {
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + 1);
-    return date.toISOString().split('T')[0];
   };
 
   const loadAgendamentos = async () => {
@@ -101,8 +93,9 @@ export default function AgendamentosPage() {
         .order('horario', { ascending: true });
 
       if (dateFilter) {
-        // Ajusta a data do filtro para compensar a diferença do fuso horário
-        query = query.eq('data', adjustDateForDB(dateFilter));
+        const adjustedDate = new Date(dateFilter);
+        adjustedDate.setDate(adjustedDate.getDate() + 1);
+        query = query.eq('data', adjustedDate.toISOString().split('T')[0]);
       }
 
       if (statusFilter) {
@@ -121,6 +114,7 @@ export default function AgendamentosPage() {
   };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
+    setActionLoading(true);
     try {
       const { error } = await supabase
         .from('agendamentos')
@@ -132,11 +126,14 @@ export default function AgendamentosPage() {
       await loadAgendamentos();
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleBulkAction = async (action: string) => {
     if (!selectedItems.length) return;
+    setActionLoading(true);
 
     try {
       if (action === 'delete') {
@@ -159,6 +156,8 @@ export default function AgendamentosPage() {
       await loadAgendamentos();
     } catch (err) {
       console.error('Erro ao executar ação em lote:', err);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -186,10 +185,13 @@ export default function AgendamentosPage() {
     link.click();
   };
 
-  const filteredAgendamentos = agendamentos.filter(a => 
-    a.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.cpf.includes(searchTerm)
+  const filteredAgendamentos = useMemo(() => 
+    agendamentos.filter(a => 
+      a.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.cpf.includes(searchTerm)
+    ),
+    [agendamentos, searchTerm]
   );
 
   if (!user || !isAdmin) {
@@ -251,6 +253,7 @@ export default function AgendamentosPage() {
                   <button
                     onClick={exportToCSV}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg"
+                    disabled={loading || actionLoading}
                   >
                     <FiDownload />
                     Exportar
@@ -298,19 +301,22 @@ export default function AgendamentosPage() {
                     </span>
                     <button
                       onClick={() => handleBulkAction('confirmado')}
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+                      disabled={actionLoading}
                     >
                       Confirmar
                     </button>
                     <button
                       onClick={() => handleBulkAction('cancelado')}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      disabled={actionLoading}
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={() => handleBulkAction('delete')}
-                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+                      disabled={actionLoading}
                     >
                       Excluir
                     </button>
@@ -322,8 +328,18 @@ export default function AgendamentosPage() {
 
           {/* Lista de agendamentos */}
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="animate-pulse">
+                <div className="h-12 bg-gray-100"></div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="border-t border-gray-200">
+                    <div className="p-4">
+                      <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -342,6 +358,7 @@ export default function AgendamentosPage() {
                               setSelectedItems([]);
                             }
                           }}
+                          disabled={actionLoading}
                         />
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -375,6 +392,7 @@ export default function AgendamentosPage() {
                                 setSelectedItems(selectedItems.filter(id => id !== agendamento.id));
                               }
                             }}
+                            disabled={actionLoading}
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -410,22 +428,25 @@ export default function AgendamentosPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleStatusChange(agendamento.id, 'confirmado')}
-                              className="text-green-600 hover:text-green-900"
+                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
                               title="Confirmar"
+                              disabled={actionLoading}
                             >
                               <FiCheck />
                             </button>
                             <button
                               onClick={() => handleStatusChange(agendamento.id, 'cancelado')}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
                               title="Cancelar"
+                              disabled={actionLoading}
                             >
                               <FiX />
                             </button>
                             <button
                               onClick={() => window.open(`/admin/agendamentos/${agendamento.id}/imprimir`, '_blank')}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
                               title="Imprimir"
+                              disabled={actionLoading}
                             >
                               <FiPrinter />
                             </button>
