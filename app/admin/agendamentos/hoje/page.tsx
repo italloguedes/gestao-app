@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
@@ -189,7 +189,7 @@ export default function AgendamentosHojePage() {
     if (!agendamento) return null;
     
     const statusConfig: Record<string, {
-      icon: React.ReactElement;
+      icon: ReactElement;
       text: string;
       className: string;
     }> = {
