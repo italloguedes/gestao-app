@@ -189,7 +189,7 @@ export default function AgendamentosHojePage() {
     if (!agendamento) return null;
     
     const statusConfig: Record<string, {
-      icon: JSX.Element;
+      icon: React.ReactElement;
       text: string;
       className: string;
     }> = {
