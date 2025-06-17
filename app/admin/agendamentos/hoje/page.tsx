@@ -339,6 +339,15 @@ export default function AgendamentosHojePage() {
                                 Ausente
                               </button>
                               <button
+                                onClick={() => handleStatusChange(agendamento.id, 'concluido')}
+                                className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                title="Marcar concluido"
+                              >
+                                <FiXCircle className="w-3 h-3 mr-1" />
+                                Concluído
+                              </button>
+                              
+                              <button
                                 onClick={() => {
                                   setSelectedAppointment(agendamento);
                                   setModalAction('cancelar');
