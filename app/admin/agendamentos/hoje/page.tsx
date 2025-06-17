@@ -41,7 +41,7 @@ type StatusMapType = {
 };
 
 const HORARIOS = [
-  "08:00","08:30", "09:00", "10:00", "11:00", // manhã['08:00', '08:30', '09:00', '10:00', '11:00', '13:00', '13:30', '14:00', '14:30', '15:00']
+  "08:00","08:30", "09:00", "10:00", "11:00", // manhã
   "13:00","13:30", "14:00","14:30", "15:00", // tarde
 ];
 
@@ -181,7 +181,7 @@ export default function AgendamentosHojePage() {
       concluido: {
         icon: <FiCheckCircle className="w-4 h-4 mr-1.5" />,
         text: "Concluído",
-        className: "bg-teal-50 text-teal-700 border border-teal-200"
+        className: "bg-green-100 text-green-800 border border-green-300"
       },
       ausente: {
         icon: <FiXCircle className="w-4 h-4 mr-1.5" />,
@@ -340,13 +340,12 @@ export default function AgendamentosHojePage() {
                               </button>
                               <button
                                 onClick={() => handleStatusChange(agendamento.id, 'concluido')}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                className="flex-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
                                 title="Marcar concluido"
                               >
-                                <FiXCircle className="w-3 h-3 mr-1" />
+                                <FiCheckCircle className="w-3 h-3 mr-1" />
                                 Concluído
                               </button>
-                              
                               <button
                                 onClick={() => {
                                   setSelectedAppointment(agendamento);
@@ -357,34 +356,6 @@ export default function AgendamentosHojePage() {
                                 title="Cancelar"
                               >
                                 <FiSlash className="w-3 h-3 mr-1" />
-                                Cancelar
-                              </button>
-                            </div>
-                          )}
-                          {agendamento.status === 'concluido' && (
-                            <div className="flex gap-2 mt-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction('concluir');
-                                  setIsModalOpen(true);
-                                }}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors flex items-center justify-center"
-                                title="Concluir atendimento"
-                              >
-                                <FiCheck className="w-3 h-3 mr-1" />
-                                Concluir
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction('cancelar');
-                                  setIsModalOpen(true);
-                                }}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                title="Cancelar atendimento"
-                              >
-                                <FiXCircle className="w-3 h-3 mr-1" />
                                 Cancelar
                               </button>
                             </div>
@@ -418,4 +389,4 @@ export default function AgendamentosHojePage() {
       )}
     </>
   );
-} 
+}
