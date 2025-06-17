@@ -40,101 +40,99 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         observacoes: formData.get('observacoes'),
       };
 
-      if (action === 'concluir') {
-        // Generate protocolo
-        const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
-        if (protocolError) throw protocolError;
+      // Generate protocolo
+      const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
+      if (protocolError) throw protocolError;
 
-        const protocolo = protocolData;
-        const now = new Date();
-        const diaAtual = now.toISOString().split('T')[0];
-        const horario = now.toTimeString().split(' ')[0];
+      const protocolo = protocolData;
+      const now = new Date();
+      const diaAtual = now.toISOString().split('T')[0];
+      const horario = now.toTimeString().split(' ')[0];
 
-        // Create new atendimento record
-        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
-          {
-            nome: formData.get('nome'),
-            cpf: formData.get('cpf'),
-            email: formData.get('email'),
-            telefone: formData.get('telefone'),
-            data_nascimento: formData.get('data_nascimento'),
-            solicitante: formData.get('solicitante'),
-            observacoes: formData.get('observacoes'),
-            horario,
-            dia_atual: diaAtual,
-            usuario_id: (await supabase.auth.getUser()).data.user?.id,
-            protocolo,
-            status: 'em_andamento',
-            agendamento_id: appointment.id
-          },
-        ]);
+      // Create new atendimento record
+      const { error: atendimentoError } = await supabase.from('atendimentos').insert([
+        {
+          nome: formData.get('nome'),
+          cpf: formData.get('cpf'),
+          email: formData.get('email'),
+          telefone: formData.get('telefone'),
+          data_nascimento: formData.get('data_nascimento'),
+          solicitante: formData.get('solicitante'),
+          observacoes: formData.get('observacoes'),
+          horario,
+          dia_atual: diaAtual,
+          usuario_id: (await supabase.auth.getUser()).data.user?.id,
+          protocolo,
+          status: 'em_andamento',
+          agendamento_id: appointment.id
+        },
+      ]);
 
-        if (atendimentoError) throw atendimentoError;
+      if (atendimentoError) throw atendimentoError;
 
-        // Update agendamento with new data and status
-        const { error: agendamentoError } = await supabase
-          .from('agendamentos')
-          .update({
-            ...updatedAppointment,
-            status: 'concluido'
-          })
-          .eq('id', appointment.id);
+      // Update agendamento with new data and status
+      const { error: agendamentoError } = await supabase
+        .from('agendamentos')
+        .update({
+          ...updatedAppointment,
+          status: 'concluido'
+        })
+        .eq('id', appointment.id);
 
-        if (agendamentoError) throw agendamentoError;
+      if (agendamentoError) throw agendamentoError;
 
-        // Send email
-        try {
-          const res = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: formData.get('email'),
-              subject: `Atendimento Realizado, ${formData.get('nome')}! 🎉`,
-              html: `
-                <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
-                  <div style="text-align: center; margin-bottom: 24px;">
-                    <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
-                  </div>
-                  <div style="background: #fff; border-radius: 10px; padding: 32px 24px; box-shadow: 0 2px 8px #0001;">
-                    <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 18px;">
-                      Atendimento para emissão da CIN (Carteira de Identidade Nacional)
-                    </h2>
-                    <p style="margin-bottom: 18px;">
-                      Olá, ${formData.get('nome')}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
-                    </p>
-                    <p style="margin-bottom: 10px;">
-                      <b>Nome:</b> ${formData.get('nome')}<br>
-                      <b>CPF:</b> ${formData.get('cpf')}<br>
-                      <b>Número de Protocolo:</b> ${protocolo}
-                    </p>
-                    <p style="margin-bottom: 0;">
-                      Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
-                    </p>
-                  </div>
-                  <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
-                    © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
-                  </div>
+      // Send email
+      try {
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: formData.get('email'),
+            subject: `Atendimento Realizado, ${formData.get('nome')}! 🎉`,
+            html: `
+              <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                  <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
                 </div>
-              `,
-            }),
-          });
+                <div style="background: #fff; border-radius: 10px; padding: 32px 24px; box-shadow: 0 2px 8px #0001;">
+                  <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 18px;">
+                    Atendimento para emissão da CIN (Carteira de Identidade Nacional)
+                  </h2>
+                  <p style="margin-bottom: 18px;">
+                    Olá, ${formData.get('nome')}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
+                  </p>
+                  <p style="margin-bottom: 10px;">
+                    <b>Nome:</b> ${formData.get('nome')}<br>
+                    <b>CPF:</b> ${formData.get('cpf')}<br>
+                    <b>Número de Protocolo:</b> ${protocolo}
+                  </p>
+                  <p style="margin-bottom: 0;">
+                    Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
+                  </p>
+                </div>
+                <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
+                  © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+                </div>
+              </div>
+            `,
+          }),
+        });
 
-          if (!res.ok) {
-            console.error('Erro ao enviar email:', await res.json());
-          }
-        } catch (err) {
-          console.error('Erro ao enviar email:', err);
+        if (!res.ok) {
+          console.error('Erro ao enviar email:', await res.json());
         }
-
-        setMessage('Atendimento concluído com sucesso!');
-        onSave(updatedAppointment);
-        setTimeout(() => {
-          onClose();
-        }, 2000);
+      } catch (err) {
+        console.error('Erro ao enviar email:', err);
       }
+
+      setMessage('Atendimento concluído com sucesso!');
+      onSave(updatedAppointment);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (err) {
       console.error('Erro:', err);
-      setMessage(`Erro ao ${action} atendimento. Por favor, tente novamente.`);
+      setMessage(`Erro ao concluir atendimento. Por favor, tente novamente.`);
     } finally {
       setLoading(false);
     }
