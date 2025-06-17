@@ -26,6 +26,15 @@ const DesktopNavItems = ({ onClose }: { onClose?: () => void }) => (
       <FiCalendar className="mr-2 group-hover:scale-110 transition-transform duration-150" />
       <span>Agendar</span>
     </Link>
+
+    <Link
+      href="/admin/agendamentos/hoje"
+      className="group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-150"
+      onClick={onClose}
+    >
+      <FiCalendar className="mr-2 group-hover:scale-110 transition-transform duration-150" />
+      <span>Agenda de Hoje</span>
+    </Link>
   </>
 );
 
