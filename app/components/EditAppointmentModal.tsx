@@ -132,12 +132,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       } else if (action === 'concluir') {
         // Update atendimento status to 'concluido'
         const { error: atendimentoError } = await supabase
-          .from('atendimentos')
+          .from('agendamento')
           .update({ 
             status: 'concluido',
             observacoes: formData.get('observacoes')
           })
-          .eq('agendamento_id', appointment.id);
+          .eq('id', appointment.id);
 
         if (atendimentoError) throw atendimentoError;
 
