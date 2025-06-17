@@ -142,7 +142,10 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         const protocolo = protocolData;
 
-        // Insere na tabela atendimentos
+        const user = await supabase.auth.getUser();
+        const usuarioId = user.data.user?.id;
+
+        // Insere o atendimento
         const { error: atendimentoInsertError } = await supabase.from('atendimentos').insert([
           {
             nome: appointment.nome,
@@ -152,24 +155,30 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             observacoes: formData.get('observacoes'),
             horario,
             dia_atual: diaAtual,
-            usuario_id: (await supabase.auth.getUser()).data.user?.id,
+            usuario_id: usuarioId,
             protocolo,
-            status: 'concluido'
+            status: 'concluido',
           },
         ]);
 
         if (atendimentoInsertError) throw atendimentoInsertError;
 
-        // Atualiza o status da tabela agendamentos
-        const { error: agendamentoUpdateError } = await supabase
+        // Atualiza o status do agendamento para 'concluido'
+        const { data: agendamentoUpdated, error: agendamentoUpdateError } = await supabase
           .from('agendamentos')
           .update({
             status: 'concluido',
-            observacoes: formData.get('observacoes')
+            observacoes: formData.get('observacoes'),
           })
-          .eq('id', appointment.id);
+          .eq('id', appointment.id)
+          .select(); // Adicionado select para debugar
 
-        if (agendamentoUpdateError) throw agendamentoUpdateError;
+        if (agendamentoUpdateError) {
+          console.error('Erro ao atualizar agendamento:', agendamentoUpdateError);
+          throw agendamentoUpdateError;
+        } else {
+          console.log('Agendamento atualizado com sucesso:', agendamentoUpdated);
+        }
 
         setMessage('Atendimento concluído com sucesso!');
       }
@@ -202,8 +211,8 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         {message && (
           <div className={`mb-4 p-4 rounded-md ${message.includes('sucesso')
-              ? 'bg-green-50 border border-green-200 text-green-600'
-              : 'bg-red-50 border border-red-200 text-red-600'
+            ? 'bg-green-50 border border-green-200 text-green-600'
+            : 'bg-red-50 border border-red-200 text-red-600'
             }`}>
             <p>{message}</p>
           </div>
