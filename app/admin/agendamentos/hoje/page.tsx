@@ -55,7 +55,7 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<'iniciar' | 'concluir' | 'cancelar'>('iniciar');
+  const [modalAction, setModalAction] = useState<'iniciar' | 'concluir' | 'cancelar' | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -145,6 +145,8 @@ export default function AgendamentosHojePage() {
 
       if (error) throw error;
       await loadAgendamentos();
+      setIsModalOpen(false);
+      setSelectedAppointment(null);
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
       alert('Erro ao atualizar status. Por favor, tente novamente.');
@@ -316,50 +318,56 @@ export default function AgendamentosHojePage() {
                             <span className="text-sm">{agendamento.telefone}</span>
                           </div>
                           
-                          {agendamento.status === 'confirmado' && (
-                            <div className="flex gap-2 mt-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction('iniciar');
-                                  setIsModalOpen(true);
-                                }}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                                title="Concluir Atendimento"
-                              >
-                                <FiEdit className="w-3 h-3 mr-1" />
-                                Iniciar
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(agendamento.id, 'ausente')}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                title="Marcar ausente"
-                              >
-                                <FiXCircle className="w-3 h-3 mr-1" />
-                                Ausente
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(agendamento.id, 'concluido')}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                                title="Marcar concluido"
-                              >
-                                <FiCheckCircle className="w-3 h-3 mr-1" />
-                                Concluído
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction('cancelar');
-                                  setIsModalOpen(true);
-                                }}
-                                className="flex-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                                title="Cancelar"
-                              >
-                                <FiSlash className="w-3 h-3 mr-1" />
-                                Cancelar
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={() => {
+                                setSelectedAppointment(agendamento);
+                                setModalAction('iniciar');
+                                setIsModalOpen(true);
+                              }}
+                              className="flex-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                              title="Iniciar Atendimento"
+                            >
+                              <FiEdit className="w-3 h-3 mr-1" />
+                              Iniciar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAppointment(agendamento);
+                                setModalAction('ausente');
+                                setIsModalOpen(true);
+                              }}
+                              className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                              title="Marcar ausente"
+                            >
+                              <FiXCircle className="w-3 h-3 mr-1" />
+                              Ausente
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAppointment(agendamento);
+                                setModalAction('concluido');
+                                setIsModalOpen(true);
+                              }}
+                              className="flex-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                              title="Marcar concluido"
+                            >
+                              <FiCheckCircle className="w-3 h-3 mr-1" />
+                              Concluído
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAppointment(agendamento);
+                                setModalAction('cancelar');
+                                setIsModalOpen(true);
+                              }}
+                              className="flex-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                              title="Cancelar"
+                            >
+                              <FiSlash className="w-3 h-3 mr-1" />
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center py-4">
@@ -375,16 +383,18 @@ export default function AgendamentosHojePage() {
         </div>
       </div>
 
-      {selectedAppointment && (
+      {selectedAppointment && isModalOpen && (
         <EditAppointmentModal
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
             setSelectedAppointment(null);
+            setModalAction(null);
           }}
           appointment={selectedAppointment}
           onSave={handleEditAppointment}
           action={modalAction}
+          onStatusChange={handleStatusChange}
         />
       )}
     </>
