@@ -8,13 +8,14 @@ interface EditAppointmentModalProps {
   onClose: () => void;
   appointment: any;
   onSave: (updatedAppointment: any) => void;
-  action: 'iniciar' | 'concluir' | 'cancelar';
+  action: 'iniciar' | 'ausente' | 'concluido' | 'cancelar' | null;
+  onStatusChange: (id: number, newStatus: string) => void;
 }
 
-export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction }: EditAppointmentModalProps) {
+export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange }: EditAppointmentModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  const [action, setAction] = React.useState<'iniciar' | 'concluir' | 'cancelar'>(initialAction);
+  const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | null>(initialAction);
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -31,15 +32,16 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       const formData = new FormData(e.target as HTMLFormElement);
       const updatedAppointment = {
         ...appointment,
-        nome: formData.get('nome'),
-        telefone: formData.get('telefone'),
-        email: formData.get('email'),
-        cpf: formData.get('cpf'),
-        data_nascimento: formData.get('data_nascimento'),
+        nome: formData.get('nome') || appointment.nome,
+        telefone: formData.get('telefone') || appointment.telefone,
+        email: formData.get('email') || appointment.email,
+        cpf: formData.get('cpf') || appointment.cpf,
+        data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
+        observacoes: formData.get('observacoes') || appointment.observacoes,
       };
 
       if (action === 'iniciar') {
-        // First update the appointment
+        // Update appointment details
         const { error: appointmentError } = await supabase
           .from('agendamentos')
           .update(updatedAppointment)
@@ -47,42 +49,35 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         if (appointmentError) throw appointmentError;
 
-        // Then create the atendimento record
+        // Create atendimento record
         const now = new Date();
         const diaAtual = now.toISOString().split('T')[0];
         const horario = now.toTimeString().split(' ')[0];
 
-        // Generate protocolo
         const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
         if (protocolError) throw protocolError;
 
         const protocolo = protocolData;
 
-        // Create atendimento
         const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
-            nome: formData.get('nome'),
-            cpf: formData.get('cpf'),
-            email: formData.get('email'),
+            nome: updatedAppointment.nome,
+            cpf: updatedAppointment.cpf,
+            email: updatedAppointment.email,
             solicitante: formData.get('solicitante'),
-            observacoes: formData.get('observacoes'),
+            observacoes: updatedAppointment.observacoes,
             horario,
             dia_atual: diaAtual,
             usuario_id: (await supabase.auth.getUser()).data.user?.id,
             protocolo,
-            status: 'em_andamento'
+            status: 'em_andamento',
           },
         ]);
 
         if (atendimentoError) throw atendimentoError;
 
-        // Update appointment status to 'concluido'
-        const { error: statusError } = await supabase
-          .from('agendamentos')
-          .update({ status: 'concluido' })
-          .eq('id', appointment.id);
-
-        if (statusError) throw statusError;
+        // Update appointment status to 'concluido' after initiating
+        await onStatusChange(appointment.id, 'concluido');
 
         // Send email
         try {
@@ -90,8 +85,8 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              to: formData.get('email'),
-              subject: `Atendimento Realizado, ${formData.get('nome')}! 🎉`,
+              to: updatedAppointment.email,
+              subject: `Atendimento Realizado, ${updatedAppointment.nome}! 🎉`,
               html: `
                 <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
                   <div style="text-align: center; margin-bottom: 24px;">
@@ -102,11 +97,11 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       Atendimento para emissão da CIN (Carteira de Identidade Nacional)
                     </h2>
                     <p style="margin-bottom: 18px;">
-                      Olá, ${formData.get('nome')}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
+                      Olá, ${updatedAppointment.nome}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
                     </p>
                     <p style="margin-bottom: 10px;">
-                      <b>Nome:</b> ${formData.get('nome')}<br>
-                      <b>CPF:</b> ${formData.get('cpf')}<br>
+                      <b>Nome:</b> ${updatedAppointment.nome}<br>
+                      <b>CPF:</b> ${updatedAppointment.cpf}<br>
                       <b>Número de Protocolo:</b> ${protocolo}
                     </p>
                     <p style="margin-bottom: 0;">
@@ -129,58 +124,41 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
 
         setMessage('Atendimento iniciado com sucesso!');
-      } else if (action === 'concluir') {
-        const formData = new FormData(e.target as HTMLFormElement);
-
+      } else if (action === 'ausente') {
+        await onStatusChange(appointment.id, 'ausente');
+        setMessage('Atendimento marcado como ausente com sucesso!');
+      } else if (action === 'concluido') {
         const now = new Date();
         const diaAtual = now.toISOString().split('T')[0];
         const horario = now.toTimeString().split(' ')[0];
 
-        // Gera protocolo
         const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
         if (protocolError) throw protocolError;
 
         const protocolo = protocolData;
 
-        const user = await supabase.auth.getUser();
-        const usuarioId = user.data.user?.id;
-
-        // Insere o atendimento
-        const { error: atendimentoInsertError } = await supabase.from('atendimentos').insert([
+        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
-            nome: appointment.nome,
-            cpf: appointment.cpf,
-            email: appointment.email,
-            solicitante: appointment.solicitante || formData.get('solicitante'),
-            observacoes: formData.get('observacoes'),
+            nome: updatedAppointment.nome,
+            cpf: updatedAppointment.cpf,
+            email: updatedAppointment.email,
+            solicitante: formData.get('solicitante') || appointment.solicitante,
+            observacoes: updatedAppointment.observacoes,
             horario,
             dia_atual: diaAtual,
-            usuario_id: usuarioId,
+            usuario_id: (await supabase.auth.getUser()).data.user?.id,
             protocolo,
             status: 'concluido',
           },
         ]);
 
-        if (atendimentoInsertError) throw atendimentoInsertError;
+        if (atendimentoError) throw atendimentoError;
 
-        // Atualiza o status do agendamento para 'concluido'
-        const { data: agendamentoUpdated, error: agendamentoUpdateError } = await supabase
-          .from('agendamentos')
-          .update({
-            status: 'concluido',
-            observacoes: formData.get('observacoes'),
-          })
-          .eq('id', appointment.id)
-          .select(); // Adicionado select para debugar
-
-        if (agendamentoUpdateError) {
-          console.error('Erro ao atualizar agendamento:', agendamentoUpdateError);
-          throw agendamentoUpdateError;
-        } else {
-          console.log('Agendamento atualizado com sucesso:', agendamentoUpdated);
-        }
-
+        await onStatusChange(appointment.id, 'concluido');
         setMessage('Atendimento concluído com sucesso!');
+      } else if (action === 'cancelar') {
+        await onStatusChange(appointment.id, 'cancelado');
+        setMessage('Atendimento cancelado com sucesso!');
       }
 
       onSave(updatedAppointment);
@@ -201,8 +179,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-slate-800">
             {action === 'iniciar' ? 'Iniciar Atendimento' :
-              action === 'concluir' ? 'Concluir Atendimento' :
-                'Cancelar Atendimento'}
+              action === 'ausente' ? 'Marcar Ausente' :
+              action === 'concluido' ? 'Concluir Atendimento' :
+              'Cancelar Atendimento'}
           </h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
             <FiX className="w-6 h-6" />
@@ -224,7 +203,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             <span className="font-medium">{appointment.horario}</span>
           </div>
 
-          {action === 'iniciar' ? (
+          {action === 'iniciar' && (
             <>
               <div className="space-y-4">
                 <div>
@@ -294,7 +273,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 </div>
               </div>
             </>
-          ) : null}
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
@@ -303,6 +282,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               rows={3}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               placeholder="Observações sobre o atendimento"
+              defaultValue={appointment.observacoes}
             />
           </div>
 
@@ -315,61 +295,57 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             >
               Cancelar
             </button>
-            {action === 'iniciar' ? (
-              <button
-                type="submit"
-                className="px-4 py-2 text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors flex items-center"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loading />
-                    <span className="ml-2">Processando...</span>
-                  </>
-                ) : (
-                  'Concluir Atendimento'
-                )}
-              </button>
-            ) : action === 'concluir' ? (
-              <button
-                type="submit"
-                className="px-4 py-2 text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors flex items-center"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loading />
-                    <span className="ml-2">Processando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FiCheck className="w-4 h-4 mr-2" />
-                    Concluir Atendimento
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="px-4 py-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors flex items-center"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loading />
-                    <span className="ml-2">Processando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FiXCircle className="w-4 h-4 mr-2" />
-                    Cancelar Atendimento
-                  </>
-                )}
-              </button>
-            )}
+            <button
+              type="submit"
+              className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center ${getButtonStyle(action)}`}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loading />
+                  <span className="ml-2">Processando...</span>
+                </>
+              ) : (
+                <>
+                  {action === 'ausente' && <FiXCircle className="w-4 h-4 mr-2" />}
+                  {action === 'concluido' && <FiCheck className="w-4 h-4 mr-2" />}
+                  {getButtonText(action)}
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
-} 
+}
+
+const getButtonStyle = (action: string | null) => {
+  switch (action) {
+    case 'iniciar':
+      return 'bg-sky-600 hover:bg-sky-700';
+    case 'ausente':
+      return 'bg-rose-600 hover:bg-rose-700';
+    case 'concluido':
+      return 'bg-teal-600 hover:bg-teal-700';
+    case 'cancelar':
+      return 'bg-amber-600 hover:bg-amber-700';
+    default:
+      return 'bg-gray-600';
+  }
+};
+
+const getButtonText = (action: string | null) => {
+  switch (action) {
+    case 'iniciar':
+      return 'Iniciar Atendimento';
+    case 'ausente':
+      return 'Marcar Ausente';
+    case 'concluido':
+      return 'Concluir Atendimento';
+    case 'cancelar':
+      return 'Cancelar Atendimento';
+    default:
+      return 'Confirmar';
+  }
+};
