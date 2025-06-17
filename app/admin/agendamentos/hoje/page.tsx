@@ -4,12 +4,12 @@ import React, { ReactElement } from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import { 
-  FiCheck, 
-  FiX, 
-  FiPrinter, 
-  FiClock, 
-  FiUser, 
+import {
+  FiCheck,
+  FiX,
+  FiPrinter,
+  FiClock,
+  FiUser,
   FiPhone,
   FiCalendar,
   FiCheckCircle,
@@ -41,8 +41,8 @@ type StatusMapType = {
 };
 
 const HORARIOS = [
-  "08:00","08:30", "09:00", "10:00", "11:00", // manhã
-  "13:00","13:30", "14:00","14:30", "15:00", // tarde
+  "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
+  "13:00", "13:30", "14:00", "14:30", "15:00", // tarde
 ];
 
 export default function AgendamentosHojePage() {
@@ -79,7 +79,7 @@ export default function AgendamentosHojePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      
+
       if (user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -92,7 +92,7 @@ export default function AgendamentosHojePage() {
           setIsAdmin(false);
           return;
         }
-        
+
         setIsAdmin(userData?.role === 'admin');
       }
     } catch (err) {
@@ -286,27 +286,25 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 ${
-                      agendamento 
-                        ? 'bg-white border-slate-200 hover:shadow-md' 
+                    className={`rounded-lg shadow-sm border transition-all duration-200 ${agendamento
+                        ? 'bg-white border-slate-200 hover:shadow-md'
                         : 'bg-slate-50 border-slate-200 border-dashed'
-                    }`}
+                      }`}
                   >
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
-                          <div className={`flex items-center rounded-lg px-2 py-1 ${
-                            isPassedTime 
-                              ? 'bg-slate-100 text-slate-600' 
+                          <div className={`flex items-center rounded-lg px-2 py-1 ${isPassedTime
+                              ? 'bg-slate-100 text-slate-600'
                               : 'bg-sky-50 text-sky-700'
-                          }`}>
+                            }`}>
                             <FiClock className="w-4 h-4 mr-1" />
                             <span className="font-medium">{horario}</span>
                           </div>
                           {agendamento && getStatusBadge(agendamento.status)}
                         </div>
                       </div>
-                      
+
                       {agendamento ? (
                         <div className="space-y-2">
                           <div className="flex items-center text-slate-700">
@@ -317,15 +315,15 @@ export default function AgendamentosHojePage() {
                             <FiPhone className="w-4 h-4 mr-2 text-slate-500" />
                             <span className="text-sm">{agendamento.telefone}</span>
                           </div>
-                          
-                          <div className="flex gap-2 mt-3">
+
+                          <div className="grid grid-cols-2 gap-2 mt-3"> {/* Alterado para grid com 2 colunas */}
                             <button
                               onClick={() => {
                                 setSelectedAppointment(agendamento);
                                 setModalAction('iniciar');
                                 setIsModalOpen(true);
                               }}
-                              className="flex-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
                               title="Iniciar Atendimento"
                             >
                               <FiEdit className="w-3 h-3 mr-1" />
@@ -337,7 +335,7 @@ export default function AgendamentosHojePage() {
                                 setModalAction('ausente');
                                 setIsModalOpen(true);
                               }}
-                              className="flex-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
                               title="Marcar ausente"
                             >
                               <FiXCircle className="w-3 h-3 mr-1" />
@@ -349,7 +347,7 @@ export default function AgendamentosHojePage() {
                                 setModalAction('concluido');
                                 setIsModalOpen(true);
                               }}
-                              className="flex-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
                               title="Marcar concluido"
                             >
                               <FiCheckCircle className="w-3 h-3 mr-1" />
@@ -361,7 +359,7 @@ export default function AgendamentosHojePage() {
                                 setModalAction('cancelar');
                                 setIsModalOpen(true);
                               }}
-                              className="flex-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
                               title="Cancelar"
                             >
                               <FiSlash className="w-3 h-3 mr-1" />
