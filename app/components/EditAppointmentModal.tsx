@@ -57,6 +57,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             email: formData.get('email'),
             telefone: formData.get('telefone'),
             data_nascimento: formData.get('data_nascimento'),
+            solicitante: formData.get('solicitante'),
             observacoes: formData.get('observacoes'),
             horario,
             dia_atual: diaAtual,
@@ -230,6 +231,17 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 name="data_nascimento"
                 defaultValue={appointment.data_nascimento}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
+              <input
+                type="text"
+                name="solicitante"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                placeholder="Nome do solicitante"
                 required
               />
             </div>
