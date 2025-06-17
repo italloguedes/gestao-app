@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import React, { ReactElement } from 'react';
-import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase-client';
+import React, { ReactElement, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase-client";
 import {
   FiCheck,
   FiX,
@@ -18,10 +17,10 @@ import {
   FiLock,
   FiSlash,
   FiArrowLeft,
-  FiEdit
-} from 'react-icons/fi';
-import DashboardHeader from '@/components/DashboardHeader';
-import EditAppointmentModal from '../../../components/EditAppointmentModal';
+  FiEdit,
+} from "react-icons/fi";
+import DashboardHeader from "@/components/DashboardHeader";
+import EditAppointmentModal from "../../../components/EditAppointmentModal";
 
 interface Agendamento {
   id: number;
@@ -35,10 +34,6 @@ interface Agendamento {
   data_nascimento: string;
   tipo_cancelamento?: string;
 }
-
-type StatusMapType = {
-  [key: string]: string;
-};
 
 const HORARIOS = [
   "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
@@ -55,11 +50,8 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<'iniciar' | 'concluir' | 'cancelar' | 'ausente' | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     checkUser();
@@ -82,36 +74,36 @@ export default function AgendamentosHojePage() {
 
       if (user) {
         const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('auth_id', user.id)
+          .from("users")
+          .select("role")
+          .eq("auth_id", user.id)
           .single();
 
         if (userError) {
-          console.error('Erro ao verificar permissões:', userError);
+          console.error("Erro ao verificar permissões:", userError);
           setIsAdmin(false);
           return;
         }
 
-        setIsAdmin(userData?.role === 'admin');
+        setIsAdmin(userData?.role === "admin");
       }
     } catch (err) {
-      console.error('Erro ao verificar usuário:', err);
+      console.error("Erro ao verificar usuário:", err);
       setIsAdmin(false);
     }
   };
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString + 'T12:00:00Z');
-      return date.toLocaleDateString('pt-BR', {
-        timeZone: 'America/Fortaleza',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
+      const date = new Date(dateString + "T12:00:00Z");
+      return date.toLocaleDateString("pt-BR", {
+        timeZone: "America/Fortaleza",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       });
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
+      console.error("Erro ao formatar data:", error);
       return dateString;
     }
   };
@@ -120,16 +112,16 @@ export default function AgendamentosHojePage() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('agendamentos')
-        .select('*')
-        .eq('data', selectedDate)
-        .in('status', ['confirmado', 'cancelado', 'bloqueado', 'concluido', 'ausente'])
-        .order('horario', { ascending: true });
+        .from("agendamentos")
+        .select("*")
+        .eq("data", selectedDate)
+        .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
+        .order("horario", { ascending: true });
 
       if (error) throw error;
       setAgendamentos(data || []);
     } catch (err) {
-      console.error('Erro ao carregar agendamentos:', err);
+      console.error("Erro ao carregar agendamentos:", err);
     } finally {
       setLoading(false);
     }
@@ -139,17 +131,17 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
     try {
       const { error } = await supabase
-        .from('agendamentos')
+        .from("agendamentos")
         .update({ status: newStatus })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
       await loadAgendamentos();
       setIsModalOpen(false);
       setSelectedAppointment(null);
     } catch (err) {
-      console.error('Erro ao atualizar status:', err);
-      alert('Erro ao atualizar status. Por favor, tente novamente.');
+      console.error("Erro ao atualizar status:", err);
+      alert("Erro ao atualizar status. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
     }
@@ -159,63 +151,57 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
     try {
       const { error } = await supabase
-        .from('agendamentos')
+        .from("agendamentos")
         .update(updatedAppointment)
-        .eq('id', updatedAppointment.id);
+        .eq("id", updatedAppointment.id);
 
       if (error) throw error;
       await loadAgendamentos();
       setIsModalOpen(false);
     } catch (err) {
-      console.error('Erro ao atualizar agendamento:', err);
-      alert('Erro ao atualizar agendamento. Por favor, tente novamente.');
+      console.error("Erro ao atualizar agendamento:", err);
+      alert("Erro ao atualizar agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, {
-      icon: ReactElement;
-      text: string;
-      className: string;
-    }> = {
+    const statusConfig = {
       concluido: {
         icon: <FiCheckCircle className="w-4 h-4 mr-1.5" />,
         text: "Concluído",
-        className: "bg-green-100 text-green-800 border border-green-300"
+        className: "bg-green-100 text-green-800 border border-green-300",
       },
       ausente: {
         icon: <FiXCircle className="w-4 h-4 mr-1.5" />,
         text: "Ausente",
-        className: "bg-rose-50 text-rose-700 border border-rose-200"
+        className: "bg-rose-50 text-rose-700 border border-rose-200",
       },
       confirmado: {
         icon: <FiCalendar className="w-4 h-4 mr-1.5" />,
         text: "Confirmado",
-        className: "bg-sky-50 text-sky-700 border border-sky-200"
+        className: "bg-sky-50 text-sky-700 border border-sky-200",
       },
       bloqueado: {
         icon: <FiLock className="w-4 h-4 mr-1.5" />,
         text: "Bloqueado",
-        className: "bg-slate-50 text-slate-700 border border-slate-200"
+        className: "bg-slate-50 text-slate-700 border border-slate-200",
       },
       cancelado: {
         icon: <FiSlash className="w-4 h-4 mr-1.5" />,
         text: "Cancelado",
-        className: "bg-amber-50 text-amber-700 border border-amber-200"
-      }
+        className: "bg-amber-50 text-amber-700 border border-amber-200",
+      },
     };
 
     const config = statusConfig[status];
-    if (!config) return null;
-
-    return (
+    return config ? (
       <span className={`px-2 py-1 text-xs rounded-full flex items-center ${config.className}`}>
         {config.icon}
         {config.text}
       </span>
-    );
+    ) : null;
   };
 
   if (!user || !isAdmin) {
@@ -236,9 +222,7 @@ export default function AgendamentosHojePage() {
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pt-20">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                Agendamentos de Hoje
-              </h1>
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
               <div className="flex items-center text-base text-slate-600">
                 <FiCalendar className="w-4 h-4 mr-2" />
                 {formatDate(selectedDate)}
@@ -248,7 +232,7 @@ export default function AgendamentosHojePage() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
+                onChange={(e) => setSelectedDate(e.target.value)}
                 className="border rounded px-2 py-1"
               />
               <button
@@ -259,7 +243,7 @@ export default function AgendamentosHojePage() {
                 Atualizar
               </button>
               <button
-                onClick={() => router.push('/admin/gestao')}
+                onClick={() => router.push("/admin/gestao")}
                 className="flex items-center px-3 py-1.5 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200"
               >
                 <FiArrowLeft className="w-4 h-4 mr-1.5" />
@@ -271,7 +255,10 @@ export default function AgendamentosHojePage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 animate-pulse">
+                <div
+                  key={i}
+                  className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 animate-pulse"
+                >
                   <div className="h-6 bg-slate-200 rounded w-1/3 mb-3"></div>
                   <div className="h-4 bg-slate-200 rounded w-2/3"></div>
                 </div>
@@ -279,25 +266,31 @@ export default function AgendamentosHojePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {HORARIOS.map(horario => {
-                const agendamento = agendamentos.find(a => a.horario.startsWith(horario));
+              {HORARIOS.map((horario) => {
+                const agendamento = agendamentos.find((a) =>
+                  a.horario.startsWith(horario)
+                );
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
 
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 ${agendamento
-                        ? 'bg-white border-slate-200 hover:shadow-md'
-                        : 'bg-slate-50 border-slate-200 border-dashed'
-                      }`}
+                    className={`rounded-lg shadow-sm border transition-all duration-200 ${
+                      agendamento
+                        ? "bg-white border-slate-200 hover:shadow-md"
+                        : "bg-slate-50 border-slate-200 border-dashed"
+                    }`}
                   >
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
-                          <div className={`flex items-center rounded-lg px-2 py-1 ${isPassedTime
-                              ? 'bg-slate-100 text-slate-600'
-                              : 'bg-sky-50 text-sky-700'
-                            }`}>
+                          <div
+                            className={`flex items-center rounded-lg px-2 py-1 ${
+                              isPassedTime
+                                ? "bg-slate-100 text-slate-600"
+                                : "bg-sky-50 text-sky-700"
+                            }`}
+                          >
                             <FiClock className="w-4 h-4 mr-1" />
                             <span className="font-medium">{horario}</span>
                           </div>
@@ -309,18 +302,20 @@ export default function AgendamentosHojePage() {
                         <div className="space-y-2">
                           <div className="flex items-center text-slate-700">
                             <FiUser className="w-4 h-4 mr-2 text-slate-500" />
-                            <span className="font-medium text-sm truncate">{agendamento.nome}</span>
+                            <span className="font-medium text-sm truncate">
+                              {agendamento.nome}
+                            </span>
                           </div>
                           <div className="flex items-center text-slate-600">
                             <FiPhone className="w-4 h-4 mr-2 text-slate-500" />
                             <span className="text-sm">{agendamento.telefone}</span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 mt-3"> {/* Alterado para grid com 2 colunas */}
+                          <div className="grid grid-cols-2 gap-2 mt-3">
                             <button
                               onClick={() => {
                                 setSelectedAppointment(agendamento);
-                                setModalAction('iniciar');
+                                setModalAction("iniciar");
                                 setIsModalOpen(true);
                               }}
                               className="col-span-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
@@ -332,7 +327,7 @@ export default function AgendamentosHojePage() {
                             <button
                               onClick={() => {
                                 setSelectedAppointment(agendamento);
-                                setModalAction('ausente');
+                                setModalAction("ausente");
                                 setIsModalOpen(true);
                               }}
                               className="col-span-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
@@ -344,7 +339,7 @@ export default function AgendamentosHojePage() {
                             <button
                               onClick={() => {
                                 setSelectedAppointment(agendamento);
-                                setModalAction('concluido');
+                                setModalAction("concluido");
                                 setIsModalOpen(true);
                               }}
                               className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
@@ -356,7 +351,7 @@ export default function AgendamentosHojePage() {
                             <button
                               onClick={() => {
                                 setSelectedAppointment(agendamento);
-                                setModalAction('cancelar');
+                                setModalAction("cancelar");
                                 setIsModalOpen(true);
                               }}
                               className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
