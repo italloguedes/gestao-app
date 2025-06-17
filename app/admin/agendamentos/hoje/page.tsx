@@ -55,7 +55,7 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<'iniciar' | 'concluir' | 'cancelar' | null>(null);
+  const [modalAction, setModalAction] = useState<'iniciar' | 'concluir' | 'cancelar' | 'ausente' | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
