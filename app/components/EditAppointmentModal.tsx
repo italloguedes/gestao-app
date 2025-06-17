@@ -130,47 +130,48 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         setMessage('Atendimento iniciado com sucesso!');
       } else if (action === 'concluir') {
-        // Update atendimento status to 'concluido'
-        const { error: atendimentoError } = await supabase
+        const formData = new FormData(e.target as HTMLFormElement);
+
+        const now = new Date();
+        const diaAtual = now.toISOString().split('T')[0];
+        const horario = now.toTimeString().split(' ')[0];
+
+        // Gera protocolo
+        const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
+        if (protocolError) throw protocolError;
+
+        const protocolo = protocolData;
+
+        // Insere na tabela atendimentos
+        const { error: atendimentoInsertError } = await supabase.from('atendimentos').insert([
+          {
+            nome: appointment.nome,
+            cpf: appointment.cpf,
+            email: appointment.email,
+            solicitante: appointment.solicitante || formData.get('solicitante'),
+            observacoes: formData.get('observacoes'),
+            horario,
+            dia_atual: diaAtual,
+            usuario_id: (await supabase.auth.getUser()).data.user?.id,
+            protocolo,
+            status: 'concluido'
+          },
+        ]);
+
+        if (atendimentoInsertError) throw atendimentoInsertError;
+
+        // Atualiza o status da tabela agendamentos
+        const { error: agendamentoUpdateError } = await supabase
           .from('agendamentos')
-          .update({ 
+          .update({
             status: 'concluido',
             observacoes: formData.get('observacoes')
           })
           .eq('id', appointment.id);
 
-        if (atendimentoError) throw atendimentoError;
-
-        // Update agendamento status to 'concluido'
-        const { error: agendamentoError } = await supabase
-          .from('agendamentos')
-          .update({ status: 'concluido' })
-          .eq('id', appointment.id);
-
-        if (agendamentoError) throw agendamentoError;
+        if (agendamentoUpdateError) throw agendamentoUpdateError;
 
         setMessage('Atendimento concluído com sucesso!');
-      } else if (action === 'cancelar') {
-        // Update atendimento status to 'cancelado'
-        const { error: atendimentoError } = await supabase
-          .from('agendamentos')
-          .update({ 
-            status: 'cancelado',
-            tipo_cancelamento: formData.get('observacoes')
-          })
-          .eq('id', appointment.id);
-
-        if (atendimentoError) throw atendimentoError;
-
-        // Update appointment status to 'cancelado'
-        const { error: appointmentError } = await supabase
-          .from('agendamentos')
-          .update({ status: 'cancelado' })
-          .eq('id', appointment.id);
-
-        if (appointmentError) throw appointmentError;
-
-        setMessage('Atendimento cancelado com sucesso!');
       }
 
       onSave(updatedAppointment);
@@ -190,9 +191,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-slate-800">
-            {action === 'iniciar' ? 'Iniciar Atendimento' : 
-             action === 'concluir' ? 'Concluir Atendimento' : 
-             'Cancelar Atendimento'}
+            {action === 'iniciar' ? 'Iniciar Atendimento' :
+              action === 'concluir' ? 'Concluir Atendimento' :
+                'Cancelar Atendimento'}
           </h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
             <FiX className="w-6 h-6" />
@@ -200,11 +201,10 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         </div>
 
         {message && (
-          <div className={`mb-4 p-4 rounded-md ${
-            message.includes('sucesso')
+          <div className={`mb-4 p-4 rounded-md ${message.includes('sucesso')
               ? 'bg-green-50 border border-green-200 text-green-600'
               : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
+            }`}>
             <p>{message}</p>
           </div>
         )}
