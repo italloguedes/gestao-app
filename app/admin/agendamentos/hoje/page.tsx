@@ -22,19 +22,15 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 
+type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
+
 interface StatusConfig {
   icon: ReactElement;
   text: string;
   className: string;
 }
 
-interface StatusConfigMap {
-  concluido: StatusConfig;
-  ausente: StatusConfig;
-  confirmado: StatusConfig;
-  bloqueado: StatusConfig;
-  cancelado: StatusConfig;
-}
+type StatusConfigMap = Record<AppointmentStatus, StatusConfig>;
 
 interface Agendamento {
   id: number;
@@ -44,12 +40,10 @@ interface Agendamento {
   telefone: string;
   data: string;
   horario: string;
-  status: string;
+  status: AppointmentStatus;
   data_nascimento: string;
   tipo_cancelamento?: string;
 }
-
-type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
 const HORARIOS = [
   "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
@@ -182,8 +176,8 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const getStatusBadge = (status: AppointmentStatus) => {
-    const statusConfig = {
+  const getStatusBadge = (status: AppointmentStatus): ReactElement | null => {
+    const statusConfig: StatusConfigMap = {
       concluido: {
         icon: <FiCheckCircle className="w-4 h-4 mr-1.5" />,
         text: "Concluído",
@@ -209,7 +203,7 @@ export default function AgendamentosHojePage() {
         text: "Cancelado",
         className: "bg-amber-50 text-amber-700 border border-amber-200",
       },
-    } as const;
+    };
 
     const config = statusConfig[status];
     return config ? (
@@ -327,56 +321,58 @@ export default function AgendamentosHojePage() {
                             <span className="text-sm">{agendamento.telefone}</span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 mt-3">
-                            <button
-                              onClick={() => {
-                                setSelectedAppointment(agendamento);
-                                setModalAction("iniciar");
-                                setIsModalOpen(true);
-                              }}
-                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                              title="Iniciar Atendimento"
-                            >
-                              <FiEdit className="w-3 h-3 mr-1" />
-                              Iniciar
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedAppointment(agendamento);
-                                setModalAction("ausente");
-                                setIsModalOpen(true);
-                              }}
-                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                              title="Marcar ausente"
-                            >
-                              <FiXCircle className="w-3 h-3 mr-1" />
-                              Ausente
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedAppointment(agendamento);
-                                setModalAction("concluido");
-                                setIsModalOpen(true);
-                              }}
-                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                              title="Marcar concluido"
-                            >
-                              <FiCheckCircle className="w-3 h-3 mr-1" />
-                              Concluído
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedAppointment(agendamento);
-                                setModalAction("cancelar");
-                                setIsModalOpen(true);
-                              }}
-                              className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                              title="Cancelar"
-                            >
-                              <FiSlash className="w-3 h-3 mr-1" />
-                              Cancelar
-                            </button>
-                          </div>
+                          {agendamento.status === "confirmado" && (
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(agendamento);
+                                  setModalAction("iniciar");
+                                  setIsModalOpen(true);
+                                }}
+                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                                title="Iniciar Atendimento"
+                              >
+                                <FiEdit className="w-3 h-3 mr-1" />
+                                Iniciar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(agendamento);
+                                  setModalAction("ausente");
+                                  setIsModalOpen(true);
+                                }}
+                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                title="Marcar ausente"
+                              >
+                                <FiXCircle className="w-3 h-3 mr-1" />
+                                Ausente
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(agendamento);
+                                  setModalAction("concluido");
+                                  setIsModalOpen(true);
+                                }}
+                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                                title="Marcar concluido"
+                              >
+                                <FiCheckCircle className="w-3 h-3 mr-1" />
+                                Concluído
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(agendamento);
+                                  setModalAction("cancelar");
+                                  setIsModalOpen(true);
+                                }}
+                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                                title="Cancelar"
+                              >
+                                <FiSlash className="w-3 h-3 mr-1" />
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center py-4">
