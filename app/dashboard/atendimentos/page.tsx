@@ -81,7 +81,7 @@ export default function AtendimentosPage() {
 
       if (searchTerm) {
         query = query.or(
-          `nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,protocolo.ilike.%${searchTerm}%`
+          `nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,protocolo.ilike.%${searchTerm}%,solicitante.ilike.%${searchTerm}%`
         );
       }
 
