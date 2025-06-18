@@ -22,6 +22,20 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 
+interface StatusConfig {
+  icon: ReactElement;
+  text: string;
+  className: string;
+}
+
+interface StatusConfigMap {
+  concluido: StatusConfig;
+  ausente: StatusConfig;
+  confirmado: StatusConfig;
+  bloqueado: StatusConfig;
+  cancelado: StatusConfig;
+}
+
 interface Agendamento {
   id: number;
   nome: string;
@@ -34,6 +48,8 @@ interface Agendamento {
   data_nascimento: string;
   tipo_cancelamento?: string;
 }
+
+type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
 const HORARIOS = [
   "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
@@ -166,7 +182,7 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: AppointmentStatus) => {
     const statusConfig = {
       concluido: {
         icon: <FiCheckCircle className="w-4 h-4 mr-1.5" />,
@@ -193,7 +209,7 @@ export default function AgendamentosHojePage() {
         text: "Cancelado",
         className: "bg-amber-50 text-amber-700 border border-amber-200",
       },
-    };
+    } as const;
 
     const config = statusConfig[status];
     return config ? (
@@ -294,7 +310,7 @@ export default function AgendamentosHojePage() {
                             <FiClock className="w-4 h-4 mr-1" />
                             <span className="font-medium">{horario}</span>
                           </div>
-                          {agendamento && getStatusBadge(agendamento.status)}
+                          {agendamento && getStatusBadge(agendamento.status as AppointmentStatus)}
                         </div>
                       </div>
 
