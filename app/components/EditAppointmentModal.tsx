@@ -124,6 +124,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
 
         setMessage('Atendimento iniciado com sucesso!');
+        onSave(updatedAppointment);
       } else if (action === 'ausente') {
         await onStatusChange(appointment.id, 'ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
@@ -161,7 +162,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         setMessage('Atendimento cancelado com sucesso!');
       }
 
-      onSave(updatedAppointment);
       setTimeout(() => {
         onClose();
       }, 2000);
