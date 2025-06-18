@@ -128,6 +128,42 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       } else if (action === 'ausente') {
         await onStatusChange(appointment.id, 'ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
+      } else if (action === 'concluido') {
+        const now = new Date();
+        const diaAtual = now.toISOString().split('T')[0];
+        const horario = now.toTimeString().split(' ')[0];
+
+        const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
+        if (protocolError) throw protocolError;
+
+        const protocolo = protocolData;
+
+        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
+          {
+            nome: updatedAppointment.nome,
+            cpf: updatedAppointment.cpf,
+            email: updatedAppointment.email,
+            solicitante: formData.get('solicitante') || appointment.solicitante,
+            observacoes: updatedAppointment.observacoes,
+            horario,
+            dia_atual: diaAtual,
+            usuario_id: (await supabase.auth.getUser()).data.user?.id,
+            protocolo,
+            status: 'concluido',
+          },
+        ]);
+
+        if (atendimentoError) throw atendimentoError;
+
+        // Atualize o agendamento com status 'concluido'
+        const { error: updateError } = await supabase
+          .from('agendamentos')
+          .update({ ...updatedAppointment, status: 'concluido' })
+          .eq('id', appointment.id);
+
+        if (updateError) throw updateError;
+
+        setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
         await onStatusChange(appointment.id, 'cancelado');
         setMessage('Atendimento cancelado com sucesso!');
