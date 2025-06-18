@@ -349,9 +349,9 @@ export default function AgendamentosHojePage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction("concluido");
-                                  setIsModalOpen(true);
+                                  if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
+                                    handleStatusChange(agendamento.id, "concluido");
+                                  }
                                 }}
                                 className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
                                 title="Marcar concluido"
@@ -361,9 +361,9 @@ export default function AgendamentosHojePage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction("cancelar");
-                                  setIsModalOpen(true);
+                                  if (window.confirm("Deseja realmente cancelar este atendimento?")) {
+                                    handleStatusChange(agendamento.id, "cancelado");
+                                  }
                                 }}
                                 className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
                                 title="Cancelar"
