@@ -448,8 +448,8 @@ async function getHorariosDisponiveis(data: Date) {
 function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
   const toast = document.createElement('div');
   toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-emerald-600' :
-      type === 'error' ? 'bg-red-600' :
-        'bg-blue-600'
+    type === 'error' ? 'bg-red-600' :
+      'bg-blue-600'
     }`;
   toast.textContent = message;
   document.body.appendChild(toast);
@@ -744,15 +744,18 @@ function AgendamentoContent() {
               <h2 className="text-lg font-semibold text-emerald-700 mb-2">Selecione uma data</h2>
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
                 <div className="flex">
-                  <div className="flex-shrink-0">
-                    <FiInfo className="h-5 w-5 text-blue-400" />
+                  <div className="flex items-start bg-orange-100 p-4 rounded">
+                    <div className="flex-shrink-0">
+                      <FiInfo className="h-5 w-5 text-orange-700" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-orange-700">
+                        O agendamento de emissão de documentos na sala sensorial / ALECE é exclusivo para pessoas autistas, com
+                        síndrome de Down e TDAH.
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-3 bg-orange-100 p-3 rounded">
-                    <p className="text-sm text-orange-700">
-                      O agendamento de emissão de documentos na sala sensorial / ALECE é exclusivo para pessoas autistas, com
-                      síndrome de Down e TDAH.
-                    </p>
-                  </div>
+
                 </div>
               </div>
               <div className="flex items-center justify-between mb-2">
