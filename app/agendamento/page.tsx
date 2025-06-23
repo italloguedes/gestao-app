@@ -12,8 +12,8 @@ const UNIDADE = "Sala Sensorial ALECE";
 const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
 const ENDERECO_COMPLETO = "Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238";
 const HORARIOS = [
-  "08:00","08:30", "09:00", "10:00", "11:00", // manhã
-  "13:00","13:30", "14:00","14:30", "15:00", // tarde
+  "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
+  "13:00", "13:30", "14:00", "14:30", "15:00", // tarde
 ];
 
 function getMonthDays(year: number, month: number) {
@@ -65,10 +65,10 @@ function formatPhone(phone: string) {
 function validateCPF(cpf: string) {
   cpf = cpf.replace(/\D/g, '');
   if (cpf.length !== 11) return false;
-  
+
   // Verifica se todos os dígitos são iguais
   if (/^(\d)\1{10}$/.test(cpf)) return false;
-  
+
   // Validação do primeiro dígito verificador
   let sum = 0;
   for (let i = 0; i < 9; i++) {
@@ -77,7 +77,7 @@ function validateCPF(cpf: string) {
   let digit = 11 - (sum % 11);
   if (digit > 9) digit = 0;
   if (digit !== parseInt(cpf.charAt(9))) return false;
-  
+
   // Validação do segundo dígito verificador
   sum = 0;
   for (let i = 0; i < 10; i++) {
@@ -86,7 +86,7 @@ function validateCPF(cpf: string) {
   digit = 11 - (sum % 11);
   if (digit > 9) digit = 0;
   if (digit !== parseInt(cpf.charAt(10))) return false;
-  
+
   return true;
 }
 
@@ -98,7 +98,7 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
 
   const fetchAgendamentos = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -262,7 +262,7 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
             <div class="info"><b>Telefone:</b> ${agendamento.telefone}</div>
             <div class="info"><b>Data de Nascimento:</b> ${new Date(agendamento.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
             <div class="info"><b>Data do Atendimento:</b> ${new Date(agendamento.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-            <div class="info"><b>Horário:</b> ${agendamento.horario.slice(0,5)}</div>
+            <div class="info"><b>Horário:</b> ${agendamento.horario.slice(0, 5)}</div>
           </div>
 
           <div class="two-columns">
@@ -357,20 +357,20 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
             {agendamentos.map(a => (
               <div key={a.id} className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-emerald-50">
                 <div>
-                  <div><b>Data:</b> {a.data} <b>Horário:</b> {a.horario.slice(0,5)}</div>
+                  <div><b>Data:</b> {a.data} <b>Horário:</b> {a.horario.slice(0, 5)}</div>
                   <div><b>Nome:</b> {a.nome}</div>
                   <div><b>Telefone:</b> {a.telefone}</div>
                 </div>
                 <div className="flex gap-2 mt-2 md:mt-0">
-                  <button 
-                    className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700" 
-                    onClick={() => handleCancelar(a.id)} 
+                  <button
+                    className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                    onClick={() => handleCancelar(a.id)}
                     disabled={loading}
                   >
                     Cancelar
                   </button>
-                  <button 
-                    className="px-3 py-1 rounded bg-emerald-700 text-white hover:bg-emerald-800" 
+                  <button
+                    className="px-3 py-1 rounded bg-emerald-700 text-white hover:bg-emerald-800"
                     onClick={() => handleImprimir(a)}
                   >
                     Imprimir
@@ -390,7 +390,7 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
 async function getHorariosDisponiveis(data: Date) {
   try {
     const dataFormatada = formatDate(data);
-    
+
     // Busca todos os agendamentos para a data (confirmados e bloqueados)
     const { data: agendamentos, error } = await supabase
       .from("agendamentos")
@@ -405,7 +405,7 @@ async function getHorariosDisponiveis(data: Date) {
     // Verificar se é o dia atual
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    
+
     const dataVerificar = new Date(data);
     dataVerificar.setHours(0, 0, 0, 0);
 
@@ -417,10 +417,10 @@ async function getHorariosDisponiveis(data: Date) {
         const horarioAtual = new Date();
         const horarioAgendamento = new Date();
         horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
-        
+
         // Adicionar 15 minutos ao horário atual para criar uma margem
         const horarioLimite = new Date(horarioAtual.getTime() + 15 * 60000);
-        
+
         if (horarioAgendamento <= horarioLimite) {
           return false;
         }
@@ -447,11 +447,10 @@ async function getHorariosDisponiveis(data: Date) {
 // Adicionar estas funções de feedback
 function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
   const toast = document.createElement('div');
-  toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${
-    type === 'success' ? 'bg-emerald-600' :
-    type === 'error' ? 'bg-red-600' :
-    'bg-blue-600'
-  }`;
+  toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-emerald-600' :
+      type === 'error' ? 'bg-red-600' :
+        'bg-blue-600'
+    }`;
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => {
@@ -462,7 +461,7 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
 // Componente principal que só será renderizado no cliente
 function AgendamentoContent() {
   const router = useRouter();
-  
+
   // 1. Todos os estados
   const [user, setUser] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -481,7 +480,7 @@ function AgendamentoContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
-  const [availableDays, setAvailableDays] = useState<{[key: string]: boolean}>({});
+  const [availableDays, setAvailableDays] = useState<{ [key: string]: boolean }>({});
 
   // 2. Todos os useEffects
   useEffect(() => {
@@ -502,8 +501,8 @@ function AgendamentoContent() {
     if (currentDate === null || currentMonth === null || currentYear === null) return;
 
     const checkAvailability = async () => {
-      const availability: {[key: string]: boolean} = {};
-      
+      const availability: { [key: string]: boolean } = {};
+
       // Começar do dia atual
       const startDate = new Date();
       startDate.setHours(0, 0, 0, 0);
@@ -525,11 +524,11 @@ function AgendamentoContent() {
             availability[formattedDate] = false;
           }
         }
-        
+
         // Avançar para o próximo dia
         currentCheckDate.setDate(currentCheckDate.getDate() + 1);
       }
-      
+
       setAvailableDays(availability);
     };
 
@@ -572,32 +571,32 @@ function AgendamentoContent() {
   // 4. Funções auxiliares
   const isDateAllowed = (date: Date) => {
     if (!currentDate) return false;
-    
+
     // Não permitir datas no passado
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const dateToCheck = new Date(date);
     dateToCheck.setHours(0, 0, 0, 0);
-    
+
     if (dateToCheck < today) return false;
 
     // Não permitir fins de semana
     if (date.getDay() === 0 || date.getDay() === 6) return false;
-    
+
     // Permitir agendamentos até 10 dias úteis à frente
     const maxDate = new Date(today);
     let daysToAdd = 14; // 2 semanas para garantir 10 dias úteis
     maxDate.setDate(today.getDate() + daysToAdd);
     maxDate.setHours(23, 59, 59, 999);
-    
+
     return dateToCheck <= maxDate;
   };
 
   const prevMonth = () => {
     if (!currentDate || !currentMonth || !currentYear) return;
     if (currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear()) return;
-    
+
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(currentYear - 1);
@@ -608,18 +607,18 @@ function AgendamentoContent() {
 
   const nextMonth = () => {
     if (!currentDate || !currentMonth || !currentYear) return;
-    
+
     const currentDay = new Date(currentDate);
     const daysSinceMonday = currentDay.getDay() === 0 ? 6 : currentDay.getDay() - 1;
     const thisWeekStart = new Date(currentDay);
     thisWeekStart.setDate(currentDay.getDate() - daysSinceMonday);
-    
+
     const nextWeekEnd = new Date(thisWeekStart);
     nextWeekEnd.setDate(thisWeekStart.getDate() + 11);
-    
+
     const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
     if (nextMonthDate > nextWeekEnd) return;
-    
+
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(currentYear + 1);
@@ -635,7 +634,7 @@ function AgendamentoContent() {
   const handleAgendar = async () => {
     setError("");
     setSuccess("");
-    
+
     // Validações básicas
     if (!user) {
       setError("Você precisa estar autenticado para agendar.");
@@ -687,7 +686,7 @@ function AgendamentoContent() {
         horario: horario + ":00",
         status: 'confirmado'
       }).select().single();
-      
+
       if (insertError) {
         console.error("Erro ao agendar:", insertError);
         setError("Erro ao agendar: " + insertError.message);
@@ -695,7 +694,7 @@ function AgendamentoContent() {
       } else {
         setSuccess("Agendamento realizado com sucesso!");
         showToast("Agendamento realizado com sucesso!", 'success');
-        
+
         // Enviar email de confirmação
         try {
           await sendEmailConfirmation(newAgendamento);
@@ -714,7 +713,7 @@ function AgendamentoContent() {
             .order("horario", { ascending: true });
           setAgendamentos(agendamentos || []);
         }
-        
+
         // Limpa os campos
         setSelectedDate(null);
         setHorario("");
@@ -748,10 +747,10 @@ function AgendamentoContent() {
                   <div className="flex-shrink-0">
                     <FiInfo className="h-5 w-5 text-blue-400" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-blue-700">
-                    O agendamento de emissão de documentos na sala sensorial / ALECE é exclusiva para pessoas autistas, com
-                    síndrome de Down e TDAH.
+                  <div className="ml-3 bg-orange-100 p-3 rounded">
+                    <p className="text-sm text-orange-700">
+                      O agendamento de emissão de documentos na sala sensorial / ALECE é exclusivo para pessoas autistas, com
+                      síndrome de Down e TDAH.
                     </p>
                   </div>
                 </div>
@@ -786,9 +785,9 @@ function AgendamentoContent() {
                 {days.map((date) => {
                   const today = new Date();
                   const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                  const isToday = date.getDate() === today.getDate() && 
-                                date.getMonth() === today.getMonth() && 
-                                date.getFullYear() === today.getFullYear();
+                  const isToday = date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
                   const isAfter4PM = isToday && today.getHours() >= 16;
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                   const isDisabled = isPast || isWeekend || isAfter4PM || !isDateAllowed(date);
@@ -800,8 +799,8 @@ function AgendamentoContent() {
                       key={date.toISOString()}
                       className={`w-10 h-10 rounded flex items-center justify-center font-semibold transition-all relative
                         ${isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
-                          isSelected ? 'bg-orange-500 text-white' : 
-                          hasAvailableTimes ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-200 text-gray-500'}
+                          isSelected ? 'bg-orange-500 text-white' :
+                            hasAvailableTimes ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-200 text-gray-500'}
                       `}
                       disabled={isDisabled || !hasAvailableTimes}
                       onClick={() => setSelectedDate(date)}
@@ -848,7 +847,7 @@ function AgendamentoContent() {
                         key={h}
                         type="button"
                         className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
-                          ${!isDisponivel 
+                          ${!isDisponivel
                             ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                             : horario === h
                               ? "bg-emerald-700 text-white border-emerald-700"
