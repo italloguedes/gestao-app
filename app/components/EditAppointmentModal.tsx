@@ -44,7 +44,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         // Update appointment details
         const { error: appointmentError } = await supabase
           .from('agendamentos')
-          .update(updatedAppointment)
+          .update({ ...updatedAppointment, status: 'concluido' })
           .eq('id', appointment.id);
 
         if (appointmentError) throw appointmentError;
@@ -70,14 +70,11 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             dia_atual: diaAtual,
             usuario_id: (await supabase.auth.getUser()).data.user?.id,
             protocolo,
-            status: 'em_andamento',
+            status: 'concluido',
           },
         ]);
 
         if (atendimentoError) throw atendimentoError;
-
-        // Update appointment status to 'concluido' after initiating
-        await onStatusChange(appointment.id, 'concluido');
 
         // Send email
         try {
@@ -123,7 +120,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           console.error('Erro ao enviar email:', err);
         }
 
-        setMessage('Atendimento iniciado com sucesso!');
+        setMessage('Atendimento concluído com sucesso!');
         onSave(updatedAppointment);
       } else if (action === 'ausente') {
         await onStatusChange(appointment.id, 'ausente');
@@ -185,7 +182,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-slate-800">
-            {action === 'iniciar' ? 'Iniciar Atendimento' :
+            {action === 'iniciar' ? 'Concluir Atendimento' :
               action === 'ausente' ? 'Marcar Ausente' :
               action === 'concluido' ? 'Concluir Atendimento' :
               'Cancelar Atendimento'}
@@ -345,7 +342,7 @@ const getButtonStyle = (action: string | null) => {
 const getButtonText = (action: string | null) => {
   switch (action) {
     case 'iniciar':
-      return 'Iniciar Atendimento';
+      return 'Concluir Atendimento';
     case 'ausente':
       return 'Marcar Ausente';
     case 'concluido':

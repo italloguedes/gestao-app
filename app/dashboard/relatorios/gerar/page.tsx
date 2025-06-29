@@ -55,7 +55,7 @@ export default function GerarRelatorioPage() {
     doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
-    const title = 'Relatório de Atendimentos - Sala Sensoria / ALECE';
+    const title = 'Relatório de Atendimentos - Sala Sensorial / ALECE';
     const titleWidth = doc.getStringUnitWidth(title) * doc.getFontSize() / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
     
@@ -96,7 +96,7 @@ export default function GerarRelatorioPage() {
       body: tableRows,
       startY: 38,
       styles: {
-        fontSize: 7,
+        fontSize: 8,
         cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
         lineColor: [230, 230, 230],
         lineWidth: 0.05,
