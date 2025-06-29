@@ -41,13 +41,20 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       };
 
       if (action === 'iniciar') {
+        console.log('Iniciando processo de conclusão do atendimento...');
+        
         // Update appointment details
         const { error: appointmentError } = await supabase
           .from('agendamentos')
           .update({ ...updatedAppointment, status: 'concluido' })
           .eq('id', appointment.id);
 
-        if (appointmentError) throw appointmentError;
+        if (appointmentError) {
+          console.error('Erro ao atualizar agendamento:', appointmentError);
+          throw appointmentError;
+        }
+        
+        console.log('Agendamento atualizado com sucesso para status: concluido');
 
         // Create atendimento record
         const now = new Date();
@@ -58,6 +65,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         if (protocolError) throw protocolError;
 
         const protocolo = protocolData;
+        console.log('Protocolo gerado:', protocolo);
 
         const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
@@ -70,11 +78,16 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             dia_atual: diaAtual,
             usuario_id: (await supabase.auth.getUser()).data.user?.id,
             protocolo,
-            status: 'concluido',
+            status: 'em_andamento',
           },
         ]);
 
-        if (atendimentoError) throw atendimentoError;
+        if (atendimentoError) {
+          console.error('Erro ao criar atendimento:', atendimentoError);
+          throw atendimentoError;
+        }
+        
+        console.log('Atendimento criado com sucesso');
 
         // Send email
         try {
@@ -115,13 +128,15 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
           if (!res.ok) {
             console.error('Erro ao enviar email:', await res.json());
+          } else {
+            console.log('Email enviado com sucesso');
           }
         } catch (err) {
           console.error('Erro ao enviar email:', err);
         }
 
+        console.log('Processo de conclusão finalizado com sucesso');
         setMessage('Atendimento concluído com sucesso!');
-        onSave(updatedAppointment);
       } else if (action === 'ausente') {
         await onStatusChange(appointment.id, 'ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
@@ -146,7 +161,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             dia_atual: diaAtual,
             usuario_id: (await supabase.auth.getUser()).data.user?.id,
             protocolo,
-            status: 'concluido',
+            status: 'em_andamento',
           },
         ]);
 

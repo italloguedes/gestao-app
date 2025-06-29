@@ -38,6 +38,25 @@ export default function NovoAtendimentoPage() {
     setLoading(true);
     setMessage('');
 
+    // Verificar se o CPF já existe no banco de dados
+    const { data: existingCpf, error: cpfCheckError } = await supabase
+      .from('atendimentos')
+      .select('cpf')
+      .eq('cpf', cpf)
+      .single();
+
+    if (cpfCheckError && cpfCheckError.code !== 'PGRST116') {
+      setMessage('Erro ao verificar CPF: ' + cpfCheckError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (existingCpf) {
+      setMessage('CPF já cadastrado no sistema. Verifique se o atendimento já foi realizado.');
+      setLoading(false);
+      return;
+    }
+
     const now = new Date();
     const diaAtual = now.toISOString().split('T')[0];
     const horario = now.toTimeString().split(' ')[0];
