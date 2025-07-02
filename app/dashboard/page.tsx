@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
+import jsPDF from 'jspdf';
 
 interface DashboardStats {
   total: number;
@@ -31,6 +32,15 @@ interface Atendimento {
   status: string;
 }
 
+interface AtendimentoEntrega extends Atendimento {
+  nome_recebedor?: string;
+  cpf_recebedor?: string;
+  data_entrega?: string;
+  usuario_entregador?: string;
+  data_hora_entrega?: string;
+  usuario_id?: string | number;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -47,6 +57,21 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [recentAtendimentos, setRecentAtendimentos] = useState<Atendimento[]>([]);
+  const [showEntregarCinModal, setShowEntregarCinModal] = useState(false);
+  const [atendimentosParaEntrega, setAtendimentosParaEntrega] = useState<AtendimentoEntrega[]>([]);
+  const [selectedAtendimento, setSelectedAtendimento] = useState<AtendimentoEntrega | null>(null);
+  const [nomeRecebedor, setNomeRecebedor] = useState('');
+  const [cpfRecebedor, setCpfRecebedor] = useState('');
+  const [loadingAtendimentosEntrega, setLoadingAtendimentosEntrega] = useState(false);
+  const entregarCinButtonRef = useRef<HTMLButtonElement>(null);
+  const [busca, setBusca] = useState('');
+  const [buscando, setBuscando] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [gerandoComprovante, setGerandoComprovante] = useState(false);
+  const [vinculo, setVinculo] = useState('');
+  const [outroVinculo, setOutroVinculo] = useState('');
+  const [nomeAtendente, setNomeAtendente] = useState('');
+  const [emailAtendente, setEmailAtendente] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -55,6 +80,26 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [user, router]);
+
+  useEffect(() => {
+    if (showEntregarCinModal) {
+      setAtendimentosParaEntrega([]);
+      setBusca('');
+      setBuscando(false);
+    } else {
+      setSelectedAtendimento(null);
+      setNomeRecebedor('');
+      setCpfRecebedor('');
+    }
+  }, [showEntregarCinModal]);
+
+  useEffect(() => {
+    if (selectedAtendimento && selectedAtendimento.usuario_id) {
+      fetchNomeAtendente(selectedAtendimento.usuario_id);
+    } else {
+      setNomeAtendente('');
+    }
+  }, [selectedAtendimento]);
 
   const fetchDashboardData = async () => {
     try {
@@ -107,6 +152,27 @@ export default function DashboardPage() {
     }
   };
 
+  const buscarAtendimentos = async () => {
+    setBuscando(true);
+    setLoadingAtendimentosEntrega(true);
+    let query = supabase
+      .from('atendimentos')
+      .select('*')
+      .neq('status', 'entregue');
+    if (busca) {
+      // Busca por nome ou CPF (case insensitive para nome)
+      query = query.or(`nome.ilike.%${busca}%,cpf.eq.${busca}`);
+    }
+    const { data, error } = await query
+      .order('dia_atual', { ascending: false })
+      .order('horario', { ascending: false });
+    if (!error) {
+      setAtendimentosParaEntrega(data || []);
+    }
+    setLoadingAtendimentosEntrega(false);
+    setBuscando(false);
+  };
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString + 'T12:00:00Z');
@@ -134,6 +200,132 @@ export default function DashboardPage() {
         return 'text-red-600 bg-red-50';
       default:
         return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const handleGerarComprovante = async () => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) return;
+    const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
+    if (!confirmed) return;
+    setGerandoComprovante(true);
+    try {
+      const now = new Date();
+      const dataEntrega = now.toISOString().split('T')[0];
+      const dataHoraEntrega = now.toISOString();
+      // Atualizar atendimento no Supabase
+      const { error } = await supabase
+        .from('atendimentos')
+        .update({
+          nome_recebedor: nomeRecebedor,
+          cpf_recebedor: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+          data_entrega: dataEntrega,
+          status: 'entregue',
+          usuario_entregador: nomeAtendente || user.email || '',
+          data_hora_entrega: dataHoraEntrega,
+        })
+        .eq('id', selectedAtendimento.id);
+      if (error) throw error;
+
+      // Carregar logo
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      // Gerar PDF moderno e profissional
+      const doc = new jsPDF();
+      // Logo centralizada
+      doc.addImage(logoBase64, 'PNG', 80, 10, 50, 20);
+      // Título
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.setTextColor(16, 185, 129); // emerald-600
+      doc.text('PROTOCOLO DE ENTREGA DA CIN', 105, 42, { align: 'center' });
+      // Linha decorativa
+      doc.setDrawColor(16, 185, 129); // emerald-600
+      doc.setLineWidth(1.2);
+      doc.line(30, 48, 180, 48);
+      // Caixa de dados principais
+      let y = 58;
+      doc.setFillColor(236, 253, 245); // verde claro (emerald-50)
+      doc.roundedRect(18, y, 174, 60, 4, 4, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(80, 80, 80);
+      let yData = y + 10;
+      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
+      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
+      // Titular
+      labelStyle(); doc.text('Titular:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
+      yData += 8;
+      labelStyle(); doc.text('CPF Titular:', 24, yData); valueStyle(); doc.text(selectedAtendimento.cpf, 60, yData);
+      yData += 8;
+      // Recebedor
+      labelStyle(); doc.text('Recebedor:', 24, yData); valueStyle(); doc.text(nomeRecebedor, 60, yData);
+      yData += 8;
+      labelStyle(); doc.text('CPF Recebedor:', 24, yData); valueStyle(); doc.text(cpfRecebedor, 60, yData);
+      yData += 8;
+      labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 60, yData);
+      yData += 8;
+      // Data e hora
+      labelStyle(); doc.text('Data Entrega:', 24, yData); valueStyle(); doc.text(formatDate(dataEntrega), 60, yData);
+      yData += 8;
+      labelStyle(); doc.text('Hora Entrega:', 24, yData); valueStyle(); doc.text(now.toLocaleTimeString('pt-BR'), 60, yData);
+      yData += 8;
+      // Responsável
+      labelStyle(); doc.text('Responsavel pelo atendimento:', 24, yData); valueStyle(); doc.text(emailAtendente, 90, yData);
+      // Campo de assinatura destacado (agora no rodapé)
+      const assinaturaY = 260;
+      doc.setDrawColor(16, 185, 129); // emerald-600
+      doc.setLineWidth(0.5);
+      doc.roundedRect(18, assinaturaY - 10, 174, 28, 4, 4);
+      doc.setFontSize(12);
+      doc.setTextColor(16, 185, 129); // emerald-600
+      doc.text('Assinatura do Recebedor', 105, assinaturaY, { align: 'center' });
+      doc.setTextColor(40, 40, 40);
+      doc.text(`______________________________________`, 105, assinaturaY + 10, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Assinatura de ${nomeRecebedor}`, 105, assinaturaY + 16, { align: 'center' });
+      // Rodapé fixo
+      const rodapeY = 285;
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.5);
+      doc.line(18, rodapeY - 7, 192, rodapeY - 7);
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Gerado por: ${nomeAtendente || user.email || ''}`, 20, rodapeY);
+      doc.text(`Data/Hora: ${formatDate(dataEntrega)} ${now.toLocaleTimeString('pt-BR')}`, 150, rodapeY);
+      // Gerar URL do PDF
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+    } catch (err) {
+      alert('Erro ao gerar comprovante.');
+    }
+    setGerandoComprovante(false);
+  };
+
+  const fetchNomeAtendente = async (usuarioId: string | number) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('name, email')
+      .eq('auth_id', usuarioId)
+      .single();
+    if (!error && data) {
+      setNomeAtendente(data.name || '');
+      setEmailAtendente(data.email || '');
+    } else {
+      setNomeAtendente('');
+      setEmailAtendente('');
     }
   };
 
@@ -165,6 +357,152 @@ export default function DashboardPage() {
   return (
     <>
       <DashboardHeader />
+      {/* Modal Entregar CIN */}
+      {showEntregarCinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setShowEntregarCinModal(false)}
+              aria-label="Fechar"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4">Entregar CIN</h2>
+            {!selectedAtendimento ? (
+              <div>
+                <div className="mb-2 font-medium">Buscar atendimento por nome ou CPF:</div>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    className="block w-full border rounded px-3 py-2"
+                    placeholder="Digite o nome ou CPF"
+                    value={busca}
+                    onChange={e => setBusca(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') buscarAtendimentos(); }}
+                  />
+                  <button
+                    className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                    onClick={buscarAtendimentos}
+                    disabled={!busca || buscando}
+                  >
+                    Buscar
+                  </button>
+                </div>
+                {loadingAtendimentosEntrega ? (
+                  <div className="text-gray-500">Carregando atendimentos...</div>
+                ) : atendimentosParaEntrega.length === 0 && busca ? (
+                  <div className="text-gray-500">Nenhum atendimento encontrado.</div>
+                ) : atendimentosParaEntrega.length > 0 ? (
+                  <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                    {atendimentosParaEntrega.map((a) => (
+                      <li key={a.id} className="py-2 flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{a.nome}</div>
+                          <div className="text-xs text-gray-500">CPF: {a.cpf}</div>
+                        </div>
+                        <button
+                          className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
+                          onClick={() => setSelectedAtendimento(a)}
+                        >
+                          Selecionar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : (
+              <div>
+                <div className="mb-2 font-medium">Dados do Atendimento</div>
+                <div className="mb-2">
+                  <div><span className="font-semibold">Nome:</span> {selectedAtendimento.nome}</div>
+                  <div><span className="font-semibold">CPF:</span> {selectedAtendimento.cpf}</div>
+                  <div><span className="font-semibold">Protocolo:</span> {selectedAtendimento.protocolo}</div>
+                </div>
+                <div className="mb-2 font-medium">Preencha os dados do recebedor:</div>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium">Nome do Recebedor</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full border rounded px-3 py-2"
+                    value={nomeRecebedor}
+                    onChange={e => setNomeRecebedor(e.target.value)}
+                  />
+                </div>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium">CPF do Recebedor</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full border rounded px-3 py-2"
+                    value={cpfRecebedor}
+                    onChange={e => setCpfRecebedor(e.target.value)}
+                  />
+                </div>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium">Vínculo com o titular</label>
+                  <select
+                    className="mt-1 block w-full border rounded px-3 py-2"
+                    value={vinculo}
+                    onChange={e => setVinculo(e.target.value)}
+                  >
+                    <option value="">Selecione</option>
+                    <option value="mãe">Mãe</option>
+                    <option value="pai">Pai</option>
+                    <option value="irmão">Irmão</option>
+                    <option value="tio">Tio</option>
+                    <option value="avós">Avós</option>
+                    <option value="outros">Outros</option>
+                  </select>
+                  {vinculo === 'outros' && (
+                    <input
+                      type="text"
+                      className="mt-2 block w-full border rounded px-3 py-2"
+                      placeholder="Digite o vínculo"
+                      value={outroVinculo}
+                      onChange={e => setOutroVinculo(e.target.value)}
+                    />
+                  )}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
+                    disabled={!nomeRecebedor || !cpfRecebedor || !vinculo || (vinculo === 'outros' && !outroVinculo) || gerandoComprovante}
+                    onClick={handleGerarComprovante}
+                  >
+                    {gerandoComprovante ? 'Gerando...' : 'Gerar Comprovante'}
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                    onClick={() => setSelectedAtendimento(null)}
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Modal de visualização do PDF */}
+      {pdfUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setPdfUrl(null)}
+              aria-label="Fechar"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4">Comprovante de Entrega</h2>
+            <iframe src={pdfUrl} className="w-full h-[70vh] border rounded" title="Comprovante PDF"></iframe>
+            <div className="mt-4 flex justify-end">
+              <a href={pdfUrl} download="comprovante-entrega-cin.pdf" className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">Baixar PDF</a>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
         <div className="max-w-7xl mx-auto">
           <div className="space-y-6">
@@ -285,6 +623,17 @@ export default function DashboardPage() {
                     </svg>
                     <span className="font-medium">Gestão de Agendamentos</span>
                   </Link>
+
+                  <button
+                    ref={entregarCinButtonRef}
+                    onClick={() => setShowEntregarCinModal(true)}
+                    className="flex items-center px-4 py-3 rounded-lg border-2 border-emerald-700 text-emerald-800 hover:bg-emerald-50 transition-colors"
+                  >
+                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" />
+                    </svg>
+                    <span className="font-medium">Entregar CIN</span>
+                  </button>
                 </div>
               </div>
 
@@ -394,4 +743,18 @@ export default function DashboardPage() {
       </div>
     </>
   );
+}
+
+function gerarCpfAleatorio() {
+  // Gera um CPF válido (apenas para testes/demonstrativo)
+  function randomInt(n: number) { return Math.floor(Math.random() * n); }
+  let n = [];
+  for (let i = 0; i < 9; ++i) n.push(randomInt(10));
+  let d1 = 0, d2 = 0;
+  for (let i = 0; i < 9; ++i) d1 += n[i] * (10 - i);
+  d1 = 11 - (d1 % 11); if (d1 >= 10) d1 = 0;
+  for (let i = 0; i < 9; ++i) d2 += n[i] * (11 - i);
+  d2 += d1 * 2;
+  d2 = 11 - (d2 % 11); if (d2 >= 10) d2 = 0;
+  return `${n.join('')}${d1}${d2}`;
 }
