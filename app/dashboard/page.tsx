@@ -245,24 +245,41 @@ export default function DashboardPage() {
       const doc = new jsPDF();
       // Logo centralizada
       doc.addImage(logoBase64, 'PNG', 80, 10, 50, 20);
-      // Título
+      // Título e subtítulo
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(20);
       doc.setTextColor(16, 185, 129); // emerald-600
       doc.text('PROTOCOLO DE ENTREGA DA CIN', 105, 42, { align: 'center' });
+      doc.setFontSize(13);
+      doc.setTextColor(80, 80, 80);
+      doc.text('SALA SENSORIAL / ALECE', 105, 50, { align: 'center' });
       // Linha decorativa
       doc.setDrawColor(16, 185, 129); // emerald-600
       doc.setLineWidth(1.2);
-      doc.line(30, 48, 180, 48);
-      // Caixa de dados principais
-      let y = 58;
+      doc.line(30, 55, 180, 55);
+      // Bloco de dados do atendimento
+      let yAtendimento = 62;
+      doc.setFillColor(232, 250, 241); // verde bem claro
+      doc.roundedRect(18, yAtendimento, 174, 32, 4, 4, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(80, 80, 80);
+      let yA = yAtendimento + 9;
+      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
+      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
+      labelStyle(); doc.text('Protocolo:', 24, yA); valueStyle(); doc.text(selectedAtendimento.protocolo || '', 60, yA);
+      labelStyle(); doc.text('Data Atendimento:', 100, yA); valueStyle(); doc.text(formatDate(selectedAtendimento.dia_atual), 150, yA);
+      yA += 8;
+      labelStyle(); doc.text('Horário:', 24, yA); valueStyle(); doc.text(selectedAtendimento.horario, 60, yA);
+      labelStyle(); doc.text('Solicitante:', 100, yA); valueStyle(); doc.text(selectedAtendimento.solicitante || '', 150, yA);
+      yA += 8;
+      labelStyle(); doc.text('E-mail Titular:', 24, yA); valueStyle(); doc.text(selectedAtendimento.email || '', 60, yA);
+      // Bloco de dados do recebedor
+      let y = yAtendimento + 40;
       doc.setFillColor(236, 253, 245); // verde claro (emerald-50)
       doc.roundedRect(18, y, 174, 60, 4, 4, 'F');
       doc.setFontSize(12);
       doc.setTextColor(80, 80, 80);
       let yData = y + 10;
-      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
-      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
       // Titular
       labelStyle(); doc.text('Titular:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
       yData += 8;
