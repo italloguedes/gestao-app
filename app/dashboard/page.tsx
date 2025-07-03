@@ -311,7 +311,7 @@ export default function DashboardPage() {
       doc.text(`______________________________________`, 105, assinaturaY + 10, { align: 'center' });
       doc.setFontSize(10);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Assinatura de ${nomeRecebedor}`, 105, assinaturaY + 16, { align: 'center' });
+      doc.text(`${nomeRecebedor}`, 105, assinaturaY + 16, { align: 'center' });
       // Rodapé fixo
       const rodapeY = 285;
       doc.setDrawColor(230, 230, 230);
