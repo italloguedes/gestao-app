@@ -257,30 +257,16 @@ export default function DashboardPage() {
       doc.setDrawColor(16, 185, 129); // emerald-600
       doc.setLineWidth(1.2);
       doc.line(30, 55, 180, 55);
-      // Bloco de dados do atendimento
-      let yAtendimento = 62;
-      doc.setFillColor(232, 250, 241); // verde bem claro
-      doc.roundedRect(18, yAtendimento, 174, 32, 4, 4, 'F');
-      doc.setFontSize(12);
-      doc.setTextColor(80, 80, 80);
-      let yA = yAtendimento + 9;
-      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
-      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
-      labelStyle(); doc.text('Protocolo:', 24, yA); valueStyle(); doc.text(selectedAtendimento.protocolo || '', 60, yA);
-      labelStyle(); doc.text('Data Atendimento:', 100, yA); valueStyle(); doc.text(formatDate(selectedAtendimento.dia_atual), 150, yA);
-      yA += 8;
-      labelStyle(); doc.text('Horário:', 24, yA); valueStyle(); doc.text(selectedAtendimento.horario, 60, yA);
-      labelStyle(); doc.text('Solicitante:', 100, yA); valueStyle(); doc.text(selectedAtendimento.solicitante || '', 150, yA);
-      yA += 8;
-      labelStyle(); doc.text('E-mail Titular:', 24, yA); valueStyle(); doc.text(selectedAtendimento.email || '', 60, yA);
       // Bloco de dados do recebedor
-      let y = yAtendimento + 40;
+      let y = 62;
       doc.setFillColor(236, 253, 245); // verde claro (emerald-50)
       doc.roundedRect(18, y, 174, 60, 4, 4, 'F');
       doc.setFontSize(12);
       doc.setTextColor(80, 80, 80);
       let yData = y + 10;
       // Titular
+      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
+      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
       labelStyle(); doc.text('Titular:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
       yData += 8;
       labelStyle(); doc.text('CPF Titular:', 24, yData); valueStyle(); doc.text(selectedAtendimento.cpf, 60, yData);
@@ -298,7 +284,7 @@ export default function DashboardPage() {
       labelStyle(); doc.text('Hora Entrega:', 24, yData); valueStyle(); doc.text(now.toLocaleTimeString('pt-BR'), 60, yData);
       yData += 8;
       // Responsável
-      labelStyle(); doc.text('Responsavel pelo atendimento:', 24, yData); valueStyle(); doc.text(emailAtendente, 90, yData);
+      labelStyle(); doc.text('Responsável pelo atendimento:', 24, yData); valueStyle(); doc.text(nomeAtendente, 90, yData);
       // Campo de assinatura destacado (agora no rodapé)
       const assinaturaY = 260;
       doc.setDrawColor(16, 185, 129); // emerald-600
@@ -319,7 +305,7 @@ export default function DashboardPage() {
       doc.line(18, rodapeY - 7, 192, rodapeY - 7);
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Gerado por: ${nomeAtendente || user.email || ''}`, 20, rodapeY);
+      doc.text(`Gerado por: ${user?.user_metadata?.name || user?.email || ''}`, 20, rodapeY);
       doc.text(`Data/Hora: ${formatDate(dataEntrega)} ${now.toLocaleTimeString('pt-BR')}`, 150, rodapeY);
       // Gerar URL do PDF
       const pdfBlob = doc.output('blob');
