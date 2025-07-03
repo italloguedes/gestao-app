@@ -276,6 +276,7 @@ export default function DashboardPage() {
       yData += 8;
       labelStyle(); doc.text('CPF Recebedor:', 24, yData); valueStyle(); doc.text(cpfRecebedor, 60, yData);
       yData += 8;
+      // Vínculo
       labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 60, yData);
       yData += 8;
       // Data e hora
@@ -283,8 +284,6 @@ export default function DashboardPage() {
       yData += 8;
       labelStyle(); doc.text('Hora Entrega:', 24, yData); valueStyle(); doc.text(now.toLocaleTimeString('pt-BR'), 60, yData);
       yData += 8;
-      // Responsável
-      labelStyle(); doc.text('Responsável pelo atendimento:', 24, yData); valueStyle(); doc.text(nomeAtendente, 90, yData);
       // Campo de assinatura destacado (agora no rodapé)
       const assinaturaY = 260;
       doc.setDrawColor(16, 185, 129); // emerald-600
