@@ -117,7 +117,7 @@ export default function GerarRelatorioPage() {
       columnStyles: {
         0: { cellWidth: 20, halign: 'center' }, // Data
         1: { cellWidth: 52, halign: 'left' },   // Nome
-        2: { cellWidth: 23, halign: 'center' }, // CPF
+        2: { cellWidth: 30, halign: 'center' }, // CPF
         3: { cellWidth: 35, halign: 'left' },   // Solicitante
         4: { cellWidth: 20, halign: 'center' }  // Status
       },
