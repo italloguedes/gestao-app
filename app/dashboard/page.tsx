@@ -341,12 +341,12 @@ export default function DashboardPage() {
               <div className="h-8 bg-gray-200 rounded w-1/4"></div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                  <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                  <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
             </div>
@@ -361,389 +361,402 @@ export default function DashboardPage() {
       <DashboardHeader />
       {/* Modal Entregar CIN */}
       {showEntregarCinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-              onClick={() => setShowEntregarCinModal(false)}
-              aria-label="Fechar"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4">Entregar CIN</h2>
-            {!selectedAtendimento ? (
-              <div>
-                <div className="mb-2 font-medium">Buscar atendimento por nome ou CPF:</div>
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    className="block w-full border rounded px-3 py-2"
-                    placeholder="Digite o nome ou CPF"
-                    value={busca}
-                    onChange={e => setBusca(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') buscarAtendimentos(); }}
-                  />
-                  <button
-                    className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                    onClick={buscarAtendimentos}
-                    disabled={!busca || buscando}
-                  >
-                    Buscar
-                  </button>
-                </div>
-                {loadingAtendimentosEntrega ? (
-                  <div className="text-gray-500">Carregando atendimentos...</div>
-                ) : atendimentosParaEntrega.length === 0 && busca ? (
-                  <div className="text-gray-500">Nenhum atendimento encontrado.</div>
-                ) : atendimentosParaEntrega.length > 0 ? (
-                  <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
-                    {atendimentosParaEntrega.map((a) => (
-                      <li key={a.id} className="py-2 flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{a.nome}</div>
-                          <div className="text-xs text-gray-500">CPF: {a.cpf}</div>
-                        </div>
-                        <button
-                          className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
-                          onClick={() => setSelectedAtendimento(a)}
-                        >
-                          Selecionar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : (
-              <div>
-                <div className="mb-2 font-medium">Dados do Atendimento</div>
-                <div className="mb-2">
-                  <div><span className="font-semibold">Nome:</span> {selectedAtendimento.nome}</div>
-                  <div><span className="font-semibold">CPF:</span> {selectedAtendimento.cpf}</div>
-                  <div><span className="font-semibold">Protocolo:</span> {selectedAtendimento.protocolo}</div>
-                </div>
-                <div className="mb-2 font-medium">Preencha os dados do recebedor:</div>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium">Nome do Recebedor</label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border rounded px-3 py-2"
-                    value={nomeRecebedor}
-                    onChange={e => setNomeRecebedor(e.target.value)}
-                  />
-                </div>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium">CPF do Recebedor</label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border rounded px-3 py-2"
-                    value={cpfRecebedor}
-                    onChange={e => setCpfRecebedor(e.target.value)}
-                  />
-                </div>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium">Vínculo com o titular</label>
-                  <select
-                    className="mt-1 block w-full border rounded px-3 py-2"
-                    value={vinculo}
-                    onChange={e => setVinculo(e.target.value)}
-                  >
-                    <option value="">Selecione</option>
-                    <option value="mãe">Mãe</option>
-                    <option value="pai">Pai</option>
-                    <option value="irmão">Irmão</option>
-                    <option value="tio">Tio</option>
-                    <option value="avós">Avós</option>
-                    <option value="outros">Outros</option>
-                  </select>
-                  {vinculo === 'outros' && (
-                    <input
-                      type="text"
-                      className="mt-2 block w-full border rounded px-3 py-2"
-                      placeholder="Digite o vínculo"
-                      value={outroVinculo}
-                      onChange={e => setOutroVinculo(e.target.value)}
-                    />
-                  )}
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <button
-                    className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
-                    disabled={!nomeRecebedor || !cpfRecebedor || !vinculo || (vinculo === 'outros' && !outroVinculo) || gerandoComprovante}
-                    onClick={handleGerarComprovante}
-                  >
-                    {gerandoComprovante ? 'Gerando...' : 'Gerar Comprovante'}
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                    onClick={() => setSelectedAtendimento(null)}
-                  >
-                    Voltar
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <EntregarCinModal
+          show={showEntregarCinModal}
+          onClose={() => setShowEntregarCinModal(false)}
+          atendimentos={atendimentosParaEntrega}
+          onBuscar={buscarAtendimentos}
+          busca={busca}
+          setBusca={setBusca}
+          buscando={buscando}
+          loading={loadingAtendimentosEntrega}
+          onSelect={setSelectedAtendimento}
+          selected={selectedAtendimento}
+          nomeRecebedor={nomeRecebedor}
+          setNomeRecebedor={setNomeRecebedor}
+          cpfRecebedor={cpfRecebedor}
+          setCpfRecebedor={setCpfRecebedor}
+          vinculo={vinculo}
+          setVinculo={setVinculo}
+          outroVinculo={outroVinculo}
+          setOutroVinculo={setOutroVinculo}
+          gerandoComprovante={gerandoComprovante}
+          onGerarComprovante={handleGerarComprovante}
+        />
       )}
       {/* Modal de visualização do PDF */}
       {pdfUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-              onClick={() => setPdfUrl(null)}
-              aria-label="Fechar"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4">Comprovante de Entrega</h2>
-            <iframe src={pdfUrl} className="w-full h-[70vh] border rounded" title="Comprovante PDF"></iframe>
-            <div className="mt-4 flex justify-end">
-              <a href={pdfUrl} download="comprovante-entrega-cin.pdf" className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">Baixar PDF</a>
-            </div>
-          </div>
-        </div>
+        <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
       )}
       <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold">Painel de Controle</h1>
-              <p className="text-gray-600 mt-2">Bem-vindo ao gerenciamento de atendimentos.</p>
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight">Painel de Controle</h1>
+            <p className="text-gray-500 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
+          </div>
+
+          {/* Cards de Estatísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <StatCard title="Total de Atendimentos" value={stats.total} color="text-gray-900" />
+            <StatCard title="Correções" value={stats.correcoes} color="text-red-600" />
+            <StatCard title="Em Andamento" value={stats.emAndamento} color="text-blue-600" />
+            <StatCard title="Concluídos" value={stats.concluidos} color="text-green-600" />
+            <StatCard title="Bloqueados" value={stats.bloqueados} color="text-gray-700" />
+            <StatCard title="Hoje" value={stats.hoje} color="text-emerald-600" />
+          </div>
+
+          {/* Container para Ações Rápidas e Atendimentos Recentes */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Ações Rápidas */}
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100 flex flex-col justify-between">
+              <h2 className="text-lg font-semibold mb-4 relative inline-block text-emerald-700">
+                Ações Rápidas
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+              </h2>
+              <div className="flex flex-col space-y-3">
+                <QuickAction href="/dashboard/atendimentos/novo" color="border-emerald-500 text-emerald-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                }>
+                  Novo Atendimento
+                </QuickAction>
+                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                }>
+                  Atualizar CIN
+                </QuickAction>
+                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                }>
+                  Ver Correções
+                </QuickAction>
+                <QuickAction href="/dashboard/atendimentos/cancelados" color="border-orange-500 text-orange-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                }>
+                  Atendimentos Cancelados
+                </QuickAction>
+                <QuickAction href="/dashboard/atendimentos/bloqueados" color="border-gray-500 text-gray-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                }>
+                  Atendimentos Bloqueados
+                </QuickAction>
+                <QuickAction href="/admin/gestao" color="border-purple-500 text-purple-700" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                }>
+                  Gestão de Agendamentos
+                </QuickAction>
+                <button
+                  ref={entregarCinButtonRef}
+                  onClick={() => setShowEntregarCinModal(true)}
+                  className="flex items-center px-4 py-3 rounded-lg border-2 border-emerald-700 text-emerald-800 hover:bg-emerald-50 transition-colors font-medium gap-2 mt-2"
+                >
+                  <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" />
+                  </svg>
+                  Entregar CIN
+                </button>
+              </div>
             </div>
 
-            {/* Cards de Estatísticas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Total de Atendimentos</h3>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Correções</h3>
-                <p className="mt-2 text-3xl font-bold text-red-600">{stats.correcoes}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Em Andamento</h3>
-                <p className="mt-2 text-3xl font-bold text-blue-600">{stats.emAndamento}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Concluídos</h3>
-                <p className="mt-2 text-3xl font-bold text-green-600">{stats.concluidos}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Bloqueados</h3>
-                <p className="mt-2 text-3xl font-bold text-gray-700">{stats.bloqueados}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Hoje</h3>
-                <p className="mt-2 text-3xl font-bold text-emerald-600">{stats.hoje}</p>
-              </div>
-            </div>
-
-            {/* Cards de Agendamentos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Agendamentos Pendentes</h3>
-                <p className="mt-2 text-3xl font-bold text-yellow-600">{stats.agendamentosPendentes}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Agendamentos Confirmados</h3>
-                <p className="mt-2 text-3xl font-bold text-green-600">{stats.agendamentosConfirmados}</p>
-              </div>
-              <div className="card p-4">
-                <h3 className="text-sm font-medium text-gray-500">Agendamentos Cancelados</h3>
-                <p className="mt-2 text-3xl font-bold text-red-600">{stats.agendamentosCancelados}</p>
-              </div>
-            </div>
-
-            {/* Container para Ações Rápidas e Atendimentos Recentes */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Ações Rápidas */}
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold mb-4 relative inline-block">
-                  Ações Rápidas
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <div className="flex flex-col space-y-3">
-                  <Link 
-                    href="/dashboard/atendimentos/novo" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="font-medium">Novo Atendimento</span>
-                  </Link>
-
-                  <Link 
-                    href="/dashboard/atendimentos/atualizar-cin" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-blue-500 text-blue-700 hover:bg-blue-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span className="font-medium">Atualizar CIN</span>
-                  </Link>
-
-                  <Link 
-                    href="/dashboard/atendimentos/correcoes" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-red-500 text-red-700 hover:bg-red-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span className="font-medium">Ver Correções</span>
-                  </Link>
-
-                  <Link 
-                    href="/dashboard/atendimentos/cancelados" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-orange-500 text-orange-700 hover:bg-orange-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    <span className="font-medium">Atendimentos Cancelados</span>
-                  </Link>
-
-                  <Link 
-                    href="/dashboard/atendimentos/bloqueados" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-gray-500 text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <span className="font-medium">Atendimentos Bloqueados</span>
-                  </Link>
-
-                  <Link 
-                    href="/admin/gestao" 
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-purple-500 text-purple-700 hover:bg-purple-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">Gestão de Agendamentos</span>
-                  </Link>
-
-                  <button
-                    ref={entregarCinButtonRef}
-                    onClick={() => setShowEntregarCinModal(true)}
-                    className="flex items-center px-4 py-3 rounded-lg border-2 border-emerald-700 text-emerald-800 hover:bg-emerald-50 transition-colors"
-                  >
-                    <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" />
-                    </svg>
-                    <span className="font-medium">Entregar CIN</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Atendimentos Recentes */}
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold mb-4 relative inline-block">
-                  Atendimentos Recentes
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <div className="space-y-3">
-                  {recentAtendimentos.length === 0 ? (
-                    <p className="text-gray-500">Nenhum atendimento registrado</p>
-                  ) : (
-                    recentAtendimentos.map((atendimento) => (
-                      <div 
-                        key={atendimento.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">{atendimento.nome}</p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(atendimento.dia_atual)} - {atendimento.protocolo}
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(atendimento.status)}`}>
-                          {atendimento.status === 'correcao' ? 'Correção' : 
-                           atendimento.status === 'concluido' ? 'Concluído' : 
-                           atendimento.status === 'em_andamento' ? 'Em andamento' : 
-                           atendimento.status}
-                        </span>
+            {/* Atendimentos Recentes */}
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100">
+              <h2 className="text-lg font-semibold mb-4 relative inline-block text-emerald-700">
+                Atendimentos Recentes
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+              </h2>
+              <div className="space-y-3">
+                {recentAtendimentos.length === 0 ? (
+                  <p className="text-gray-500">Nenhum atendimento registrado</p>
+                ) : (
+                  recentAtendimentos.map((atendimento) => (
+                    <div 
+                      key={atendimento.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-800">{atendimento.nome}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(atendimento.dia_atual)} - {atendimento.protocolo}
+                        </p>
                       </div>
-                    ))
-                  )}
-                </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(atendimento.status)}`}>
+                        {atendimento.status === 'correcao' ? 'Correção' : 
+                         atendimento.status === 'concluido' ? 'Concluído' : 
+                         atendimento.status === 'em_andamento' ? 'Em andamento' : 
+                         atendimento.status}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Link
-                href="/dashboard/atendimentos"
-                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium">
-                    <span className="absolute inset-0" aria-hidden="true" />
-                    Atendimentos
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Gerencie os atendimentos da Sala Sensorial
-                  </p>
-                </div>
-              </Link>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Link
+              href="/dashboard/atendimentos"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Atendimentos
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Gerencie os atendimentos da Sala Sensorial
+                </p>
+              </div>
+            </Link>
 
-              <Link
-                href="/dashboard/relatorios"
-                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium">
-                    <span className="absolute inset-0" aria-hidden="true" />
-                    Relatórios
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Acesse e gere relatórios detalhados
-                  </p>
-                </div>
-              </Link>
+            <Link
+              href="/dashboard/relatorios"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Relatórios
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Acesse e gere relatórios detalhados
+                </p>
+              </div>
+            </Link>
 
-              <Link
-                href="/admin/gestao"
-                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium">
-                    <span className="absolute inset-0" aria-hidden="true" />
-                    Gestão de Agendamentos
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Gerencie os agendamentos e vagas
-                  </p>
-                </div>
-              </Link>
-            </div>
+            <Link
+              href="/admin/gestao"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Gestão de Agendamentos
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Gerencie os agendamentos e vagas
+                </p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// 1. COMPONENTES INTERNOS
+
+// Modal de Entrega da CIN
+function EntregarCinModal({
+  show, onClose, atendimentos, onBuscar, busca, setBusca, buscando, loading, onSelect, selected, nomeRecebedor, setNomeRecebedor, cpfRecebedor, setCpfRecebedor, vinculo, setVinculo, outroVinculo, setOutroVinculo, gerandoComprovante, onGerarComprovante
+}: any) {
+  return show ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative">
+        <button
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl focus:outline-none"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          &times;
+        </button>
+        <h2 className="text-2xl font-bold mb-6 text-emerald-700 flex items-center gap-2">
+          <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" /></svg>
+          Entregar CIN
+        </h2>
+        {!selected ? (
+          <div>
+            <div className="mb-2 font-medium">Buscar atendimento por nome ou CPF:</div>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                className="block w-full border rounded px-3 py-2 focus:ring-2 focus:ring-emerald-400"
+                placeholder="Digite o nome ou CPF"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') onBuscar(); }}
+                autoFocus
+              />
+              <button
+                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition disabled:opacity-50"
+                onClick={onBuscar}
+                disabled={!busca || buscando}
+              >
+                Buscar
+              </button>
+            </div>
+            {loading ? (
+              <div className="text-gray-500 animate-pulse">Carregando atendimentos...</div>
+            ) : atendimentos.length === 0 && busca ? (
+              <div className="text-gray-500">Nenhum atendimento encontrado.</div>
+            ) : atendimentos.length > 0 ? (
+              <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                {atendimentos.map((a: any) => (
+                  <li key={a.id} className="py-2 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{a.nome}</div>
+                      <div className="text-xs text-gray-500">CPF: {a.cpf}</div>
+                    </div>
+                    <button
+                      className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
+                      onClick={() => onSelect(a)}
+                    >
+                      Selecionar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2 font-medium">Dados do Atendimento</div>
+            <div className="mb-2">
+              <div><span className="font-semibold">Nome:</span> {selected.nome}</div>
+              <div><span className="font-semibold">CPF:</span> {selected.cpf}</div>
+              <div><span className="font-semibold">Protocolo:</span> {selected.protocolo}</div>
+            </div>
+            <div className="mb-2 font-medium">Preencha os dados do recebedor:</div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">Nome do Recebedor</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border rounded px-3 py-2 focus:ring-2 focus:ring-emerald-400"
+                value={nomeRecebedor}
+                onChange={e => setNomeRecebedor(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">CPF do Recebedor</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border rounded px-3 py-2 focus:ring-2 focus:ring-emerald-400"
+                value={cpfRecebedor}
+                onChange={e => setCpfRecebedor(e.target.value)}
+              />
+            </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">Vínculo com o titular</label>
+              <select
+                className="mt-1 block w-full border rounded px-3 py-2 focus:ring-2 focus:ring-emerald-400"
+                value={vinculo}
+                onChange={e => setVinculo(e.target.value)}
+              >
+                <option value="">Selecione</option>
+                <option value="mãe">Mãe</option>
+                <option value="pai">Pai</option>
+                <option value="irmão">Irmão</option>
+                <option value="tio">Tio</option>
+                <option value="avós">Avós</option>
+                <option value="outros">Outros</option>
+              </select>
+              {vinculo === 'outros' && (
+                <input
+                  type="text"
+                  className="mt-2 block w-full border rounded px-3 py-2 focus:ring-2 focus:ring-emerald-400"
+                  placeholder="Digite o vínculo"
+                  value={outroVinculo}
+                  onChange={e => setOutroVinculo(e.target.value)}
+                />
+              )}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition disabled:opacity-50"
+                disabled={!nomeRecebedor || !cpfRecebedor || !vinculo || (vinculo === 'outros' && !outroVinculo) || gerandoComprovante}
+                onClick={onGerarComprovante}
+              >
+                {gerandoComprovante ? 'Gerando...' : 'Gerar Comprovante'}
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                onClick={() => onSelect(null)}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+}
+
+// Modal de PDF
+function PdfModal({ url, onClose }: { url: string, onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative">
+        <button
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl focus:outline-none"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          &times;
+        </button>
+        <h2 className="text-xl font-bold mb-4 text-emerald-700">Comprovante de Entrega</h2>
+        <iframe src={url} className="w-full h-[70vh] border rounded" title="Comprovante PDF"></iframe>
+        <div className="mt-4 flex justify-end">
+          <a href={url} download="comprovante-entrega-cin.pdf" className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition">Baixar PDF</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Card de estatística
+function StatCard({ title, value, color }: { title: string, value: any, color: string }) {
+  return (
+    <div className="card p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+      <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+// Card de ação rápida
+function QuickAction({ href, color, icon, children }: any) {
+  return (
+    <Link 
+      href={href} 
+      className={`flex items-center px-4 py-3 rounded-lg border-2 ${color} hover:bg-opacity-10 transition-colors`}
+    >
+      {icon}
+      <span className="font-medium">{children}</span>
+    </Link>
   );
 }
 
