@@ -7,7 +7,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 
 const HORARIOS = [
   "08:00","8:30", "09:00", "10:00", "11:00", // manhã
-  "13:00","13:30", "14:00","14:30", "15:00", // tarde
+  "13:00","13:30", "14:00","14:30", "15:00", // tardee
 ];
 
 interface User {

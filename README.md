@@ -76,6 +76,42 @@ npm run build
 npm start
 ```
 
+## 🌐 Deploy
+
+### Deploy no Vercel (Recomendado)
+
+1. **Conecte seu repositório ao Vercel:**
+   - Acesse [vercel.com](https://vercel.com)
+   - Faça login com sua conta GitHub
+   - Clique em "New Project"
+   - Importe seu repositório `gestao-app`
+
+2. **Configure as variáveis de ambiente no Vercel:**
+   - Vá para Settings > Environment Variables
+   - Adicione as seguintes variáveis:
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     - `RESEND_API_KEY`
+
+3. **Deploy automático:**
+   - O Vercel fará deploy automático a cada push para a branch `main`
+   - Cada Pull Request criará um preview deployment
+
+### Deploy Manual
+
+Para fazer deploy manual via GitHub Actions:
+
+1. Configure os secrets no GitHub:
+   - Vá para Settings > Secrets and variables > Actions
+   - Adicione os secrets necessários (VERCEL_TOKEN, ORG_ID, PROJECT_ID)
+
+2. Push para a branch main:
+```bash
+git add .
+git commit -m "Configuração de deploy"
+git push origin main
+```
+
 ## 📱 Funcionalidades Principais
 
 ### Área Administrativa
