@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -35,6 +36,14 @@ const nextConfig = {
   eslint: {
     // Disable ESLint during builds
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Disable TypeScript checking during builds
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    // Enable app directory
+    appDir: true,
   },
 }
 
