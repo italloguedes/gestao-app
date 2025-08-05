@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientLayout from '@/components/ClientLayout';
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,6 +16,7 @@ function BodyContent({ children, className }: { children: React.ReactNode; class
   return (
     <body className={className} suppressHydrationWarning>
       <ClientLayout>{children}</ClientLayout>
+      <Toaster />
     </body>
   );
 }

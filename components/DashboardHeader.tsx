@@ -4,36 +4,45 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
-import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiBell, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiBell, FiLogOut, FiBarChart2, FiSettings, FiFileText } from 'react-icons/fi';
 
 // Memoized navigation items to prevent re-renders
-const DesktopNavItems = ({ onClose }: { onClose?: () => void }) => (
+const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname?: string }) => (
   <>
     <Link
       href="/dashboard"
-      className="group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-150"
+      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname === '/dashboard' ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
       onClick={onClose}
     >
-      <FiHome className="mr-2 group-hover:scale-110 transition-transform duration-150" />
+      <FiHome className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
       <span>Início</span>
     </Link>
 
     <Link
       href="/agendamento"
-      className="group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-150"
+      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname === '/agendamento' ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
       onClick={onClose}
     >
-      <FiCalendar className="mr-2 group-hover:scale-110 transition-transform duration-150" />
+      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
       <span>Agendar</span>
     </Link>
 
     <Link
       href="/admin/agendamentos/hoje"
-      className="group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-150"
+      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname?.includes('/admin/agendamentos/hoje') ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
       onClick={onClose}
     >
-      <FiCalendar className="mr-2 group-hover:scale-110 transition-transform duration-150" />
+      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
       <span>Agenda de Hoje</span>
+    </Link>
+
+    <Link
+      href="/dashboard/relatorios"
+      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname?.includes('/dashboard/relatorios') ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
+      onClick={onClose}
+    >
+      <FiBarChart2 className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+      <span>Relatórios</span>
     </Link>
   </>
 );
@@ -43,6 +52,7 @@ export default function DashboardHeader() {
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [pathname, setPathname] = useState<string>('');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -50,6 +60,9 @@ export default function DashboardHeader() {
       setUser(user);
     };
     checkUser();
+    
+    // Get current pathname
+    setPathname(window.location.pathname);
   }, []);
 
   const handleLogout = async () => {
@@ -71,7 +84,7 @@ export default function DashboardHeader() {
   const userInitial = useMemo(() => userDisplayName.charAt(0).toUpperCase(), [userDisplayName]);
 
   return (
-    <header className="bg-white shadow-lg fixed top-0 left-0 right-0 z-50">
+    <header className="bg-white/90 backdrop-blur-md shadow-md fixed top-0 left-0 right-0 z-50 border-b border-gray-200/70">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo e navegação principal */}
@@ -81,23 +94,24 @@ export default function DashboardHeader() {
                 href="/dashboard" 
                 className="flex items-center space-x-2"
               >
-                <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white px-3 py-1 rounded-lg text-xl font-bold">
+                <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white px-4 py-1.5 rounded-xl text-lg font-bold shadow-sm">
                   Sala Sensorial / Alece
                 </span>
               </Link>
             </div>
 
             {/* Navegação Desktop */}
-            <nav className="hidden md:flex ml-8 space-x-1">
-              <DesktopNavItems />
+            <nav className="hidden md:flex ml-8 space-x-2">
+              <DesktopNavItems pathname={pathname} />
             </nav>
           </div>
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
             {/* Botão de notificações */}
-            <button className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+            <button className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors relative">
               <FiBell className="w-5 h-5" />
+              <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
             </button>
 
             {/* Menu do usuário */}
@@ -175,4 +189,4 @@ export default function DashboardHeader() {
       </div>
     </header>
   );
-} 
+}
