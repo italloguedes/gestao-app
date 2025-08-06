@@ -31,6 +31,7 @@ interface Atendimento {
   dia_atual: string;
   horario: string;
   status: string;
+  observacoes?: string;
 }
 
 interface AtendimentoEntrega extends Atendimento {
@@ -72,6 +73,13 @@ export default function DashboardPage() {
   const [outroVinculo, setOutroVinculo] = useState('');
   // Removidas variáveis de estado do atendente
 
+  // Estados para o modal de edição de atendimento
+  const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
+  const [selectedAtendimentoForEdit, setSelectedAtendimentoForEdit] = useState<Atendimento | null>(null);
+  const [editingAtendimento, setEditingAtendimento] = useState<Partial<Atendimento>>({});
+  const [savingAtendimento, setSavingAtendimento] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!user) {
       router.push('/');
@@ -98,7 +106,7 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
-      
+
       // Notificação de carregamento
       toast({
         title: "Atualizando dashboard",
@@ -145,7 +153,7 @@ export default function DashboardPage() {
       });
 
       setRecentAtendimentos(recentAtendimentosData.data || []);
-      
+
       // Notificação de sucesso
       toast({
         title: "Dashboard atualizado",
@@ -154,7 +162,7 @@ export default function DashboardPage() {
       });
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
-      
+
       // Notificação de erro
       toast({
         title: "Erro ao atualizar dashboard",
@@ -169,28 +177,28 @@ export default function DashboardPage() {
   const buscarAtendimentos = async () => {
     setBuscando(true);
     setLoadingAtendimentosEntrega(true);
-    
+
     try {
       let query = supabase
         .from('atendimentos')
         .select('*')
         .neq('status', 'entregue');
-        
+
       if (busca) {
         // Busca por nome ou CPF (case insensitive para nome)
         query = query.or(`nome.ilike.%${busca}%,cpf.eq.${busca}`);
       }
-      
+
       const { data, error } = await query
         .order('dia_atual', { ascending: false })
         .order('horario', { ascending: false });
-        
+
       if (error) {
         throw error;
       }
-      
+
       setAtendimentosParaEntrega(data || []);
-      
+
       // Notificação de resultados
       if (data && data.length > 0) {
         toast({
@@ -231,11 +239,11 @@ export default function DashboardPage() {
       });
       return;
     }
-    
+
     // Substituir o confirm padrão por um toast com confirmação
     const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
     if (!confirmed) return;
-    
+
     setGerandoComprovante(true);
     try {
       // Notificação de processamento
@@ -243,11 +251,11 @@ export default function DashboardPage() {
         title: "Processando entrega",
         description: "Registrando informações e gerando comprovante...",
       });
-      
+
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
-      
+
       // Atualizar atendimento no Supabase
       const { error } = await supabase
         .from('atendimentos')
@@ -260,7 +268,7 @@ export default function DashboardPage() {
           data_hora_entrega: dataHoraEntrega,
         })
         .eq('id', selectedAtendimento.id);
-        
+
       if (error) throw error;
 
       // Carregar logo
@@ -279,16 +287,16 @@ export default function DashboardPage() {
 
       // Gerar PDF moderno e profissional
       const doc = new jsPDF();
-      
+
       // Cabeçalho com fundo colorido
       doc.setFillColor(16, 185, 129); // emerald-600
       doc.rect(0, 0, 210, 35, 'F');
-      
+
       // Logo centralizada com fundo branco circular
       doc.setFillColor(255, 255, 255);
       doc.circle(30, 18, 12, 'F');
       doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
-      
+
       // Título e subtítulo no cabeçalho
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(22);
@@ -297,7 +305,7 @@ export default function DashboardPage() {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
       doc.text('Carteira de Identidade Nacional', 105, 28, { align: 'center' });
-      
+
       // Número de protocolo destacado
       doc.setFillColor(240, 253, 244); // emerald-50
       doc.roundedRect(18, 40, 174, 16, 3, 3, 'F');
@@ -307,12 +315,12 @@ export default function DashboardPage() {
       doc.text('PROTOCOLO:', 24, 50);
       doc.setFont('helvetica', 'normal');
       doc.text(selectedAtendimento.protocolo || 'N/A', 70, 50);
-      
+
       // Data e hora da entrega
       doc.text('DATA/HORA:', 120, 50);
       doc.setFont('helvetica', 'normal');
       doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 165, 50, { align: 'center' });
-      
+
       // Seção de dados do titular
       const secaoY = 65;
       doc.setFillColor(16, 185, 129); // emerald-600
@@ -321,17 +329,17 @@ export default function DashboardPage() {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('DADOS DO TITULAR', 105, secaoY + 7, { align: 'center' });
-      
+
       // Bloco de dados do titular
       doc.setFillColor(240, 253, 244); // emerald-50
       doc.roundedRect(18, secaoY + 10, 174, 40, 3, 3, 'F');
       doc.setFontSize(11);
       doc.setTextColor(80, 80, 80);
-      
+
       // Estilo para labels e valores
       const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
       const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
-      
+
       // Dados do titular
       let yData = secaoY + 22;
       labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
@@ -339,7 +347,7 @@ export default function DashboardPage() {
       labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(selectedAtendimento.cpf, 60, yData);
       yData += 10;
       labelStyle(); doc.text('Data do Atendimento:', 24, yData); valueStyle(); doc.text(formatDate(selectedAtendimento.dia_atual), 90, yData);
-      
+
       // Seção de dados do recebedor
       const recebedorY = secaoY + 60;
       doc.setFillColor(16, 185, 129); // emerald-600
@@ -348,13 +356,13 @@ export default function DashboardPage() {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('DADOS DO RECEBEDOR', 105, recebedorY + 7, { align: 'center' });
-      
+
       // Bloco de dados do recebedor
       doc.setFillColor(240, 253, 244); // emerald-50
       doc.roundedRect(18, recebedorY + 10, 174, 50, 3, 3, 'F');
       doc.setFontSize(11);
       doc.setTextColor(80, 80, 80);
-      
+
       // Dados do recebedor
       yData = recebedorY + 22;
       labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(nomeRecebedor, 60, yData);
@@ -362,7 +370,7 @@ export default function DashboardPage() {
       labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(cpfRecebedor, 60, yData);
       yData += 10;
       labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 60, yData);
-      
+
       // Informações adicionais
       const infoY = recebedorY + 70;
       doc.setFillColor(240, 253, 244); // emerald-50
@@ -373,7 +381,7 @@ export default function DashboardPage() {
       doc.text('Este documento comprova a entrega da Carteira de Identidade Nacional (CIN) ao recebedor', 105, infoY + 10, { align: 'center' });
       doc.text('identificado acima. A entrega foi registrada no sistema com data e hora especificadas.', 105, infoY + 18, { align: 'center' });
       doc.text('Em caso de dúvidas, entre em contato com a Sala Sensorial da ALECE.', 105, infoY + 26, { align: 'center' });
-      
+
       // Campo de assinatura destacado
       const assinaturaY = 240;
       doc.setDrawColor(16, 185, 129); // emerald-600
@@ -390,28 +398,28 @@ export default function DashboardPage() {
       doc.setTextColor(120, 120, 120);
       doc.setFont('helvetica', 'normal');
       doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 105, assinaturaY + 30, { align: 'center' });
-      
+
       // Removido QR Code
       // Rodapé moderno com fundo colorido
       const rodapeY = 285;
       doc.setFillColor(240, 253, 244); // emerald-50
       doc.rect(0, rodapeY - 15, 210, 20, 'F');
-      
+
       // Linha decorativa superior do rodapé
       doc.setDrawColor(16, 185, 129); // emerald-600
       doc.setLineWidth(0.5);
       doc.line(0, rodapeY - 15, 210, rodapeY - 15);
-      
+
       // Informações do rodapé
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(16, 185, 129); // emerald-600
       doc.text('SALA SENSORIAL / ALECE', 105, rodapeY - 10, { align: 'center' });
-      
+
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(80, 80, 80);
       doc.text(`Emitido em: ${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 105, rodapeY - 3, { align: 'center' });
-      
+
       // Número da página
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(120, 120, 120);
@@ -420,14 +428,14 @@ export default function DashboardPage() {
       const pdfBlob = doc.output('blob');
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
-      
+
       // Notificação de sucesso
       toast({
         title: "Comprovante gerado com sucesso!",
         description: "A CIN foi registrada como entregue e o comprovante está pronto para download.",
         variant: "success",
       });
-      
+
     } catch (err) {
       console.error('Erro ao gerar comprovante:', err);
       toast({
@@ -440,6 +448,120 @@ export default function DashboardPage() {
   };
 
   // Removida função fetchNomeAtendente
+
+  // Funções para edição de atendimento
+  const validateCPF = (cpf: string) => {
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) return 'CPF deve ter 11 dígitos';
+    return null;
+  };
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'E-mail inválido';
+    return null;
+  };
+
+  const handleEditAtendimento = (atendimento: Atendimento) => {
+    setSelectedAtendimentoForEdit(atendimento);
+    setEditingAtendimento(atendimento);
+    setValidationErrors({});
+    setShowEditAtendimentoModal(true);
+  };
+
+  const handleInputChange = (field: keyof Atendimento, value: string) => {
+    setValidationErrors(prev => ({ ...prev, [field]: '' }));
+    
+    if (field === 'cpf') {
+      const error = validateCPF(value);
+      if (error) {
+        setValidationErrors(prev => ({ ...prev, [field]: error }));
+      }
+    }
+    
+    if (field === 'email') {
+      const error = validateEmail(value);
+      if (error) {
+        setValidationErrors(prev => ({ ...prev, [field]: error }));
+      }
+    }
+
+    setEditingAtendimento(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveAtendimento = async () => {
+    if (!selectedAtendimentoForEdit || !editingAtendimento) return;
+
+    // Validar campos obrigatórios
+    const requiredFields: (keyof Atendimento)[] = ['nome', 'cpf', 'email', 'solicitante', 'protocolo', 'dia_atual', 'horario', 'status'];
+    const newValidationErrors: Record<string, string> = {};
+    
+    requiredFields.forEach(field => {
+      if (!editingAtendimento[field]) {
+        newValidationErrors[field] = 'Este campo é obrigatório';
+      }
+    });
+
+    if (Object.keys(newValidationErrors).length > 0) {
+      setValidationErrors(newValidationErrors);
+      return;
+    }
+
+    try {
+      setSavingAtendimento(true);
+      
+      // Notificação de processamento
+      toast({
+        title: "Salvando alterações",
+        description: "Atualizando dados do atendimento...",
+      });
+
+      const { error } = await supabase
+        .from('atendimentos')
+        .update(editingAtendimento)
+        .eq('id', selectedAtendimentoForEdit.id);
+
+      if (error) throw error;
+      
+      // Atualizar a lista de atendimentos recentes
+      setRecentAtendimentos(prev => 
+        prev.map(a => 
+          a.id === selectedAtendimentoForEdit.id 
+            ? { ...a, ...editingAtendimento } 
+            : a
+        )
+      );
+
+      // Notificação de sucesso
+      toast({
+        title: "Atendimento atualizado",
+        description: "Os dados foram salvos com sucesso!",
+        variant: "success",
+      });
+
+      setShowEditAtendimentoModal(false);
+      setSelectedAtendimentoForEdit(null);
+      setEditingAtendimento({});
+      setValidationErrors({});
+    } catch (err: any) {
+      console.error('Erro ao salvar atendimento:', err);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um problema ao salvar as alterações. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingAtendimento(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAtendimento(selectedAtendimentoForEdit || {});
+    setValidationErrors({});
+  };
 
   if (loading) {
     return (
@@ -497,6 +619,25 @@ export default function DashboardPage() {
       {/* Modal de visualização do PDF */}
       {pdfUrl && (
         <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
+      )}
+      {/* Modal de edição de atendimento */}
+      {showEditAtendimentoModal && selectedAtendimentoForEdit && (
+        <EditAtendimentoModal
+          show={showEditAtendimentoModal}
+          onClose={() => {
+            setShowEditAtendimentoModal(false);
+            setSelectedAtendimentoForEdit(null);
+            setEditingAtendimento({});
+            setValidationErrors({});
+          }}
+          atendimento={selectedAtendimentoForEdit}
+          editingAtendimento={editingAtendimento}
+          onInputChange={handleInputChange}
+          onSave={handleSaveAtendimento}
+          onCancel={handleCancelEdit}
+          saving={savingAtendimento}
+          validationErrors={validationErrors}
+        />
       )}
       <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -623,7 +764,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   recentAtendimentos.map((atendimento) => (
-                    <div 
+                    <div
                       key={atendimento.id}
                       className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
                     >
@@ -655,16 +796,25 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <span className={`status-badge ${atendimento.status === 'correcao' ? 'status-error' : 
-                                                        atendimento.status === 'concluido' ? 'status-completed' : 
-                                                        atendimento.status === 'em_andamento' ? 'status-in-progress' : 
-                                                        'status-pending'}`}>
-                          {atendimento.status === 'correcao' ? 'Correção' : 
-                          atendimento.status === 'concluido' ? 'Concluído' : 
-                          atendimento.status === 'em_andamento' ? 'Em andamento' : 
-                          atendimento.status}
+                        <span className={`status-badge ${atendimento.status === 'correcao' ? 'status-error' :
+                          atendimento.status === 'concluido' ? 'status-completed' :
+                            atendimento.status === 'em_andamento' ? 'status-in-progress' :
+                              'status-pending'}`}>
+                          {atendimento.status === 'correcao' ? 'Correção' :
+                            atendimento.status === 'concluido' ? 'Concluído' :
+                              atendimento.status === 'em_andamento' ? 'Em andamento' :
+                                atendimento.status}
                         </span>
-                        <button className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                        {/* Botão de navegação */}
+                        <button
+                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => router.push(`/dashboard/atendimentos/${atendimento.id}/AtendimentoDetalhes`)}
+                        ></button>
+                        <button 
+                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => handleEditAtendimento(atendimento)}
+                          title="Editar atendimento"
+                        >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
@@ -868,7 +1018,7 @@ function EntregarCinModal({
                 <p className="text-sm text-gray-500 mb-3">Encontrados {atendimentos.length} atendimentos</p>
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                   {atendimentos.map((a: any) => (
-                    <div 
+                    <div
                       key={a.id}
                       className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
                       onClick={() => onSelect(a)}
@@ -901,14 +1051,14 @@ function EntregarCinModal({
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <span className={`status-badge ${a.status === 'correcao' ? 'status-error' : 
-                                                        a.status === 'concluido' ? 'status-completed' : 
-                                                        a.status === 'em_andamento' ? 'status-in-progress' : 
-                                                        'status-pending'}`}>
-                          {a.status === 'correcao' ? 'Correção' : 
-                          a.status === 'concluido' ? 'Concluído' : 
-                          a.status === 'em_andamento' ? 'Em andamento' : 
-                          a.status}
+                        <span className={`status-badge ${a.status === 'correcao' ? 'status-error' :
+                          a.status === 'concluido' ? 'status-completed' :
+                            a.status === 'em_andamento' ? 'status-in-progress' :
+                              'status-pending'}`}>
+                          {a.status === 'correcao' ? 'Correção' :
+                            a.status === 'concluido' ? 'Concluído' :
+                              a.status === 'em_andamento' ? 'Em andamento' :
+                                a.status}
                         </span>
                         <svg className="h-5 w-5 ml-3 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -955,7 +1105,7 @@ function EntregarCinModal({
               </h3>
               <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <div className="mb-3">
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       setNomeRecebedor(selected.nome);
@@ -970,7 +1120,7 @@ function EntregarCinModal({
                     Marcar como o mesmo (próprio titular)
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="nomeRecebedor" className="block text-sm font-medium text-gray-700 mb-1">Nome do Recebedor</label>
@@ -1154,7 +1304,7 @@ function PdfModal({ url, onClose }: { url: string, onClose: () => void }) {
             O PDF foi gerado automaticamente
           </div>
           <div className="flex space-x-3">
-            <button 
+            <button
               onClick={onClose}
               className="btn-secondary flex items-center gap-2"
             >
@@ -1163,9 +1313,9 @@ function PdfModal({ url, onClose }: { url: string, onClose: () => void }) {
               </svg>
               Fechar
             </button>
-            <a 
-              href={url} 
-              download="comprovante-entrega-cin.pdf" 
+            <a
+              href={url}
+              download="comprovante-entrega-cin.pdf"
               className="btn-primary flex items-center gap-2"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1198,8 +1348,8 @@ function StatCard({ title, value, color }: { title: string, value: any, color: s
 // Card de ação rápida
 function QuickAction({ href, color, icon, children }: any) {
   return (
-    <Link 
-      href={href} 
+    <Link
+      href={href}
       className={`flex items-center px-4 py-3 rounded-xl shadow-sm border ${color.replace('text-', 'border-').replace('border-', 'border-')} hover:shadow-md transition-all duration-300 group`}
     >
       <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300`}>
@@ -1225,4 +1375,272 @@ function gerarCpfAleatorio() {
   d2 += d1 * 2;
   d2 = 11 - (d2 % 11); if (d2 >= 10) d2 = 0;
   return `${n.join('')}${d1}${d2}`;
+}
+
+// Modal de edição de atendimento
+function EditAtendimentoModal({
+  show,
+  onClose,
+  atendimento,
+  editingAtendimento,
+  onInputChange,
+  onSave,
+  onCancel,
+  saving,
+  validationErrors
+}: {
+  show: boolean;
+  onClose: () => void;
+  atendimento: Atendimento;
+  editingAtendimento: Partial<Atendimento>;
+  onInputChange: (field: keyof Atendimento, value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  validationErrors: Record<string, string>;
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-emerald-100 max-h-[90vh] overflow-y-auto">
+        <button
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        
+        <div className="flex items-center mb-6">
+          <div className="bg-emerald-100 p-3 rounded-xl mr-4">
+            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-emerald-700">Editar Atendimento</h2>
+            <p className="text-sm text-gray-500">Protocolo: {atendimento.protocolo}</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Informações do Atendimento */}
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <svg className="h-5 w-5 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Dados do Atendimento
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome Completo *
+                </label>
+                <input
+                  type="text"
+                  value={editingAtendimento.nome || ''}
+                  onChange={(e) => onInputChange('nome', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.nome ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Nome completo"
+                />
+                {validationErrors.nome && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.nome}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CPF *
+                </label>
+                <input
+                  type="text"
+                  value={editingAtendimento.cpf || ''}
+                  onChange={(e) => onInputChange('cpf', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.cpf ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="000.000.000-00"
+                />
+                {validationErrors.cpf && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.cpf}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mail *
+                </label>
+                <input
+                  type="email"
+                  value={editingAtendimento.email || ''}
+                  onChange={(e) => onInputChange('email', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="email@exemplo.com"
+                />
+                {validationErrors.email && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Solicitante *
+                </label>
+                <input
+                  type="text"
+                  value={editingAtendimento.solicitante || ''}
+                  onChange={(e) => onInputChange('solicitante', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.solicitante ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Nome do solicitante"
+                />
+                {validationErrors.solicitante && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.solicitante}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data do Atendimento *
+                </label>
+                <input
+                  type="date"
+                  value={editingAtendimento.dia_atual || ''}
+                  onChange={(e) => onInputChange('dia_atual', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.dia_atual ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.dia_atual && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.dia_atual}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Horário *
+                </label>
+                <input
+                  type="time"
+                  value={editingAtendimento.horario || ''}
+                  onChange={(e) => onInputChange('horario', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.horario ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.horario && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.horario}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status *
+                </label>
+                <select
+                  value={editingAtendimento.status || ''}
+                  onChange={(e) => onInputChange('status', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.status ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Selecione o status</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="em_andamento">Em Andamento</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="correcao">Correção</option>
+                  <option value="bloqueado">Bloqueado</option>
+                  <option value="entregue">Entregue</option>
+                </select>
+                {validationErrors.status && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.status}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Protocolo *
+                </label>
+                <input
+                  type="text"
+                  value={editingAtendimento.protocolo || ''}
+                  onChange={(e) => onInputChange('protocolo', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
+                    validationErrors.protocolo ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Número do protocolo"
+                />
+                {validationErrors.protocolo && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.protocolo}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <svg className="h-5 w-5 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Observações
+            </h3>
+                           <textarea
+                 value={(editingAtendimento as any).observacoes || ''}
+                 onChange={(e) => onInputChange('observacoes' as keyof Atendimento, e.target.value)}
+                 rows={3}
+                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                 placeholder="Observações sobre o atendimento..."
+               />
+          </div>
+        </div>
+
+        {/* Botões de ação */}
+        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+            disabled={saving}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Cancelar
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Salvando...
+              </>
+            ) : (
+              <>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Salvar Alterações
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
