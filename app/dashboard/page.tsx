@@ -393,7 +393,7 @@ export default function DashboardPage() {
       doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 10, { align: 'center' });
       doc.setTextColor(40, 40, 40);
       doc.setLineWidth(0.3);
-      doc.line(45, assinaturaY + 25, 165, assinaturaY + 25);
+      doc.line(45, assinaturaY + 10, 165, assinaturaY + 25);
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
       doc.setFont('helvetica', 'normal');
