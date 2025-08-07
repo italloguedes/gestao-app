@@ -1180,13 +1180,14 @@ function EntregarCinModal({
                       required
                     >
                       <option value="">Selecione</option>
-                      <option value="próprio">Próprio (titular)</option>
-                      <option value="mãe">Mãe</option>
-                      <option value="pai">Pai</option>
-                      <option value="irmão">Irmão</option>
-                      <option value="tio">Tio</option>
-                      <option value="avós">Avós</option>
-                      <option value="outros">Outros</option>
+                      <option value="Próprio">Próprio (titular)</option>
+                      <option value="Mãe">Mãe</option>
+                      <option value="Pai">Pai</option>
+                      <option value="Irmã(o)">Irmã(o)</option>
+                      <option value="Filho(a)">Filho(a)</option>
+                      <option value="Tio(a)">Tio(a)</option>
+                      <option value="Avós">Avós</option>
+                      <option value="Outros">Outros</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
