@@ -397,7 +397,7 @@ export default function DashboardPage() {
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 105, assinaturaY + 30, { align: 'center' });
+      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 100, assinaturaY + 25, { align: 'center' });
 
       // Removido QR Code
       // Rodapé moderno com fundo colorido
