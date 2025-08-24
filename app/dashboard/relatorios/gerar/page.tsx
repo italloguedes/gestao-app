@@ -26,6 +26,9 @@ export default function GerarRelatorioPage() {
   const [loading, setLoading] = useState(false);
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [nome, setNome] = useState('');
+  const [solicitante, setSolicitante] = useState('');
+  const [status, setStatus] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -173,21 +176,32 @@ export default function GerarRelatorioPage() {
         return;
       }
 
-      if (!dataInicio || !dataFim) {
-        setMessage({ text: 'Por favor, selecione as datas inicial e final', type: 'error' });
-        return;
+      let query = supabase
+        .from('atendimentos')
+        .select('*');
+
+      // Aplicar filtros apenas se estiverem preenchidos
+      if (dataInicio && dataFim) {
+        const dataInicioAjustada = dataInicio + 'T00:00:00';
+        const dataFimAjustada = dataFim + 'T23:59:59';
+        query = query
+          .gte('dia_atual', dataInicioAjustada)
+          .lte('dia_atual', dataFimAjustada);
       }
 
-      console.log('Buscando atendimentos...', { dataInicio, dataFim });
+      if (nome) {
+        query = query.ilike('nome', `%${nome}%`);
+      }
 
-      const dataInicioAjustada = dataInicio + 'T00:00:00';
-      const dataFimAjustada = dataFim + 'T23:59:59';
+      if (solicitante) {
+        query = query.ilike('solicitante', `%${solicitante}%`);
+      }
 
-      const { data: atendimentos, error } = await supabase
-        .from('atendimentos')
-        .select('*')
-        .gte('dia_atual', dataInicioAjustada)
-        .lte('dia_atual', dataFimAjustada)
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data: atendimentos, error } = await query
         .order('dia_atual', { ascending: true })
         .order('horario', { ascending: true });
 
@@ -198,7 +212,7 @@ export default function GerarRelatorioPage() {
       }
 
       if (!atendimentos || atendimentos.length === 0) {
-        setMessage({ text: 'Nenhum atendimento encontrado no período selecionado', type: 'error' });
+        setMessage({ text: 'Nenhum atendimento encontrado com os filtros selecionados', type: 'error' });
         return;
       }
 
@@ -222,73 +236,188 @@ export default function GerarRelatorioPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Gerar Relatório</h1>
-        <p className="text-gray-600 mt-2">Selecione o período para gerar o relatório de atendimentos</p>
-      </div>
-
-      <div className="card p-6">
-        {message && (
-          <div className={`mb-4 p-4 rounded-md ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-600'
-              : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
-            <p>{message.text}</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header com gradiente e ícone */}
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
-        )}
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerar Relatório</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Utilize os filtros abaixo para personalizar seu relatório de atendimentos da Sala Sensorial
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-700">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                id="dataInicio"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-                className="input mt-1"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700">
-                Data Final
-              </label>
-              <input
-                type="date"
-                id="dataFim"
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-                className="input mt-1"
-                required
-              />
+        {/* Card principal com sombra e bordas arredondadas */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          {/* Header do card */}
+          <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-white">Filtros de Relatório</h2>
+                <p className="text-primary-100 text-sm">Configure os parâmetros para sua consulta</p>
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="btn-secondary"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-            >
-              {loading ? <Loading /> : 'Gerar Relatório'}
-            </button>
-          </div>
-        </form>
+          {/* Mensagens de feedback */}
+          {message && (
+            <div className={`mx-6 mt-4 p-2.5 rounded-lg border-l-2 text-sm ${
+              message.type === 'success' 
+                ? 'bg-green-50/80 text-green-700 border-green-300' 
+                : 'bg-red-50/80 text-red-700 border-red-300'
+            }`}>
+              <div className="flex items-center">
+                <div className={`w-3 h-3 rounded-full mr-2 ${
+                  message.type === 'success' ? 'bg-green-400' : 'bg-red-400'
+                }`}>
+                  {message.type === 'success' ? (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <span className="font-medium text-xs">{message.text}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Data Inicial */}
+              <div className="space-y-2">
+                <label htmlFor="dataInicio" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Data Inicial
+                </label>
+                <input
+                  type="date"
+                  id="dataInicio"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                />
+              </div>
+
+              {/* Data Final */}
+              <div className="space-y-2">
+                <label htmlFor="dataFim" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Data Final
+                </label>
+                <input
+                  type="date"
+                  id="dataFim"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                />
+              </div>
+
+              {/* Nome do Cliente */}
+              <div className="space-y-2">
+                <label htmlFor="nome" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Nome do Cliente
+                </label>
+                <input
+                  type="text"
+                  id="nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Digite o nome do cliente"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                />
+              </div>
+
+              {/* Solicitante */}
+              <div className="space-y-2">
+                <label htmlFor="solicitante" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Solicitante
+                </label>
+                <input
+                  type="text"
+                  id="solicitante"
+                  value={solicitante}
+                  onChange={(e) => setSolicitante(e.target.value)}
+                  placeholder="Digite o nome do solicitante"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                />
+              </div>
+
+              {/* Status - Ocupa duas colunas */}
+              <div className="md:col-span-2 space-y-2">
+                <label htmlFor="status" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Status do Atendimento
+                </label>
+                <select
+                  id="status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                >
+                  <option value="">Todos os status</option>
+                  <option value="confirmado">✅ Confirmado</option>
+                  <option value="concluido">✅ Concluído</option>
+                  <option value="cancelado">❌ Cancelado</option>
+                  <option value="ausente">⏰ Ausente</option>
+                  <option value="bloqueado">🚫 Bloqueado</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Botão de ação */}
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full md:w-auto inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl shadow-lg text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                    <span>Gerando relatório...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Gerar Relatório PDF
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        
       </div>
     </div>
   );
-} 
+}

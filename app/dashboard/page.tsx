@@ -641,7 +641,7 @@ export default function DashboardPage() {
       )}
       <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
         <div className="max-w-7xl mx-auto space-y-8">
-          <div className="text-center">
+          <div className="text-left">
             <h1 className="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight">Painel de Controle</h1>
             <p className="text-gray-500 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
           </div>
@@ -827,73 +827,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Link
-              href="/dashboard/atendimentos"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </span>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Atendimentos
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  Gerencie os atendimentos da Sala Sensorial
-                </p>
-              </div>
-            </Link>
 
-            <Link
-              href="/dashboard/relatorios"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </span>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Relatórios
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  Acesse e gere relatórios detalhados
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              href="/admin/gestao"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary rounded-xl shadow hover:shadow-md transition-shadow border border-emerald-100"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-primary text-white ring-4 ring-white">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </span>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Gestão de Agendamentos
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  Gerencie os agendamentos e vagas
-                </p>
-              </div>
-            </Link>
-          </div>
         </div>
       </div>
     </>
