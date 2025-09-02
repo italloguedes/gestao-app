@@ -18,9 +18,11 @@ import {
   FiSlash,
   FiArrowLeft,
   FiEdit,
+  FiStar,
 } from "react-icons/fi";
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
+import CreateAppointmentModal from "@/components/CreateAppointmentModal";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
@@ -43,12 +45,21 @@ interface Agendamento {
   status: AppointmentStatus;
   data_nascimento: string;
   tipo_cancelamento?: string;
+  atendimento_preferencial?: boolean;
 }
 
-const HORARIOS = [
-  "08:00", "08:30", "09:00", "10:00", "11:00", // manhã
-  "13:00", "13:30", "14:00", "14:30", "15:00", // tarde
-];
+// Gerar 100 horários por dia (7:00 às 18:00 com intervalos de 6 minutos)
+const HORARIOS = (() => {
+  const horarios = [];
+  for (let hora = 7; hora < 18; hora++) {
+    for (let minuto = 0; minuto < 60; minuto += 6) {
+      const horaStr = hora.toString().padStart(2, '0');
+      const minutoStr = minuto.toString().padStart(2, '0');
+      horarios.push(`${horaStr}:${minutoStr}`);
+    }
+  }
+  return horarios;
+})();
 
 export default function AgendamentosHojePage() {
   const router = useRouter();
@@ -62,6 +73,7 @@ export default function AgendamentosHojePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -128,7 +140,11 @@ export default function AgendamentosHojePage() {
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro na consulta:", error);
+        throw error;
+      }
+      
       setAgendamentos(data || []);
     } catch (err) {
       console.error("Erro ao carregar agendamentos:", err);
@@ -171,6 +187,32 @@ export default function AgendamentosHojePage() {
     } catch (err) {
       console.error("Erro ao atualizar agendamento:", err);
       alert("Erro ao atualizar agendamento. Por favor, tente novamente.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCreateAppointment = async (appointmentData: any) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch('/api/agendamentos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appointmentData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar agendamento');
+      }
+
+      await loadAgendamentos();
+      alert('Agendamento criado com sucesso!');
+    } catch (err) {
+      console.error("Erro ao criar agendamento:", err);
+      alert(`Erro ao criar agendamento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
     }
@@ -236,6 +278,9 @@ export default function AgendamentosHojePage() {
               <div className="flex items-center text-base text-slate-600">
                 <FiCalendar className="w-4 h-4 mr-2" />
                 {formatDate(selectedDate)}
+                <span className="ml-4 px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-sm font-medium">
+                  {agendamentos.length} agendamentos
+                </span>
               </div>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-3">
@@ -245,6 +290,13 @@ export default function AgendamentosHojePage() {
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="border rounded px-2 py-1"
               />
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center px-3 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200"
+              >
+                <FiUser className="w-4 h-4 mr-1.5" />
+                Criar Agendamento
+              </button>
               <button
                 onClick={() => loadAgendamentos()}
                 className="flex items-center px-3 py-1.5 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
@@ -275,108 +327,127 @@ export default function AgendamentosHojePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
               {HORARIOS.map((horario) => {
-                const agendamento = agendamentos.find((a) =>
-                  a.horario.startsWith(horario)
-                );
+                // Corrigir o filtro para comparar com formato HH:MM:SS do banco
+                const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
+                const isFull = agendamentosHorario.length >= 2;
 
                 return (
                   <div
                     key={horario}
                     className={`rounded-lg shadow-sm border transition-all duration-200 ${
-                      agendamento
+                      agendamentosHorario.length > 0
                         ? "bg-white border-slate-200 hover:shadow-md"
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
+                    <div className="p-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-1">
                           <div
-                            className={`flex items-center rounded-lg px-2 py-1 ${
+                            className={`flex items-center rounded px-1 py-0.5 text-xs ${
                               isPassedTime
                                 ? "bg-slate-100 text-slate-600"
+                                : isFull
+                                ? "bg-red-50 text-red-700"
                                 : "bg-sky-50 text-sky-700"
                             }`}
                           >
-                            <FiClock className="w-4 h-4 mr-1" />
+                            <FiClock className="w-3 h-3 mr-1" />
                             <span className="font-medium">{horario}</span>
                           </div>
-                          {agendamento && getStatusBadge(agendamento.status as AppointmentStatus)}
+                          {isFull && (
+                            <span className="px-1 py-0.5 text-xs rounded bg-red-100 text-red-800">
+                              Cheio
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {agendamento ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center text-slate-700">
-                            <FiUser className="w-4 h-4 mr-2 text-slate-500" />
-                            <span className="font-medium text-sm truncate">
-                              {agendamento.nome}
-                            </span>
-                          </div>
-                          <div className="flex items-center text-slate-600">
-                            <FiPhone className="w-4 h-4 mr-2 text-slate-500" />
-                            <span className="text-sm">{agendamento.telefone}</span>
-                          </div>
+                      {agendamentosHorario.length > 0 ? (
+                        <div className="space-y-1">
+                          {agendamentosHorario.map((agendamento, index) => (
+                            <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-1' : ''}`}>
+                              <div className="flex items-center justify-between mb-1">
+                                {getStatusBadge(agendamento.status as AppointmentStatus)}
+                                {agendamento.atendimento_preferencial && (
+                                  <FiStar className="w-3 h-3 text-amber-500" title="Atendimento Preferencial" />
+                                )}
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <div className="flex items-center text-slate-700">
+                                  <FiUser className="w-3 h-3 mr-1 text-slate-500" />
+                                  <span className="font-medium text-xs truncate">
+                                    {agendamento.nome}
+                                  </span>
+                                </div>
+                                <div className="flex items-center text-slate-600">
+                                  <FiPhone className="w-3 h-3 mr-1 text-slate-500" />
+                                  <span className="text-xs">{agendamento.telefone}</span>
+                                </div>
 
-                          {agendamento.status === "confirmado" && (
-                            <div className="grid grid-cols-2 gap-2 mt-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction("iniciar");
-                                  setIsModalOpen(true);
-                                }}
-                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                                title="Iniciar Atendimento"
-                              >
-                                <FiEdit className="w-3 h-3 mr-1" />
-                                Iniciar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedAppointment(agendamento);
-                                  setModalAction("ausente");
-                                  setIsModalOpen(true);
-                                }}
-                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                title="Marcar ausente"
-                              >
-                                <FiXCircle className="w-3 h-3 mr-1" />
-                                Ausente
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
-                                    handleStatusChange(agendamento.id, "concluido");
-                                  }
-                                }}
-                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                                title="Marcar concluido"
-                              >
-                                <FiCheckCircle className="w-3 h-3 mr-1" />
-                                Concluído
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (window.confirm("Deseja realmente cancelar este atendimento?")) {
-                                    handleStatusChange(agendamento.id, "cancelado");
-                                  }
-                                }}
-                                className="col-span-1 px-2 py-1.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                                title="Cancelar"
-                              >
-                                <FiSlash className="w-3 h-3 mr-1" />
-                                Cancelar
-                              </button>
+                                {agendamento.status === "confirmado" && (
+                                  <div className="grid grid-cols-2 gap-1 mt-1">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(agendamento);
+                                        setModalAction("iniciar");
+                                        setIsModalOpen(true);
+                                      }}
+                                      className="col-span-1 px-1 py-0.5 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                                      title="Iniciar Atendimento"
+                                    >
+                                      <FiEdit className="w-2 h-2 mr-1" />
+                                      Iniciar
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(agendamento);
+                                        setModalAction("ausente");
+                                        setIsModalOpen(true);
+                                      }}
+                                      className="col-span-1 px-1 py-0.5 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                      title="Marcar ausente"
+                                    >
+                                      <FiXCircle className="w-2 h-2 mr-1" />
+                                      Ausente
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
+                                          handleStatusChange(agendamento.id, "concluido");
+                                        }
+                                      }}
+                                      className="col-span-1 px-1 py-0.5 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                                      title="Marcar concluido"
+                                    >
+                                      <FiCheckCircle className="w-2 h-2 mr-1" />
+                                      Concluído
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm("Deseja realmente cancelar este atendimento?")) {
+                                          handleStatusChange(agendamento.id, "cancelado");
+                                        }
+                                      }}
+                                      className="col-span-1 px-1 py-0.5 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                                      title="Cancelar"
+                                    >
+                                      <FiSlash className="w-2 h-2 mr-1" />
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
+                          ))}
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center py-4">
-                          <p className="text-slate-500 text-sm">Horário livre</p>
+                        <div className="flex items-center justify-center py-2">
+                          <p className="text-slate-500 text-xs">Livre</p>
                         </div>
                       )}
                     </div>
@@ -402,6 +473,13 @@ export default function AgendamentosHojePage() {
           onStatusChange={handleStatusChange}
         />
       )}
+
+      <CreateAppointmentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateAppointment}
+        selectedDate={selectedDate}
+      />
     </>
   );
 }

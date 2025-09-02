@@ -59,20 +59,17 @@ export async function sendEmailConfirmation(agendamento: Agendamento) {
       </div>
     `;
 
-    const response = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Usar a função do Supabase diretamente em vez de fetch para API interna
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: {
         to: agendamento.email,
         subject,
         html,
-      }),
+      }
     });
 
-    if (!response.ok) {
-      throw new Error('Erro ao enviar email');
+    if (error) {
+      throw new Error(`Erro ao enviar email: ${error.message}`);
     }
 
     console.log('Email enviado com sucesso para:', agendamento.email);
