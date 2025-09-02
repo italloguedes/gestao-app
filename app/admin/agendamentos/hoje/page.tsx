@@ -19,6 +19,7 @@ import {
   FiArrowLeft,
   FiEdit,
   FiStar,
+  FiFileText,
 } from "react-icons/fi";
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
@@ -218,6 +219,133 @@ export default function AgendamentosHojePage() {
     }
   };
 
+  const generateReport = async () => {
+    if (agendamentos.length === 0) {
+      alert('Não há agendamentos para gerar relatório.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      // Importar jsPDF dinamicamente
+      const { default: jsPDF } = await import('jspdf');
+      
+      // Formatar data para o formato brasileiro
+      const formattedDate = formatDate(selectedDate);
+      
+      // Criar novo documento PDF
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Configurações
+      const margin = 20;
+      const lineHeight = 7;
+      let yPosition = margin;
+      
+      // Função para adicionar nova página se necessário
+      const checkNewPage = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+      
+      // Cabeçalho
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sala Sensorial ALECE', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += lineHeight * 2;
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Relatório de Agendamentos', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += lineHeight * 2;
+      
+      // Linha separadora
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += lineHeight;
+      
+      // Informações do relatório
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Data: ${formattedDate}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Total de Agendamentos: ${agendamentos.length}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPosition);
+      yPosition += lineHeight * 2;
+      
+      // Cabeçalho da tabela
+      checkNewPage(lineHeight * 2);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      
+      const colWidths = [20, 50, 30, 30, 40, 20, 20];
+      const headers = ['Horário', 'Nome', 'CPF', 'Telefone', 'Email', 'Status', 'Pref.'];
+      
+      let xPosition = margin;
+      headers.forEach((header, index) => {
+        doc.text(header, xPosition, yPosition);
+        xPosition += colWidths[index];
+      });
+      yPosition += lineHeight;
+      
+      // Linha separadora da tabela
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += lineHeight;
+      
+      // Dados dos agendamentos
+      doc.setFont('helvetica', 'normal');
+      agendamentos.forEach((agendamento, index) => {
+        checkNewPage(lineHeight * 2);
+        
+        xPosition = margin;
+        const rowData = [
+          agendamento.horario,
+          agendamento.nome.length > 25 ? agendamento.nome.substring(0, 25) + '...' : agendamento.nome,
+          agendamento.cpf,
+          agendamento.telefone,
+          agendamento.email ? (agendamento.email.length > 20 ? agendamento.email.substring(0, 20) + '...' : agendamento.email) : '-',
+          agendamento.status.toUpperCase(),
+          agendamento.atendimento_preferencial ? 'SIM' : 'NÃO'
+        ];
+        
+        rowData.forEach((data, colIndex) => {
+          doc.text(data, xPosition, yPosition);
+          xPosition += colWidths[colIndex];
+        });
+        yPosition += lineHeight;
+        
+        // Linha separadora entre registros
+        if (index < agendamentos.length - 1) {
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          yPosition += lineHeight;
+        }
+      });
+      
+      // Rodapé
+      yPosition = pageHeight - margin - lineHeight * 3;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Relatório gerado automaticamente pelo Sistema de Gestão de Agendamentos', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += lineHeight;
+      doc.text('Assembleia Legislativa do Estado do Ceará - ALECE', pageWidth / 2, yPosition, { align: 'center' });
+      
+      // Salvar o PDF
+      const fileName = `Relatorio_Agendamentos_${selectedDate.replace(/-/g, '_')}.pdf`;
+      doc.save(fileName);
+      
+    } catch (err) {
+      console.error("Erro ao gerar relatório:", err);
+      alert("Erro ao gerar relatório. Tente novamente.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getStatusBadge = (status: AppointmentStatus): ReactElement | null => {
     const statusConfig: StatusConfigMap = {
       concluido: {
@@ -303,6 +431,14 @@ export default function AgendamentosHojePage() {
               >
                 <FiClock className="w-4 h-4 mr-1.5" />
                 Atualizar
+              </button>
+              <button
+                onClick={generateReport}
+                disabled={agendamentos.length === 0 || actionLoading}
+                className="flex items-center px-3 py-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FiFileText className="w-4 h-4 mr-1.5" />
+                {actionLoading ? "Gerando..." : "Relatório PDF"}
               </button>
               <button
                 onClick={() => router.push("/admin/gestao")}
