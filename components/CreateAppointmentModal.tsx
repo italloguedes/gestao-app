@@ -189,6 +189,20 @@ const [preferential, setPreferential] = useState(false);
             )}
           </div>
 
+          {/* novo campo: atendimento preferencial */}
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              id="preferencial"
+              type="checkbox"
+              checked={preferential}
+              onChange={(e) => setPreferential(e.target.checked)}
+              className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+            />
+            <label htmlFor="preferencial" className="text-sm text-gray-700 select-none">
+              Atendimento preferencial
+            </label>
+          </div>
+
           <div className="flex space-x-3 pt-4">
             <button
               type="button"

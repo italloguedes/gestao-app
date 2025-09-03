@@ -227,133 +227,123 @@ export default function AgendamentosHojePage() {
 
     setActionLoading(true);
     try {
-      // Importar jsPDF dinamicamente
       const { default: jsPDF } = await import('jspdf');
-      
-      // Formatar data para o formato brasileiro
-      const formattedDate = formatDate(selectedDate);
-      
-      // Criar novo documento PDF
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Configurações
-      const margin = 20;
-      const lineHeight = 7;
-      let yPosition = margin;
-      
-      // Função para adicionar nova página se necessário
-      const checkNewPage = (requiredSpace: number) => {
-        if (yPosition + requiredSpace > pageHeight - margin) {
-          doc.addPage();
-          yPosition = margin;
-          return true;
-        }
-        return false;
-      };
-      
-      // Cabeçalho
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Sala Sensorial ALECE', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += lineHeight * 2;
-      
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF();
+
+      // Cores padrão ALECE
+      const primaryColor: [number, number, number] = [0, 135, 81];
+      const secondaryColor: [number, number, number] = [248, 249, 250];
+
+      /* ---------- Cabeçalho verde centralizado ---------- */
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Relatório de Agendamentos', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += lineHeight * 2;
-      
-      // Linha separadora
-      doc.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += lineHeight;
-      
-      // Informações do relatório
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Data: ${formattedDate}`, margin, yPosition);
-      yPosition += lineHeight;
-      doc.text(`Total de Agendamentos: ${agendamentos.length}`, margin, yPosition);
-      yPosition += lineHeight;
-      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPosition);
-      yPosition += lineHeight * 2;
-      
-      // Cabeçalho da tabela com estilo profissional
-      checkNewPage(lineHeight * 2);
-      // sombrear fundo do cabeçalho
-      doc.setFillColor(230, 230, 230);
-      doc.rect(margin, yPosition - 2, pageWidth - margin * 2, lineHeight + 4, 'F');
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      
-      const colWidths = [20, 50, 30, 30, 40, 20, 20];
-      const headers = ['Horário', 'Nome', 'CPF', 'Telefone', 'Email', 'Status', 'Pref.'];
-      
-      let xPosition = margin;
-      headers.forEach((header, index) => {
-        doc.text(header, xPosition, yPosition);
-        xPosition += colWidths[index];
+      const title = 'Relatório de Agendamentos - Sala Sensorial / ALECE';
+      const titleWidth = doc.getStringUnitWidth(title) * doc.getFontSize() / doc.internal.scaleFactor;
+      doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
+
+      /* ---------- Informações do dia ---------- */
+      doc.setTextColor(90, 90, 90);
+      doc.setFontSize(9);
+      const periodo = `Data: ${formatDate(selectedDate)}`;
+      const total = `Total de Agendamentos: ${agendamentos.length}`;
+      const periodoWidth = doc.getStringUnitWidth(periodo) * doc.getFontSize() / doc.internal.scaleFactor;
+      const totalWidth = doc.getStringUnitWidth(total) * doc.getFontSize() / doc.internal.scaleFactor;
+      const infosWidth = periodoWidth + 20 + totalWidth;
+      const infosStartX = (doc.internal.pageSize.width - infosWidth) / 2;
+      doc.text(periodo, infosStartX, 30);
+      doc.text(total, infosStartX + periodoWidth + 20, 30);
+
+      /* ---------- Linha decorativa ---------- */
+      const lineWidth = 170;
+      const lineStartX = (doc.internal.pageSize.width - lineWidth) / 2;
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.3);
+      doc.line(lineStartX, 33, lineStartX + lineWidth, 33);
+
+      /* ---------- Tabela com autoTable ---------- */
+      const tableColumn = ['Horário', 'Nome', 'CPF', 'Telefone', 'Email', 'Status', 'Pref.'];
+      const tableRows = agendamentos.map(a => [
+          a.horario,
+          a.nome.length > 35 ? a.nome.substring(0, 32) + '...' : a.nome,
+          a.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+          a.telefone,
+          a.email ? (a.email.length > 25 ? a.email.substring(0, 22) + '...' : a.email) : '-',
+          a.status.charAt(0).toUpperCase() + a.status.slice(1).toLowerCase(),
+          a.atendimento_preferencial ? 'SIM' : 'NÃO'
+      ]);
+
+      const tableWidth = 170;
+      const marginLeft = (doc.internal.pageSize.width - tableWidth) / 2;
+
+      autoTable(doc, {
+          head: [tableColumn],
+          body: tableRows,
+          startY: 38,
+          styles: {
+              fontSize: 8,
+              cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
+              lineColor: [230, 230, 230],
+              lineWidth: 0.05,
+              minCellHeight: 6,
+              cellWidth: 'wrap',
+              overflow: 'hidden',
+              textColor: [50, 50, 50]
+          },
+          headStyles: {
+              fillColor: primaryColor,
+              textColor: [255, 255, 255],
+              fontSize: 7.5,
+              fontStyle: 'bold',
+              halign: 'center',
+              cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+              minCellHeight: 8
+          },
+          columnStyles: {
+              0: { cellWidth: 20, halign: 'center' },
+              1: { cellWidth: 52, halign: 'left' },
+              2: { cellWidth: 30, halign: 'center' },
+              3: { cellWidth: 30, halign: 'center' },
+              4: { cellWidth: 35, halign: 'left' },
+              5: { cellWidth: 20, halign: 'center' },
+              6: { cellWidth: 15, halign: 'center' }
+          },
+          alternateRowStyles: {
+              fillColor: secondaryColor
+          },
+          margin: { left: marginLeft },
+          rowPageBreak: 'avoid',
+          showFoot: 'lastPage'
       });
-      yPosition += lineHeight;
-      
-      // Linha separadora da tabela
-      doc.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += lineHeight;
-      
-      // Dados dos agendamentos
-      doc.setFont('helvetica', 'normal');
-      agendamentos.forEach((agendamento, index) => {
-        checkNewPage(lineHeight * 2);
-        // Sombreamento de linhas alternadas
-        if (index % 2 === 0) {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(margin, yPosition - 2, pageWidth - margin * 2, lineHeight + 2, 'F');
-        }
-        doc.setTextColor(0, 0, 0);
-        
-        xPosition = margin;
-        const rowData = [
-          agendamento.horario,
-          agendamento.nome.length > 25 ? agendamento.nome.substring(0, 25) + '...' : agendamento.nome,
-          agendamento.cpf,
-          agendamento.telefone,
-          agendamento.email ? (agendamento.email.length > 20 ? agendamento.email.substring(0, 20) + '...' : agendamento.email) : '-',
-          agendamento.status.toUpperCase(),
-          agendamento.atendimento_preferencial ? 'SIM' : 'NÃO'
-        ];
-        
-        rowData.forEach((data, colIndex) => {
-          doc.text(data, xPosition, yPosition);
-          xPosition += colWidths[colIndex];
-        });
-        yPosition += lineHeight;
-        
-        // Linha separadora entre registros
-        if (index < agendamentos.length - 1) {
-          doc.line(margin, yPosition, pageWidth - margin, yPosition);
-          yPosition += lineHeight;
-        }
-      });
-      
-      // Rodapé
-      yPosition = pageHeight - margin - lineHeight * 3;
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Relatório gerado automaticamente pelo Sistema de Gestão de Agendamentos', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += lineHeight;
-      doc.text('Assembleia Legislativa do Estado do Ceará - ALECE', pageWidth / 2, yPosition, { align: 'center' });
-      
-      // Salvar o PDF
+
+      /* ---------- Rodapé com data/hora e paginação ---------- */
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(7);
+          doc.setTextColor(128, 128, 128);
+          doc.setDrawColor(230, 230, 230);
+          doc.setLineWidth(0.3);
+          doc.line(lineStartX, doc.internal.pageSize.height - 15, lineStartX + lineWidth, doc.internal.pageSize.height - 15);
+          const now = new Date();
+          const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+          doc.text(dataHoraGeracao, marginLeft, doc.internal.pageSize.height - 8);
+          const pageText = `Página ${i} de ${pageCount}`;
+          const pageTextWidth = doc.getStringUnitWidth(pageText) * doc.getFontSize() / doc.internal.scaleFactor;
+          doc.text(pageText, marginLeft + tableWidth - pageTextWidth, doc.internal.pageSize.height - 8);
+      }
+
       const fileName = `Relatorio_Agendamentos_${selectedDate.replace(/-/g, '_')}.pdf`;
       doc.save(fileName);
-      
-    } catch (err) {
-      console.error("Erro ao gerar relatório:", err);
-      alert("Erro ao gerar relatório. Tente novamente.");
-    } finally {
+  } catch (err) {
+      console.error('Erro ao gerar relatório:', err);
+      alert('Erro ao gerar relatório. Tente novamente.');
+  } finally {
       setActionLoading(false);
-    }
+  }
   };
 
   const getStatusBadge = (status: AppointmentStatus): ReactElement | null => {
@@ -480,6 +470,7 @@ export default function AgendamentosHojePage() {
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
+                const hasPreferential = agendamentosHorario.some(a => a.atendimento_preferencial);
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
                 const isFull = agendamentosHorario.length >= 1;
 
@@ -488,7 +479,9 @@ export default function AgendamentosHojePage() {
                     key={horario}
                     className={`rounded-lg shadow-sm border transition-all duration-200 ${
                       agendamentosHorario.length > 0
-                        ? "bg-white border-slate-200 hover:shadow-md"
+                        ? hasPreferential
+                          ? "bg-amber-50 border-amber-300 hover:shadow-md"
+                          : "bg-white border-slate-200 hover:shadow-md"
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
