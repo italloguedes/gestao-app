@@ -1,14 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { FiX, FiUser, FiCalendar, FiClock, FiPhone, FiMail, FiStar } from "react-icons/fi";
+import { FiX, FiUser, FiCalendar, FiClock } from "react-icons/fi";
 
 interface CreateAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (appointment: any) => void;
+  onSave: (appointment: {
+    nome: string;
+    cpf: string;
+    telefone: string;
+    email: string;
+    data: string;
+    horario: string;
+    data_nascimento: string;
+    atendimento_preferencial?: boolean;
+  }) => void;
   selectedDate: string;
   selectedTime?: string;
+  occupiedSlots: string[];
 }
 
 export default function CreateAppointmentModal({
@@ -16,285 +26,182 @@ export default function CreateAppointmentModal({
   onClose,
   onSave,
   selectedDate,
-  selectedTime = ""
+  selectedTime = "",
+  occupiedSlots,
 }: CreateAppointmentModalProps) {
-  const [formData, setFormData] = useState({
-    nome: "",
-    cpf: "",
-    telefone: "",
-    email: "",
-    data: selectedDate,
-    horario: selectedTime,
-    data_nascimento: "",
-    atendimento_preferencial: false
-  });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
+  // hidden default values
+  const defaultBirthday = "1900-01-01";
+  const defaultEmail = "default@example.com";
+  const defaultPhone = "00000000000";
+const [preferential, setPreferential] = useState(false);
+  const [horario, setHorario] = useState(selectedTime);
+  const [errors, setErrors] = useState<{
+    nome?: string;
+    cpf?: string;
+    horario?: string;
+  }>({});
 
-  // Gerar 100 horários por dia (7:00 às 18:00 com intervalos de 6 minutos)
-  const HORARIOS = (() => {
-    const horarios = [];
-    for (let hora = 7; hora < 18; hora++) {
-      for (let minuto = 0; minuto < 60; minuto += 6) {
-        const horaStr = hora.toString().padStart(2, '0');
-        const minutoStr = minuto.toString().padStart(2, '0');
-        horarios.push(`${horaStr}:${minutoStr}`);
+  const HORARIOS = React.useMemo(() => {
+    const slots: string[] = [];
+    for (let h = 7; h < 18; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        const hs = h.toString().padStart(2, "0");
+        const ms = m.toString().padStart(2, "0");
+        slots.push(`${hs}:${ms}`);
       }
     }
-    return horarios;
-  })();
+    return slots;
+  }, []);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.nome.trim()) {
-      newErrors.nome = "Nome é obrigatório";
-    }
-
-    if (!formData.cpf.trim()) {
-      newErrors.cpf = "CPF é obrigatório";
-    } else if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(formData.cpf)) {
-      newErrors.cpf = "CPF deve estar no formato 000.000.000-00";
-    }
-
-    if (!formData.telefone.trim()) {
-      newErrors.telefone = "Telefone é obrigatório";
-    }
-
-    if (!formData.horario) {
-      newErrors.horario = "Horário é obrigatório";
-    }
-
-    if (!formData.data_nascimento) {
-      newErrors.data_nascimento = "Data de nascimento é obrigatória";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+      const errs: typeof errors = {};
+      if (!nome.trim()) errs.nome = "Nome é obrigatório";
+      if (!cpf.trim()) errs.cpf = "CPF é obrigatório";
+      else if (!/^\d{11}$/.test(cpf))
+        errs.cpf = "CPF deve ter 11 dígitos sem pontuação";
+      if (!horario) errs.horario = "Horário é obrigatório";
+      setErrors(errs);
+      return Object.keys(errs).length === 0;
   };
 
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  };
-
-  const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length <= 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    } else {
-      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    }
-  };
-
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await onSave(formData);
-      setFormData({
-        nome: "",
-        cpf: "",
-        telefone: "",
-        email: "",
-        data: selectedDate,
-        horario: "",
-        data_nascimento: "",
-        atendimento_preferencial: false
-      });
-      onClose();
-    } catch (error) {
-      console.error("Erro ao criar agendamento:", error);
-    } finally {
-      setLoading(false);
-    }
+    if (!validate()) return;
+    const unformattedCpf = cpf.replace(/\D/g, "");
+    onSave({
+      nome,
+      cpf: unformattedCpf,
+      telefone: defaultPhone,
+      email: defaultEmail,
+      data: selectedDate,
+      horario,
+      data_nascimento: defaultBirthday,
+      atendimento_preferencial: preferential,
+    });
+    setNome("");
+    setCpf("");
+    setHorario(selectedTime);
+    setErrors({});
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-800">Criar Agendamento</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <FiX className="w-6 h-6" />
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">Criar Agendamento</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <FiX size={20} />
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome Completo *
             </label>
             <div className="relative">
-              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                value={formData.nome}
-                onChange={(e) => handleInputChange("nome", e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${
-                  errors.nome ? "border-red-300" : "border-slate-300"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.nome ? "border-red-300" : "border-gray-300"
                 }`}
                 placeholder="Digite o nome completo"
               />
             </div>
-            {errors.nome && <p className="text-red-500 text-xs mt-1">{errors.nome}</p>}
+            {errors.nome && (
+              <p className="text-red-500 text-xs mt-1">{errors.nome}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               CPF *
             </label>
-            <input
-              type="text"
-              value={formData.cpf}
-              onChange={(e) => handleInputChange("cpf", formatCPF(e.target.value))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${
-                errors.cpf ? "border-red-300" : "border-slate-300"
-              }`}
-              placeholder="000.000.000-00"
-              maxLength={14}
-            />
-            {errors.cpf && <p className="text-red-500 text-xs mt-1">{errors.cpf}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Telefone *
-            </label>
             <div className="relative">
-              <FiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
-                type="text"
-                value={formData.telefone}
-                onChange={(e) => handleInputChange("telefone", formatPhone(e.target.value))}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${
-                  errors.telefone ? "border-red-300" : "border-slate-300"
-                }`}
-                placeholder="(00) 00000-0000"
-                maxLength={15}
+                  type="text"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.cpf ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="00000000000"
+                  maxLength={11}
               />
             </div>
-            {errors.telefone && <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>}
+            {errors.cpf && (
+              <p className="text-red-500 text-xs mt-1">{errors.cpf}</p>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email
-            </label>
-            <div className="relative">
-              <FiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                placeholder="email@exemplo.com"
-              />
-            </div>
-          </div>
+          {/* hidden default phone, no input field */}
+
+          {/* hidden default birthday, no input field */}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Data de Nascimento *
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data *
             </label>
             <div className="relative">
-              <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="date"
-                value={formData.data_nascimento}
-                onChange={(e) => handleInputChange("data_nascimento", e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${
-                  errors.data_nascimento ? "border-red-300" : "border-slate-300"
-                }`}
-              />
-            </div>
-            {errors.data_nascimento && <p className="text-red-500 text-xs mt-1">{errors.data_nascimento}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Data do Agendamento *
-            </label>
-            <div className="relative">
-              <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="date"
-                value={formData.data}
-                onChange={(e) => handleInputChange("data", e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                value={selectedDate}
+                disabled
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Horário *
             </label>
             <div className="relative">
-              <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <select
-                value={formData.horario}
-                onChange={(e) => handleInputChange("horario", e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${
-                  errors.horario ? "border-red-300" : "border-slate-300"
+                value={horario}
+                onChange={(e) => setHorario(e.target.value)}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.horario ? "border-red-300" : "border-gray-300"
                 }`}
               >
                 <option value="">Selecione um horário</option>
-                {HORARIOS.map((horario) => (
-                  <option key={horario} value={horario}>
-                    {horario}
-                  </option>
-                ))}
+                {HORARIOS.filter((slot) => !occupiedSlots.includes(slot)).map(
+                  (slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  )
+                )}
               </select>
             </div>
-            {errors.horario && <p className="text-red-500 text-xs mt-1">{errors.horario}</p>}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="atendimento_preferencial"
-              checked={formData.atendimento_preferencial}
-              onChange={(e) => handleInputChange("atendimento_preferencial", e.target.checked)}
-              className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
-            />
-            <label htmlFor="atendimento_preferencial" className="flex items-center text-sm text-slate-700">
-              <FiStar className="w-4 h-4 mr-1 text-amber-500" />
-              Atendimento Preferencial
-            </label>
+            {errors.horario && (
+              <p className="text-red-500 text-xs mt-1">{errors.horario}</p>
+            )}
           </div>
 
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
             >
-              {loading ? "Criando..." : "Criar Agendamento"}
+              Criar Agendamento
             </button>
           </div>
         </form>

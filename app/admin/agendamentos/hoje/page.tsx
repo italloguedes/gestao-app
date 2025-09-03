@@ -53,7 +53,7 @@ interface Agendamento {
 const HORARIOS = (() => {
   const horarios = [];
   for (let hora = 7; hora < 18; hora++) {
-    for (let minuto = 0; minuto < 60; minuto += 6) {
+    for (let minuto = 0; minuto < 60; minuto += 5) {
       const horaStr = hora.toString().padStart(2, '0');
       const minutoStr = minuto.toString().padStart(2, '0');
       horarios.push(`${horaStr}:${minutoStr}`);
@@ -212,7 +212,7 @@ export default function AgendamentosHojePage() {
       await loadAgendamentos();
       alert('Agendamento criado com sucesso!');
     } catch (err) {
-      console.error("Erro ao criar agendamento:", err);
+      console.warn("Erro ao criar agendamento:", err);
       alert(`Erro ao criar agendamento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
@@ -278,8 +278,12 @@ export default function AgendamentosHojePage() {
       doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPosition);
       yPosition += lineHeight * 2;
       
-      // Cabeçalho da tabela
+      // Cabeçalho da tabela com estilo profissional
       checkNewPage(lineHeight * 2);
+      // sombrear fundo do cabeçalho
+      doc.setFillColor(230, 230, 230);
+      doc.rect(margin, yPosition - 2, pageWidth - margin * 2, lineHeight + 4, 'F');
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       
@@ -301,6 +305,12 @@ export default function AgendamentosHojePage() {
       doc.setFont('helvetica', 'normal');
       agendamentos.forEach((agendamento, index) => {
         checkNewPage(lineHeight * 2);
+        // Sombreamento de linhas alternadas
+        if (index % 2 === 0) {
+          doc.setFillColor(245, 245, 245);
+          doc.rect(margin, yPosition - 2, pageWidth - margin * 2, lineHeight + 2, 'F');
+        }
+        doc.setTextColor(0, 0, 0);
         
         xPosition = margin;
         const rowData = [
@@ -395,6 +405,9 @@ export default function AgendamentosHojePage() {
     );
   }
 
+  // Build list of occupied time slots (HH:MM) to filter available times in create modal
+  const occupiedSlots = agendamentos.map(a => a.horario.substring(0, 5));
+
   return (
     <>
       <DashboardHeader />
@@ -468,7 +481,7 @@ export default function AgendamentosHojePage() {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
-                const isFull = agendamentosHorario.length >= 2;
+                const isFull = agendamentosHorario.length >= 1;
 
                 return (
                   <div
@@ -615,6 +628,7 @@ export default function AgendamentosHojePage() {
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleCreateAppointment}
         selectedDate={selectedDate}
+        occupiedSlots={occupiedSlots}
       />
     </>
   );
