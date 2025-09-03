@@ -264,19 +264,16 @@ export default function AgendamentosHojePage() {
       doc.setLineWidth(0.3);
       doc.line(lineStartX, 33, lineStartX + lineWidth, 33);
 
-      /* ---------- Tabela com autoTable ---------- */
-      const tableColumn = ['Horário', 'Nome', 'CPF', 'Telefone', 'Email', 'Status', 'Pref.'];
+      /* ---------- Tabela com autoTable (horário, nome, CPF e status) ---------- */
+      const tableColumn = ['Horário', 'Nome', 'CPF', 'Status'];
       const tableRows = agendamentos.map(a => [
           a.horario,
           a.nome.length > 35 ? a.nome.substring(0, 32) + '...' : a.nome,
           a.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
-          a.telefone,
-          a.email ? (a.email.length > 25 ? a.email.substring(0, 22) + '...' : a.email) : '-',
-          a.status.charAt(0).toUpperCase() + a.status.slice(1).toLowerCase(),
-          a.atendimento_preferencial ? 'SIM' : 'NÃO'
+          a.status.charAt(0).toUpperCase() + a.status.slice(1).toLowerCase()
       ]);
 
-      const tableWidth = 170;
+      const tableWidth = 140; // Ajustado para 4 colunas
       const marginLeft = (doc.internal.pageSize.width - tableWidth) / 2;
 
       autoTable(doc, {
@@ -291,7 +288,8 @@ export default function AgendamentosHojePage() {
               minCellHeight: 6,
               cellWidth: 'wrap',
               overflow: 'hidden',
-              textColor: [50, 50, 50]
+              textColor: [50, 50, 50],
+              halign: 'center' // Centraliza todo o conteúdo da tabela
           },
           headStyles: {
               fillColor: primaryColor,
@@ -303,13 +301,10 @@ export default function AgendamentosHojePage() {
               minCellHeight: 8
           },
           columnStyles: {
-              0: { cellWidth: 20, halign: 'center' },
-              1: { cellWidth: 52, halign: 'left' },
-              2: { cellWidth: 30, halign: 'center' },
-              3: { cellWidth: 30, halign: 'center' },
-              4: { cellWidth: 35, halign: 'left' },
-              5: { cellWidth: 20, halign: 'center' },
-              6: { cellWidth: 15, halign: 'center' }
+              0: { cellWidth: 20, halign: 'center' }, // Horário
+              1: { cellWidth: 50, halign: 'center' }, // Nome (centralizado)
+              2: { cellWidth: 35, halign: 'center' }, // CPF (centralizado)
+              3: { cellWidth: 35, halign: 'center' }  // Status (centralizado)
           },
           alternateRowStyles: {
               fillColor: secondaryColor
