@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FiX, FiUser, FiCalendar, FiClock } from "react-icons/fi";
+import { FiX, FiUser, FiCalendar, FiClock, FiPhone } from "react-icons/fi";
 
 interface CreateAppointmentModalProps {
   isOpen: boolean;
@@ -31,15 +31,16 @@ export default function CreateAppointmentModal({
 }: CreateAppointmentModalProps) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
   // hidden default values
   const defaultBirthday = "1900-01-01";
   const defaultEmail = "default@example.com";
-  const defaultPhone = "00000000000";
 const [preferential, setPreferential] = useState(false);
   const [horario, setHorario] = useState(selectedTime);
   const [errors, setErrors] = useState<{
     nome?: string;
     cpf?: string;
+    telefone?: string;
     horario?: string;
   }>({});
 
@@ -61,6 +62,9 @@ const [preferential, setPreferential] = useState(false);
       if (!cpf.trim()) errs.cpf = "CPF é obrigatório";
       else if (!/^\d{11}$/.test(cpf))
         errs.cpf = "CPF deve ter 11 dígitos sem pontuação";
+      if (!telefone.trim()) errs.telefone = "Telefone é obrigatório";
+      else if (!/^\d{10,11}$/.test(telefone))
+        errs.telefone = "Telefone deve ter 10 ou 11 dígitos";
       if (!horario) errs.horario = "Horário é obrigatório";
       setErrors(errs);
       return Object.keys(errs).length === 0;
@@ -70,10 +74,11 @@ const [preferential, setPreferential] = useState(false);
     e.preventDefault();
     if (!validate()) return;
     const unformattedCpf = cpf.replace(/\D/g, "");
+    const unformattedPhone = telefone.replace(/\D/g, "");
     onSave({
       nome,
       cpf: unformattedCpf,
-      telefone: defaultPhone,
+      telefone: unformattedPhone,
       email: defaultEmail,
       data: selectedDate,
       horario,
@@ -82,6 +87,7 @@ const [preferential, setPreferential] = useState(false);
     });
     setNome("");
     setCpf("");
+    setTelefone("");
     setHorario(selectedTime);
     setErrors({});
     onClose();
@@ -142,7 +148,27 @@ const [preferential, setPreferential] = useState(false);
             )}
           </div>
 
-          {/* hidden default phone, no input field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Telefone *
+            </label>
+            <div className="relative">
+              <FiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                  type="text"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.telefone ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="00000000000"
+                  maxLength={11}
+              />
+            </div>
+            {errors.telefone && (
+              <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>
+            )}
+          </div>
 
           {/* hidden default birthday, no input field */}
 
