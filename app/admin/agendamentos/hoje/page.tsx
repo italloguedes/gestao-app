@@ -398,7 +398,7 @@ export default function AgendamentosHojePage() {
       <DashboardHeader />
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pt-20">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 sticky top-20 z-30 bg-slate-50/90 backdrop-blur">
             <div>
               <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
               <div className="flex items-center text-base text-slate-600">
@@ -466,6 +466,7 @@ export default function AgendamentosHojePage() {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
                 const hasPreferential = agendamentosHorario.some(a => a.atendimento_preferencial);
+                const hasConcluded = agendamentosHorario.some(a => a.status === 'concluido');
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
                 const isFull = agendamentosHorario.length >= 1;
 
@@ -474,9 +475,11 @@ export default function AgendamentosHojePage() {
                     key={horario}
                     className={`rounded-lg shadow-sm border transition-all duration-200 ${
                       agendamentosHorario.length > 0
-                        ? hasPreferential
-                          ? "bg-amber-50 border-amber-300 hover:shadow-md"
-                          : "bg-white border-slate-200 hover:shadow-md"
+                        ? hasConcluded
+                          ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
+                          : hasPreferential
+                            ? "bg-amber-50 border-amber-300 hover:shadow-md"
+                            : "bg-white border-slate-200 hover:shadow-md"
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
