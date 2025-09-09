@@ -482,7 +482,7 @@ export default function AgendamentosHojePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-10 gap-2">
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
@@ -494,7 +494,7 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[200px] ${
+                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[180px] ${
                       agendamentosHorario.length > 0
                         ? hasConcluded
                           ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
@@ -504,9 +504,9 @@ export default function AgendamentosHojePage() {
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
-                    <div className="p-4 h-full flex flex-col">
+                    <div className="p-3 h-full flex flex-col">
                       {/* Header com horário */}
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <div
                           className={`flex items-center rounded px-2 py-1 text-sm font-medium ${
                             isPassedTime
@@ -527,9 +527,9 @@ export default function AgendamentosHojePage() {
                       </div>
 
                       {agendamentosHorario.length > 0 ? (
-                        <div className="flex-1 space-y-3">
+                        <div className="flex-1 space-y-2">
                           {agendamentosHorario.map((agendamento, index) => (
-                            <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-3' : ''}`}>
+                            <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-2' : ''}`}>
                               {/* Status e preferencial */}
                               <div className="flex items-center justify-between mb-2">
                                 {getStatusBadge(agendamento.status as AppointmentStatus)}
@@ -539,7 +539,7 @@ export default function AgendamentosHojePage() {
                               </div>
                               
                               {/* Informações do agendamento */}
-                              <div className="space-y-2 mb-3">
+                              <div className="space-y-1 mb-2">
                                 <div className="flex items-center text-slate-700">
                                   <FiUser className="w-4 h-4 mr-2 text-slate-500" />
                                   <span className="font-medium text-sm truncate">
@@ -553,7 +553,7 @@ export default function AgendamentosHojePage() {
                               </div>
 
                               {/* Botões de ação */}
-                              <div className="space-y-2">
+                              <div className="space-y-1">
                                 {/* Botão de editar sempre visível */}
                                 <button
                                   onClick={() => {
@@ -561,15 +561,15 @@ export default function AgendamentosHojePage() {
                                     setModalAction("edit");
                                     setIsModalOpen(true);
                                   }}
-                                  className="w-full px-3 py-2 text-sm rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
+                                  className="w-full px-2 py-1 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
                                   title="Editar Agendamento"
                                 >
-                                  <FiEdit className="w-4 h-4 mr-2" />
+                                  <FiEdit className="w-3 h-3 mr-1" />
                                   Editar
                                 </button>
 
                                 {agendamento.status === "confirmado" && (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="grid grid-cols-2 gap-1">
                                     <button
                                       onClick={() => {
                                         setSelectedAppointment(agendamento);
