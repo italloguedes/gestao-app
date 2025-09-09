@@ -34,4 +34,4 @@ CREATE TRIGGER update_users_updated_at
 
 -- Insert initial admin user
 INSERT INTO users (name, email, role, status)
-VALUES ('Admin', 'admin@example.com', 'admin', 'active'); 
+VALUES ('Admin', 'admin@example.com', 'admin', 'active');
