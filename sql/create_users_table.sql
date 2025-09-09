@@ -7,7 +7,7 @@ CREATE TABLE users (
     auth_id TEXT UNIQUE,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('admin', 'atendente', 'user')),
+    role TEXT NOT NULL CHECK (role IN ('superadmin', 'admin', 'atendente', 'user')),
     status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())

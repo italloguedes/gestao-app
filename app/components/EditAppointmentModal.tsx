@@ -8,14 +8,14 @@ interface EditAppointmentModalProps {
   onClose: () => void;
   appointment: any;
   onSave: (updatedAppointment: any) => void;
-  action: 'iniciar' | 'ausente' | 'concluido' | 'cancelar' | null;
+  action: 'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | null;
   onStatusChange: (id: number, newStatus: string) => void;
 }
 
 export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange }: EditAppointmentModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | null>(initialAction);
+  const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | null>(initialAction);
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -179,6 +179,17 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       } else if (action === 'cancelar') {
         await onStatusChange(appointment.id, 'cancelado');
         setMessage('Atendimento cancelado com sucesso!');
+      } else if (action === 'edit') {
+        // Apenas atualizar os dados do agendamento
+        const { error } = await supabase
+          .from('agendamentos')
+          .update(updatedAppointment)
+          .eq('id', appointment.id);
+
+        if (error) throw error;
+        
+        onSave(updatedAppointment);
+        setMessage('Agendamento atualizado com sucesso!');
       }
 
       setTimeout(() => {
@@ -200,6 +211,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             {action === 'iniciar' ? 'Concluir Atendimento' :
               action === 'ausente' ? 'Marcar Ausente' :
               action === 'concluido' ? 'Concluir Atendimento' :
+              action === 'edit' ? 'Editar Agendamento' :
               'Cancelar Atendimento'}
           </h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
@@ -222,7 +234,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             <span className="font-medium">{appointment.horario}</span>
           </div>
 
-          {action === 'iniciar' && (
+          {(action === 'iniciar' || action === 'edit') && (
             <>
               <div className="space-y-4">
                 <div>
@@ -280,16 +292,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
-                  <input
-                    type="text"
-                    name="solicitante"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Nome do solicitante"
-                    required
-                  />
-                </div>
+                {action === 'iniciar' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
+                    <input
+                      type="text"
+                      name="solicitante"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="Nome do solicitante"
+                      required
+                    />
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -349,6 +363,8 @@ const getButtonStyle = (action: string | null) => {
       return 'bg-teal-600 hover:bg-teal-700';
     case 'cancelar':
       return 'bg-amber-600 hover:bg-amber-700';
+    case 'edit':
+      return 'bg-blue-600 hover:bg-blue-700';
     default:
       return 'bg-gray-600';
   }
@@ -364,6 +380,8 @@ const getButtonText = (action: string | null) => {
       return 'Concluir Atendimento';
     case 'cancelar':
       return 'Cancelar Atendimento';
+    case 'edit':
+      return 'Salvar Alterações';
     default:
       return 'Confirmar';
   }

@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import jsPDF from 'jspdf';
-import { toast } from '@/components/ui/use-toast';
 
 interface DashboardStats {
   total: number;
@@ -107,12 +106,6 @@ export default function DashboardPage() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      // Notificação de carregamento
-      toast({
-        title: "Atualizando dashboard",
-        description: "Carregando estatísticas e informações recentes...",
-        variant: "default",
-      });
 
       // Fetch all atendimentos stats in parallel
       const [
@@ -154,21 +147,9 @@ export default function DashboardPage() {
 
       setRecentAtendimentos(recentAtendimentosData.data || []);
 
-      // Notificação de sucesso
-      toast({
-        title: "Dashboard atualizado",
-        description: `Dados atualizados em ${new Date().toLocaleTimeString('pt-BR')}`,
-        variant: "success",
-      });
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
 
-      // Notificação de erro
-      toast({
-        title: "Erro ao atualizar dashboard",
-        description: "Não foi possível carregar os dados mais recentes. Tente novamente.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -199,27 +180,8 @@ export default function DashboardPage() {
 
       setAtendimentosParaEntrega(data || []);
 
-      // Notificação de resultados
-      if (data && data.length > 0) {
-        toast({
-          title: `${data.length} atendimento(s) encontrado(s)`,
-          description: busca ? `Resultados para: "${busca}"` : "Mostrando atendimentos pendentes de entrega",
-          variant: "default",
-        });
-      } else if (busca) {
-        toast({
-          title: "Nenhum resultado encontrado",
-          description: `Não encontramos atendimentos para "${busca}". Tente outro termo.`,
-          variant: "default",
-        });
-      }
     } catch (error) {
       console.error('Erro ao buscar atendimentos:', error);
-      toast({
-        title: "Erro na busca",
-        description: "Ocorreu um problema ao buscar os atendimentos. Tente novamente.",
-        variant: "destructive",
-      });
     } finally {
       setLoadingAtendimentosEntrega(false);
       setBuscando(false);
@@ -232,11 +194,6 @@ export default function DashboardPage() {
 
   const handleGerarComprovante = async () => {
     if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
-      toast({
-        title: "Campos incompletos",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -246,11 +203,6 @@ export default function DashboardPage() {
 
     setGerandoComprovante(true);
     try {
-      // Notificação de processamento
-      toast({
-        title: "Processando entrega",
-        description: "Registrando informações e gerando comprovante...",
-      });
 
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];
@@ -429,20 +381,9 @@ export default function DashboardPage() {
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
 
-      // Notificação de sucesso
-      toast({
-        title: "Comprovante gerado com sucesso!",
-        description: "A CIN foi registrada como entregue e o comprovante está pronto para download.",
-        variant: "success",
-      });
 
     } catch (err) {
       console.error('Erro ao gerar comprovante:', err);
-      toast({
-        title: "Erro ao gerar comprovante",
-        description: "Ocorreu um problema ao processar sua solicitação. Tente novamente.",
-        variant: "destructive",
-      });
     }
     setGerandoComprovante(false);
   };
@@ -513,11 +454,6 @@ export default function DashboardPage() {
     try {
       setSavingAtendimento(true);
       
-      // Notificação de processamento
-      toast({
-        title: "Salvando alterações",
-        description: "Atualizando dados do atendimento...",
-      });
 
       const { error } = await supabase
         .from('atendimentos')
@@ -535,12 +471,6 @@ export default function DashboardPage() {
         )
       );
 
-      // Notificação de sucesso
-      toast({
-        title: "Atendimento atualizado",
-        description: "Os dados foram salvos com sucesso!",
-        variant: "success",
-      });
 
       setShowEditAtendimentoModal(false);
       setSelectedAtendimentoForEdit(null);
@@ -548,11 +478,6 @@ export default function DashboardPage() {
       setValidationErrors({});
     } catch (err: any) {
       console.error('Erro ao salvar atendimento:', err);
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um problema ao salvar as alterações. Tente novamente.",
-        variant: "destructive",
-      });
     } finally {
       setSavingAtendimento(false);
     }

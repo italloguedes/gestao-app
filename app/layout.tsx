@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientLayout from '@/components/ClientLayout';
-import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +19,6 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${inter.className} min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 antialiased`}>
         <ClientLayout>{children}</ClientLayout>
-        <Toaster />
       </body>
     </html>
   );

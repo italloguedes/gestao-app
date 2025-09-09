@@ -59,9 +59,14 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
         if (updateError) throw updateError;
       } else {
         // Criando novo usuário
+        const generatedAuthId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
         const { error: createError } = await supabase
           .from('users')
           .insert([{
+            auth_id: generatedAuthId,
             name: formData.name,
             email: formData.email,
             role: formData.role,
@@ -169,6 +174,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               <option value="user">Usuário</option>
               <option value="atendente">Atendente</option>
               <option value="admin">Administrador</option>
+              <option value="superadmin">Super Administrador</option>
             </select>
           </div>
 

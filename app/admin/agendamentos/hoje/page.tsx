@@ -72,7 +72,7 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | null>(null);
+  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | "edit" | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -527,6 +527,22 @@ export default function AgendamentosHojePage() {
                                 <div className="flex items-center text-slate-600">
                                   <FiPhone className="w-3 h-3 mr-1 text-slate-500" />
                                   <span className="text-xs">{agendamento.telefone}</span>
+                                </div>
+
+                                {/* Botão de editar sempre visível */}
+                                <div className="mt-1">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedAppointment(agendamento);
+                                      setModalAction("edit");
+                                      setIsModalOpen(true);
+                                    }}
+                                    className="w-full px-1 py-0.5 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
+                                    title="Editar Agendamento"
+                                  >
+                                    <FiEdit className="w-2 h-2 mr-1" />
+                                    Editar
+                                  </button>
                                 </div>
 
                                 {agendamento.status === "confirmado" && (

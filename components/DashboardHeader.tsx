@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
-import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiBell, FiLogOut, FiBarChart2, FiSettings, FiFileText } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiLogOut, FiBarChart2, FiSettings, FiFileText } from 'react-icons/fi';
 
 // Memoized navigation items to prevent re-renders
 const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname?: string }) => (
@@ -53,6 +53,7 @@ export default function DashboardHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [pathname, setPathname] = useState<string>('');
+  const [sessionRemaining, setSessionRemaining] = useState<string>('');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -60,9 +61,28 @@ export default function DashboardHeader() {
       setUser(user);
     };
     checkUser();
-    
+
     // Get current pathname
     setPathname(window.location.pathname);
+
+    // Atualiza contador de tempo restante de sessão (3h a partir de session-expiry)
+    const updateRemaining = () => {
+      const expiryStr = localStorage.getItem('session-expiry');
+      let expiry = expiryStr ? parseInt(expiryStr) : NaN;
+      if (!expiry || Number.isNaN(expiry)) {
+        // fallback: define para 3h a partir de agora e persiste
+        expiry = Date.now() + 10800000;
+        localStorage.setItem('session-expiry', String(expiry));
+      }
+      const diffMs = Math.max(0, expiry - Date.now());
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      setSessionRemaining(`${hours}h ${minutes}m`);
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 60000); // Atualiza a cada minuto
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = async () => {
@@ -108,12 +128,6 @@ export default function DashboardHeader() {
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
-            {/* Botão de notificações */}
-            <button className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors relative">
-              <FiBell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-            </button>
-
             {/* Menu do usuário */}
             <div className="relative">
               <button
@@ -131,6 +145,11 @@ export default function DashboardHeader() {
                   <div className="px-4 py-2 border-b border-gray-100">
                     <p className="text-sm font-medium text-gray-900">{userDisplayName}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
+                    {sessionRemaining && (
+                      <p className="text-xs text-emerald-600 font-medium mt-1">
+                        Expira em: {sessionRemaining}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={handleLogout}
@@ -170,6 +189,11 @@ export default function DashboardHeader() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{userDisplayName}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
+                    {sessionRemaining && (
+                      <p className="text-xs text-emerald-600 font-medium mt-1">
+                        Expira em: {sessionRemaining}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

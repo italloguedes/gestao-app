@@ -1,6 +1,6 @@
 import { supabase } from '../supabase-client';
 
-export type UserRole = 'admin' | 'atendente' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
 
 export interface User {
   id?: number;  // Changed from string (UUID) to number (SERIAL)
@@ -131,7 +131,7 @@ export async function createUser(userData: Omit<User, 'id' | 'created_at' | 'upd
     }
 
     // Validate role
-    const validRoles = ['admin', 'atendente', 'user'];
+    const validRoles = ['superadmin', 'admin', 'atendente', 'user'];
     if (!validRoles.includes(userData.role)) {
       const error = new Error('Função inválida');
       console.error('Erro de validação de função:', error);
@@ -234,10 +234,15 @@ export async function deleteUser(id: number) {
 
 // Função para verificar se o usuário tem acesso ao dashboard
 export const hasAccessToDashboard = (role: UserRole): boolean => {
-  return role === 'admin' || role === 'atendente';
+  return role === 'superadmin' || role === 'admin' || role === 'atendente';
 };
 
 // Função para verificar se o usuário tem permissões de admin
 export const isAdmin = (role: UserRole): boolean => {
-  return role === 'admin';
+  return role === 'superadmin' || role === 'admin';
+};
+
+// Função para verificar se o usuário tem permissões de superadmin
+export const isSuperAdmin = (role: UserRole): boolean => {
+  return role === 'superadmin';
 }; 

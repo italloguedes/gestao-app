@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 import { hasAccessToDashboard } from '@/lib/models/User';
-import { toast } from '@/components/ui/use-toast';
 
 interface Atendimento {
   id: number;
@@ -240,11 +239,6 @@ export default function AtendimentosPage() {
     try {
       setSaving(true);
       
-      // Notificação de processamento
-      toast({
-        title: "Salvando alterações",
-        description: "Atualizando dados do atendimento...",
-      });
 
       const { error } = await supabase
         .from('atendimentos')
@@ -262,12 +256,6 @@ export default function AtendimentosPage() {
         )
       );
 
-      // Notificação de sucesso
-      toast({
-        title: "Atendimento atualizado",
-        description: "Os dados foram salvos com sucesso!",
-        variant: "success",
-      });
 
       setShowEditModal(false);
       setSelectedAtendimento(null);
@@ -275,11 +263,6 @@ export default function AtendimentosPage() {
       setValidationErrors({});
     } catch (err: any) {
       console.error('Erro ao salvar atendimento:', err);
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um problema ao salvar as alterações. Tente novamente.",
-        variant: "destructive",
-      });
     } finally {
       setSaving(false);
     }

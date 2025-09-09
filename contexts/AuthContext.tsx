@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUser(session.user);
-        // Atualiza o timestamp de expiração se a sessão for válida
-        localStorage.setItem('session-expiry', String(Date.now() + 7200000));
+        // Atualiza o timestamp de expiração se a sessão for válida (3 horas)
+        localStorage.setItem('session-expiry', String(Date.now() + 10800000));
       }
       setLoading(false);
     };
@@ -56,6 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (checkSessionExpiry()) return; // Se a sessão expirou, não faz nada
 
       setUser(session?.user ?? null);
+      // Atualiza expiração sempre que houver uma nova sessão (3 horas)
+      if (session) {
+        localStorage.setItem('session-expiry', String(Date.now() + 10800000));
+      }
       
       if (session?.user && window.location.pathname === '/') {
         try {
