@@ -41,6 +41,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         horario: formData.get('horario') ? `${formData.get('horario')}:00` : appointment.horario,
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
         atendimento_preferencial: formData.get('atendimento_preferencial') === 'on',
+        status: formData.get('status') || appointment.status,
         observacoes: formData.get('observacoes') || appointment.observacoes,
       };
 
@@ -380,6 +381,22 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <label className="ml-2 block text-sm text-slate-700">
                     Atendimento Preferencial
                   </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={appointment.status}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  >
+                    <option value="confirmado">Confirmado</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="ausente">Ausente</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
                 </div>
 
                 {action === 'iniciar' && (
