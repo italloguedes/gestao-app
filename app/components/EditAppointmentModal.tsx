@@ -292,106 +292,100 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
           {(action === 'iniciar' || action === 'edit') && (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Coluna Esquerda */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
-                      <input
-                        type="date"
-                        name="data"
-                        defaultValue={appointment.data}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Horário</label>
-                      <input
-                        type="time"
-                        name="horario"
-                        defaultValue={appointment.horario.substring(0, 5)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
-                    <input
-                      type="text"
-                      name="nome"
-                      defaultValue={appointment.nome}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
-                    <input
-                      type="tel"
-                      name="telefone"
-                      defaultValue={appointment.telefone}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      defaultValue={appointment.email}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Data e Horário */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
+                  <input
+                    type="date"
+                    name="data"
+                    defaultValue={appointment.data}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Horário</label>
+                  <input
+                    type="time"
+                    name="horario"
+                    defaultValue={appointment.horario.substring(0, 5)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={appointment.status}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  >
+                    <option value="confirmado">Confirmado</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="ausente">Ausente</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
                 </div>
 
-                {/* Coluna Direita */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
-                    <input
-                      type="text"
-                      name="cpf"
-                      defaultValue={appointment.cpf}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    />
-                  </div>
+                {/* Nome e Contatos */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    name="nome"
+                    defaultValue={appointment.nome}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    defaultValue={appointment.telefone}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
-                    <input
-                      type="date"
-                      name="data_nascimento"
-                      defaultValue={appointment.data_nascimento}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    />
-                  </div>
+                {/* Email e CPF */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    defaultValue={appointment.email}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
+                  <input
+                    type="text"
+                    name="cpf"
+                    defaultValue={appointment.cpf}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    name="data_nascimento"
+                    defaultValue={appointment.data_nascimento}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select
-                      name="status"
-                      defaultValue={appointment.status}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      required
-                    >
-                      <option value="confirmado">Confirmado</option>
-                      <option value="cancelado">Cancelado</option>
-                      <option value="ausente">Ausente</option>
-                      <option value="concluido">Concluído</option>
-                      <option value="bloqueado">Bloqueado</option>
-                    </select>
-                  </div>
-
+                {/* Atendimento Preferencial */}
+                <div className="md:col-span-2 lg:col-span-3">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
@@ -407,7 +401,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               </div>
 
               {action === 'iniciar' && (
-                <div className="col-span-1 lg:col-span-2">
+                <div className="md:col-span-2 lg:col-span-3">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
                   <input
                     type="text"
@@ -421,7 +415,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             </>
           )}
 
-          <div className="col-span-1 lg:col-span-2">
+          <div className="md:col-span-2 lg:col-span-3">
             <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
             <textarea
               name="observacoes"
