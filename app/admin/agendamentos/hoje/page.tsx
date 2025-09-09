@@ -621,7 +621,6 @@ export default function AgendamentosHojePage() {
                                   </div>
                                 )}
                               </div>
-                              </div>
                             </div>
                           ))}
                         </div>
