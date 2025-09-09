@@ -40,6 +40,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         data: formData.get('data') || appointment.data,
         horario: formData.get('horario') ? `${formData.get('horario')}:00` : appointment.horario,
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
+        atendimento_preferencial: formData.get('atendimento_preferencial') === 'on',
         observacoes: formData.get('observacoes') || appointment.observacoes,
       };
 
@@ -367,6 +368,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                     required
                   />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="atendimento_preferencial"
+                    defaultChecked={appointment.atendimento_preferencial || false}
+                    className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm text-slate-700">
+                    Atendimento Preferencial
+                  </label>
                 </div>
 
                 {action === 'iniciar' && (
