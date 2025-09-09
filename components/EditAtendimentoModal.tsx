@@ -194,6 +194,7 @@ export default function EditAtendimentoModal({
                   <option value="">Selecione o status</option>
                   <option value="pendente">Pendente</option>
                   <option value="em_andamento">Em Andamento</option>
+                  <option value="cancelado">Cancelado</option>
                   <option value="concluido">Concluído</option>
                   <option value="correcao">Correção</option>
                   <option value="bloqueado">Bloqueado</option>
