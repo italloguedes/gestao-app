@@ -72,7 +72,7 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | "edit" | null>(null);
+  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | "edit" | "delete" | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -108,7 +108,7 @@ export default function AgendamentosHojePage() {
           return;
         }
 
-        setIsAdmin(userData?.role === "admin");
+        setIsAdmin(userData?.role === "admin" || userData?.role === "superadmin");
       }
     } catch (err) {
       console.error("Erro ao verificar usuário:", err);
@@ -214,6 +214,27 @@ export default function AgendamentosHojePage() {
     } catch (err) {
       console.warn("Erro ao criar agendamento:", err);
       alert(`Erro ao criar agendamento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteAppointment = async (id: number) => {
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from("agendamentos")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      await loadAgendamentos();
+      setIsModalOpen(false);
+      setSelectedAppointment(null);
+      alert('Agendamento excluído com sucesso!');
+    } catch (err) {
+      console.error("Erro ao excluir agendamento:", err);
+      alert("Erro ao excluir agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
     }
@@ -627,6 +648,7 @@ export default function AgendamentosHojePage() {
           onSave={handleEditAppointment}
           action={modalAction}
           onStatusChange={handleStatusChange}
+          onDelete={handleDeleteAppointment}
         />
       )}
 

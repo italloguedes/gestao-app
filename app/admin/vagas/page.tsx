@@ -52,7 +52,7 @@ export default function GestaoVagas() {
           return;
         }
         
-        setIsAdmin(userData?.role === 'admin');
+        setIsAdmin(userData?.role === 'admin' || userData?.role === 'superadmin');
         // Guarda o ID da tabela users
         if (user) {
           setUser({

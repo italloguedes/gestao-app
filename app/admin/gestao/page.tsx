@@ -50,7 +50,7 @@ export default function GestaoPage() {
           return;
         }
         
-        setIsAdmin(userData?.role === 'admin');
+        setIsAdmin(userData?.role === 'admin' || userData?.role === 'superadmin');
       }
     } catch (err) {
       console.error('Erro ao verificar usuário:', err);

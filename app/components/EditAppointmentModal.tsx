@@ -8,14 +8,15 @@ interface EditAppointmentModalProps {
   onClose: () => void;
   appointment: any;
   onSave: (updatedAppointment: any) => void;
-  action: 'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | null;
+  action: 'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null;
   onStatusChange: (id: number, newStatus: string) => void;
+  onDelete?: (id: number) => void;
 }
 
-export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange }: EditAppointmentModalProps) {
+export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange, onDelete }: EditAppointmentModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | null>(initialAction);
+  const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -36,6 +37,8 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         telefone: formData.get('telefone') || appointment.telefone,
         email: formData.get('email') || appointment.email,
         cpf: formData.get('cpf') || appointment.cpf,
+        data: formData.get('data') || appointment.data,
+        horario: formData.get('horario') ? `${formData.get('horario')}:00` : appointment.horario,
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
         observacoes: formData.get('observacoes') || appointment.observacoes,
       };
@@ -190,6 +193,11 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         
         onSave(updatedAppointment);
         setMessage('Agendamento atualizado com sucesso!');
+      } else if (action === 'delete') {
+        if (onDelete) {
+          await onDelete(appointment.id);
+          setMessage('Agendamento excluído com sucesso!');
+        }
       }
 
       setTimeout(() => {
@@ -212,6 +220,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               action === 'ausente' ? 'Marcar Ausente' :
               action === 'concluido' ? 'Concluir Atendimento' :
               action === 'edit' ? 'Editar Agendamento' :
+              action === 'delete' ? 'Excluir Agendamento' :
               'Cancelar Atendimento'}
           </h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
@@ -228,15 +237,83 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center space-x-3 text-slate-600">
-            <FiClock className="w-5 h-5" />
-            <span className="font-medium">{appointment.horario}</span>
+        {action === 'delete' ? (
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <FiXCircle className="w-5 h-5 text-red-600 mr-2" />
+                <h3 className="text-red-800 font-medium">Confirmar Exclusão</h3>
+              </div>
+              <p className="text-red-700 mt-2">
+                Tem certeza que deseja excluir o agendamento de <strong>{appointment.nome}</strong> 
+                para o dia <strong>{appointment.data}</strong> às <strong>{appointment.horario.substring(0, 5)}</strong>?
+              </p>
+              <p className="text-red-600 text-sm mt-2">
+                Esta ação não pode ser desfeita.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loading />
+                    <span className="ml-2">Excluindo...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiXCircle className="w-4 h-4 mr-2" />
+                    Excluir Agendamento
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-center space-x-3 text-slate-600">
+              <FiClock className="w-5 h-5" />
+              <span className="font-medium">{appointment.horario}</span>
+            </div>
 
           {(action === 'iniciar' || action === 'edit') && (
             <>
               <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
+                    <input
+                      type="date"
+                      name="data"
+                      defaultValue={appointment.data}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Horário</label>
+                    <input
+                      type="time"
+                      name="horario"
+                      defaultValue={appointment.horario.substring(0, 5)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
                   <input
@@ -319,35 +396,50 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             />
           </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center ${getButtonStyle(action)}`}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loading />
-                  <span className="ml-2">Processando...</span>
-                </>
-              ) : (
-                <>
-                  {action === 'ausente' && <FiXCircle className="w-4 h-4 mr-2" />}
-                  {action === 'concluido' && <FiCheck className="w-4 h-4 mr-2" />}
-                  {getButtonText(action)}
-                </>
+            <div className="flex justify-between items-center mt-6">
+              {action === 'edit' && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => setAction('delete')}
+                  className="px-4 py-2 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center"
+                  disabled={loading}
+                >
+                  <FiXCircle className="w-4 h-4 mr-2" />
+                  Excluir
+                </button>
               )}
-            </button>
-          </div>
-        </form>
+              
+              <div className="flex space-x-3 ml-auto">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center ${getButtonStyle(action)}`}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loading />
+                      <span className="ml-2">Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      {action === 'ausente' && <FiXCircle className="w-4 h-4 mr-2" />}
+                      {action === 'concluido' && <FiCheck className="w-4 h-4 mr-2" />}
+                      {getButtonText(action)}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -365,6 +457,8 @@ const getButtonStyle = (action: string | null) => {
       return 'bg-amber-600 hover:bg-amber-700';
     case 'edit':
       return 'bg-blue-600 hover:bg-blue-700';
+    case 'delete':
+      return 'bg-red-600 hover:bg-red-700';
     default:
       return 'bg-gray-600';
   }
@@ -382,6 +476,8 @@ const getButtonText = (action: string | null) => {
       return 'Cancelar Atendimento';
     case 'edit':
       return 'Salvar Alterações';
+    case 'delete':
+      return 'Excluir Agendamento';
     default:
       return 'Confirmar';
   }
