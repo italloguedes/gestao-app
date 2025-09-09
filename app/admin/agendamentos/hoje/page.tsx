@@ -482,7 +482,7 @@ export default function AgendamentosHojePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-10 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
@@ -494,7 +494,7 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[180px] ${
+                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[200px] ${
                       agendamentosHorario.length > 0
                         ? hasConcluded
                           ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
@@ -504,7 +504,7 @@ export default function AgendamentosHojePage() {
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
-                    <div className="p-3 h-full flex flex-col">
+                    <div className="p-4 h-full flex flex-col">
                       {/* Header com horário */}
                       <div className="flex items-center justify-between mb-2">
                         <div
@@ -561,15 +561,15 @@ export default function AgendamentosHojePage() {
                                     setModalAction("edit");
                                     setIsModalOpen(true);
                                   }}
-                                  className="w-full px-2 py-1 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
+                                  className="w-full px-3 py-2 text-sm rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
                                   title="Editar Agendamento"
                                 >
-                                  <FiEdit className="w-3 h-3 mr-1" />
+                                  <FiEdit className="w-4 h-4 mr-2" />
                                   Editar
                                 </button>
 
                                 {agendamento.status === "confirmado" && (
-                                  <div className="grid grid-cols-2 gap-1">
+                                  <div className="grid grid-cols-2 gap-2">
                                     <button
                                       onClick={() => {
                                         setSelectedAppointment(agendamento);
@@ -579,7 +579,7 @@ export default function AgendamentosHojePage() {
                                       className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
                                       title="Iniciar Atendimento"
                                     >
-                                      <FiEdit className="w-3 h-3 mr-1" />
+                                      <FiEdit className="w-4 h-4 mr-2" />
                                       Iniciar
                                     </button>
                                     <button
