@@ -29,6 +29,7 @@ export default function GerarRelatorioPage() {
   const [nome, setNome] = useState('');
   const [solicitante, setSolicitante] = useState('');
   const [status, setStatus] = useState('');
+  const [ordenacao, setOrdenacao] = useState<'padrao' | 'nome'>('padrao');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -57,20 +58,22 @@ export default function GerarRelatorioPage() {
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    const titleFontSize = 16;
+    doc.setFontSize(titleFontSize);
     const title = 'Relatório de Atendimentos - Sala Sensorial / ALECE';
-    const titleWidth = doc.getStringUnitWidth(title) * doc.getFontSize() / doc.internal.scaleFactor;
+    const titleWidth = doc.getStringUnitWidth(title) * titleFontSize / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
     
     // Informações do período mais compactas e centralizadas
     doc.setTextColor(90, 90, 90);
-    doc.setFontSize(9);
+    const infoFontSize = 9;
+    doc.setFontSize(infoFontSize);
     const periodo = `Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`;
     const total = `Total de Atendimentos: ${atendimentos.length}`;
     
     // Centraliza as informações do período
-    const periodoWidth = doc.getStringUnitWidth(periodo) * doc.getFontSize() / doc.internal.scaleFactor;
-    const totalWidth = doc.getStringUnitWidth(total) * doc.getFontSize() / doc.internal.scaleFactor;
+    const periodoWidth = doc.getStringUnitWidth(periodo) * infoFontSize / doc.internal.scaleFactor;
+    const totalWidth = doc.getStringUnitWidth(total) * infoFontSize / doc.internal.scaleFactor;
     const infosWidth = periodoWidth + 20 + totalWidth; // 20 é o espaço entre os textos
     const infosStartX = (doc.internal.pageSize.width - infosWidth) / 2;
     
@@ -138,10 +141,11 @@ export default function GerarRelatorioPage() {
     });
 
     // Rodapé modernizado e centralizado
-    const pageCount = doc.getNumberOfPages();
+    const pageCount = (doc as any).getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(7);
+      const footerFontSize = 7;
+      doc.setFontSize(footerFontSize);
       doc.setTextColor(128, 128, 128);
       
       // Linha separadora do rodapé centralizada
@@ -156,7 +160,7 @@ export default function GerarRelatorioPage() {
       
       // Número da página
       const pageText = `Página ${i} de ${pageCount}`;
-      const pageTextWidth = doc.getStringUnitWidth(pageText) * doc.getFontSize() / doc.internal.scaleFactor;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * footerFontSize / doc.internal.scaleFactor;
       doc.text(pageText, marginLeft + tableWidth - pageTextWidth, doc.internal.pageSize.height - 8);
     }
 
@@ -201,9 +205,16 @@ export default function GerarRelatorioPage() {
         query = query.eq('status', status);
       }
 
-      const { data: atendimentos, error } = await query
-        .order('dia_atual', { ascending: true })
-        .order('horario', { ascending: true });
+      // Ordenação condicional conforme seleção do usuário
+      if (ordenacao === 'nome') {
+        query = query.order('nome', { ascending: true });
+      } else {
+        query = query
+          .order('dia_atual', { ascending: true })
+          .order('horario', { ascending: true });
+      }
+
+      const { data: atendimentos, error } = await query;
 
       if (error) {
         console.error('Erro ao buscar atendimentos:', error);
@@ -387,6 +398,24 @@ export default function GerarRelatorioPage() {
                   <option value="cancelado">❌ Cancelado</option>
                   <option value="ausente">⏰ Ausente</option>
                   <option value="bloqueado">🚫 Bloqueado</option>
+                </select>
+              </div>
+              {/* Ordenação */}
+              <div className="md:col-span-2 space-y-2">
+                <label htmlFor="ordenacao" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h6" />
+                  </svg>
+                  Ordenar por
+                </label>
+                <select
+                  id="ordenacao"
+                  value={ordenacao}
+                  onChange={(e) => setOrdenacao(e.target.value as 'padrao' | 'nome')}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                >
+                  <option value="padrao">Padrão (Data e Horário)</option>
+                  <option value="nome">Nome (A-Z)</option>
                 </select>
               </div>
             </div>
