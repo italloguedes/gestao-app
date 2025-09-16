@@ -5,6 +5,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiLogOut, FiBarChart2, FiSettings, FiFileText } from 'react-icons/fi';
+import UserProfileModal from './UserProfileModal';
+import UserSettingsModal from './UserSettingsModal';
 
 // Memoized navigation items to prevent re-renders
 const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname?: string }) => (
@@ -52,6 +54,8 @@ export default function DashboardHeader() {
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [pathname, setPathname] = useState<string>('');
   const [sessionRemaining, setSessionRemaining] = useState<string>('');
 
@@ -103,6 +107,7 @@ export default function DashboardHeader() {
   const userDisplayName = useMemo(() => getUserDisplayName(), [user]);
   const userInitial = useMemo(() => userDisplayName.charAt(0).toUpperCase(), [userDisplayName]);
 
+
   return (
     <header className="bg-white/90 backdrop-blur-md shadow-md fixed top-0 left-0 right-0 z-50 border-b border-gray-200/70">
       <div className="max-w-7xl mx-auto">
@@ -141,23 +146,57 @@ export default function DashboardHeader() {
 
               {/* Dropdown do usuário */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{userDisplayName}</p>
-                    <p className="text-xs text-gray-500">{user?.email}</p>
-                    {sessionRemaining && (
-                      <p className="text-xs text-emerald-600 font-medium mt-1">
-                        Expira em: {sessionRemaining}
-                      </p>
-                    )}
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-semibold text-lg">
+                        {userInitial}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">{userDisplayName}</p>
+                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        {sessionRemaining && (
+                          <p className="text-xs text-emerald-600 font-medium mt-1">
+                            Expira em: {sessionRemaining}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
-                  >
-                    <FiLogOut className="mr-2" />
-                    Sair
-                  </button>
+                  
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setShowProfileModal(true);
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                    >
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Meu Perfil
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(true);
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
+                    </button>
+                  </div>
+                  
+                  <div className="border-t border-gray-100 py-1">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <FiLogOut className="mr-3 h-4 w-4" />
+                      Sair
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -211,6 +250,31 @@ export default function DashboardHeader() {
           </div>
         )}
       </div>
+      
+      {/* Modal de Perfil */}
+      <UserProfileModal
+        show={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onSuccess={() => {
+          setShowProfileModal(false);
+          // Recarregar dados do usuário se necessário
+          const checkUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+          };
+          checkUser();
+        }}
+      />
+
+      {/* Modal de Configurações */}
+      <UserSettingsModal
+        show={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSuccess={() => {
+          setShowSettingsModal(false);
+        }}
+      />
+
     </header>
   );
 }
