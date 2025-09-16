@@ -6,15 +6,28 @@ export async function POST(request: Request) {
     const { to, nome, protocolo } = await request.json();
 
     // Configuração do transportador de email
+    const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
+    const port = Number(process.env.EMAIL_PORT) || 587;
+    const secure = port === 465; // SSL on 465, STARTTLS on 587
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      secure: true,
+      host,
+      port,
+      secure,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+        user: process.env.EMAIL_USER || process.env.GMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD || process.env.GMAIL_PASSWORD,
       },
+      tls: {
+        ciphers: 'TLSv1.2',
+        rejectUnauthorized: true,
+      },
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
+      greetingTimeout: 10000,
     });
+
+    // Falhar rapidamente se conexão não puder ser estabelecida
+    await transporter.verify();
 
     // Template do email
     const emailContent = `
@@ -37,9 +50,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    const err: any = error;
+    console.error('Erro ao enviar email (detalhes):', {
+      message: err?.message,
+      code: err?.code,
+      command: err?.command,
+      response: err?.response,
+      address: err?.address,
+      port: err?.port,
+    });
+    const isDev = process.env.NODE_ENV !== 'production';
     return NextResponse.json(
-      { error: 'Erro ao enviar email' },
+      {
+        success: false,
+        error: isDev ? `Erro ao enviar email: ${err?.message ?? 'erro desconhecido'}` : 'Erro ao enviar email',
+        code: isDev ? err?.code : undefined,
+      },
       { status: 500 }
     );
   }

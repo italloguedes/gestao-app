@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
+import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import jsPDF from 'jspdf';
 
 interface DashboardStats {
@@ -78,6 +79,9 @@ export default function DashboardPage() {
   const [editingAtendimento, setEditingAtendimento] = useState<Partial<Atendimento>>({});
   const [savingAtendimento, setSavingAtendimento] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Estados para o modal de novo atendimento
+  const [showNovoAtendimentoModal, setShowNovoAtendimentoModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -338,7 +342,7 @@ export default function DashboardPage() {
       const assinaturaY = 240;
       doc.setDrawColor(16, 185, 129); // emerald-600
       doc.setLineWidth(0.5);
-      doc.roundedRect(18, assinaturaY, 174, 35, 3, 3);
+      doc.roundedRect(18, assinaturaY, 174, 35, 3, 3, 'S');
       doc.setFontSize(12);
       doc.setTextColor(16, 185, 129); // emerald-600
       doc.setFont('helvetica', 'bold');
@@ -492,18 +496,18 @@ export default function DashboardPage() {
     return (
       <>
         <DashboardHeader />
-        <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
-          <div className="max-w-7xl mx-auto">
-            <div className="animate-pulse space-y-6">
+        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white py-6 px-3 pt-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="animate-pulse space-y-5">
               <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+                  <div key={i} className="h-20 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
             </div>
@@ -564,15 +568,26 @@ export default function DashboardPage() {
           validationErrors={validationErrors}
         />
       )}
-      <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
-        <div className="max-w-7xl mx-auto space-y-8">
+      {/* Modal de novo atendimento */}
+      {showNovoAtendimentoModal && (
+        <NovoAtendimentoModal
+          show={showNovoAtendimentoModal}
+          onClose={() => setShowNovoAtendimentoModal(false)}
+          onSuccess={() => {
+            setShowNovoAtendimentoModal(false);
+            fetchDashboardData(); // Refresh dashboard data
+          }}
+        />
+      )}
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white py-6 px-3 pt-20">
+        <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-left">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight">Painel de Controle</h1>
-            <p className="text-gray-500 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">Painel de Controle</h1>
+            <p className="text-gray-600 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
           </div>
 
           {/* Cards de Estatísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard title="Total de Atendimentos" value={stats.total} color="text-gray-900" />
             <StatCard title="Correções" value={stats.correcoes} color="text-red-600" />
             <StatCard title="Em Andamento" value={stats.emAndamento} color="text-blue-600" />
@@ -582,9 +597,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Container para Ações Rápidas e Atendimentos Recentes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Ações Rápidas */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100 flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
                   Ações Rápidas
@@ -605,13 +620,20 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex flex-col space-y-3">
-                <QuickAction href="/dashboard/atendimentos/novo" color="border-emerald-500 text-emerald-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <button
+                  onClick={() => setShowNovoAtendimentoModal(true)}
+                  className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 text-emerald-700 bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group w-full"
+                >
+                  <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <span className="font-medium">Novo Atendimento</span>
+                  <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                }>
-                  Novo Atendimento
-                </QuickAction>
+                </button>
                 <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={
                   <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -650,7 +672,7 @@ export default function DashboardPage() {
                 <button
                   ref={entregarCinButtonRef}
                   onClick={() => setShowEntregarCinModal(true)}
-                  className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 hover:shadow-md transition-all duration-300 group mt-2"
+                  className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 bg-white/80 backdrop-blur-sm hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-300 hover:shadow-md transition-all duration-300 group mt-2"
                 >
                   <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
                     <svg className="h-5 w-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -666,7 +688,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Atendimentos Recentes */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-emerald-100">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
                   Atendimentos Recentes
@@ -1192,15 +1214,91 @@ function PdfModal({ url, onClose }: { url: string, onClose: () => void }) {
 
 // Card de estatística
 function StatCard({ title, value, color }: { title: string, value: any, color: string }) {
+  // Mapeamento de cores e ícones por tipo de card
+  const cardConfig = {
+    'text-gray-900': { 
+      icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+      gradient: 'from-slate-600 to-slate-700',
+      bg: 'bg-gradient-to-br from-slate-50 to-slate-100/50',
+      border: 'border-slate-200',
+      shadow: 'shadow-slate-200/50'
+    },
+    'text-red-600': { 
+      icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+      gradient: 'from-red-500 to-red-600',
+      bg: 'bg-gradient-to-br from-red-50 to-red-100/50',
+      border: 'border-red-200',
+      shadow: 'shadow-red-200/50'
+    },
+    'text-blue-600': { 
+      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      gradient: 'from-blue-500 to-blue-600',
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50',
+      border: 'border-blue-200',
+      shadow: 'shadow-blue-200/50'
+    },
+    'text-green-600': { 
+      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      gradient: 'from-green-500 to-green-600',
+      bg: 'bg-gradient-to-br from-green-50 to-green-100/50',
+      border: 'border-green-200',
+      shadow: 'shadow-green-200/50'
+    },
+    'text-gray-700': { 
+      icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
+      gradient: 'from-gray-600 to-gray-700',
+      bg: 'bg-gradient-to-br from-gray-50 to-gray-100/50',
+      border: 'border-gray-200',
+      shadow: 'shadow-gray-200/50'
+    },
+    'text-emerald-600': { 
+      icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+      gradient: 'from-emerald-500 to-emerald-600',
+      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
+      border: 'border-emerald-200',
+      shadow: 'shadow-emerald-200/50'
+    }
+  };
+
+  const config = cardConfig[color as keyof typeof cardConfig] || cardConfig['text-gray-900'];
+
   return (
-    <div className="dashboard-card group overflow-hidden relative">
-      <div className={`absolute top-0 left-0 w-1 h-full ${color.replace('text-', 'bg-')}`}></div>
-      <div className="pl-3">
-        <h3 className="dashboard-card-title text-gray-700">{title}</h3>
-        <p className={`dashboard-card-value ${color}`}>{value}</p>
-        <div className="dashboard-card-subtitle">Atendimentos</div>
-      </div>
-      <div className={`absolute bottom-0 left-0 w-full h-1 ${color.replace('text-', 'bg-')} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+    <div className={`group relative overflow-hidden rounded-2xl border ${config.border} ${config.bg} ${config.shadow} shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`}>
+      {/* Gradiente de fundo sutil */}
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm"></div>
+      
+      {/* Barra lateral colorida */}
+      <div className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${config.gradient}`}></div>
+      
+        {/* Conteúdo principal */}
+        <div className="relative p-6">
+          {/* Layout horizontal para formato retangular */}
+          <div className="flex items-center justify-between">
+            {/* Lado esquerdo: título e valor */}
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wider mb-2">{title}</h3>
+              <div className="mb-1">
+                <span className={`text-3xl font-bold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>
+                  {value}
+                </span>
+              </div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Atendimentos</p>
+            </div>
+            
+            {/* Lado direito: ícone */}
+            <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${config.gradient} shadow-lg ml-4`}>
+              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+              </svg>
+            </div>
+          </div>
+          
+          {/* Indicador de progresso decorativo */}
+          <div className="mt-4 h-1 w-full rounded-full bg-gray-200">
+            <div className={`h-1 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out`} 
+                 style={{ width: `${Math.min(100, (value / 100) * 10)}%` }}></div>
+          </div>
+        </div>
     </div>
   );
 }
@@ -1210,7 +1308,7 @@ function QuickAction({ href, color, icon, children }: any) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-3 rounded-xl shadow-sm border ${color.replace('text-', 'border-').replace('border-', 'border-')} hover:shadow-md transition-all duration-300 group`}
+      className={`flex items-center px-4 py-3 rounded-xl shadow-sm border ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group`}
     >
       <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300`}>
         {icon}

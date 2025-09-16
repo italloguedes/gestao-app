@@ -6,12 +6,24 @@ export async function POST(request: Request) {
     const { to, subject, html } = await request.json();
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587, // STARTTLS
+      secure: false,
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PASSWORD,
       },
+      tls: {
+        ciphers: 'TLSv1.2',
+        rejectUnauthorized: true,
+      },
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
+      greetingTimeout: 10000,
     });
+
+    // Fail fast if connection cannot be established
+    await transporter.verify();
 
     // Fallback em texto puro, removendo tags do HTML
     const plainText = html.replace(/<[^>]*>/g, '');
@@ -40,9 +52,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, messageId: info.messageId });
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    const err: any = error;
+    console.error('Erro ao enviar email (detalhes):', {
+      message: err?.message,
+      code: err?.code,
+      command: err?.command,
+      response: err?.response,
+      address: err?.address,
+      port: err?.port,
+    });
+    const isDev = process.env.NODE_ENV !== 'production';
     return NextResponse.json(
-      { success: false, error: 'Falha ao enviar email' },
+      {
+        success: false,
+        error: isDev ? `Falha ao enviar email: ${err?.message ?? 'erro desconhecido'}` : 'Falha ao enviar email',
+        code: isDev ? err?.code : undefined,
+      },
       { status: 500 }
     );
   }
