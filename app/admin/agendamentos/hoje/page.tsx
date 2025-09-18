@@ -156,20 +156,47 @@ export default function AgendamentosHojePage() {
   };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
+    console.log('🔄 handleStatusChange: Iniciando', { id, newStatus });
     setActionLoading(true);
     try {
+      // Primeiro, vamos verificar se o agendamento existe
+      console.log('🔄 handleStatusChange: Verificando agendamento existente...');
+      const { data: existingData, error: fetchError } = await supabase
+        .from("agendamentos")
+        .select("id, nome, status")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ handleStatusChange: Erro ao buscar agendamento', fetchError);
+        throw new Error(`Agendamento não encontrado: ${fetchError.message}`);
+      }
+
+      console.log('🔄 handleStatusChange: Agendamento encontrado', existingData);
+
+      // Agora vamos atualizar o status
+      console.log('🔄 handleStatusChange: Atualizando no Supabase...');
       const { error } = await supabase
         .from("agendamentos")
         .update({ status: newStatus })
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ handleStatusChange: Erro do Supabase', error);
+        throw error;
+      }
+      
+      console.log('✅ handleStatusChange: Atualização bem-sucedida, recarregando agendamentos...');
       await loadAgendamentos();
       setIsModalOpen(false);
       setSelectedAppointment(null);
+      console.log('✅ handleStatusChange: Concluído com sucesso');
+      
+      // Mostrar mensagem de sucesso
+      alert(`Status atualizado para "${newStatus}" com sucesso!`);
     } catch (err) {
-      console.error("Erro ao atualizar status:", err);
-      alert("Erro ao atualizar status. Por favor, tente novamente.");
+      console.error("❌ handleStatusChange: Erro ao atualizar status:", err);
+      alert(`Erro ao atualizar status: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
     }
@@ -691,20 +718,38 @@ export default function AgendamentosHojePage() {
                                       </button>
                                       <button
                                         onClick={async () => {
+                                          console.log('🟢 Botão Concluído: Clicado', { id: agendamento.id, nome: agendamento.nome });
                                           if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
+                                            console.log('🟢 Botão Concluído: Confirmação aceita, chamando handleStatusChange...');
                                             try {
                                               await handleStatusChange(agendamento.id, "concluido");
+                                              console.log('🟢 Botão Concluído: handleStatusChange concluído');
                                             } catch (error) {
-                                              console.error("Erro ao marcar como concluído:", error);
+                                              console.error("❌ Botão Concluído: Erro ao marcar como concluído:", error);
                                               alert("Erro ao marcar como concluído. Tente novamente.");
                                             }
+                                          } else {
+                                            console.log('🟢 Botão Concluído: Confirmação cancelada');
                                           }
                                         }}
-                                        className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                                        disabled={actionLoading}
+                                        className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                                         title="Marcar concluido"
                                       >
-                                        <FiCheckCircle className="w-3 h-3 mr-1" />
-                                        Concluído
+                                        {actionLoading ? (
+                                          <>
+                                            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-green-800" fill="none" viewBox="0 0 24 24">
+                                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Processando...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <FiCheckCircle className="w-3 h-3 mr-1" />
+                                            Concluído
+                                          </>
+                                        )}
                                       </button>
                                       <button
                                         onClick={async () => {
