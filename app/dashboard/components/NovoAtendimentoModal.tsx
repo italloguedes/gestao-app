@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,7 +18,77 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
   const [protocolo, setProtocolo] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [hasSavedData, setHasSavedData] = useState(false);
   const { user } = useAuth();
+
+  // Chave para localStorage
+  const FORM_DATA_KEY = 'novoAtendimentoModal_formData';
+
+  // Carregar dados salvos quando o modal abre
+  useEffect(() => {
+    if (show) {
+      const savedData = localStorage.getItem(FORM_DATA_KEY);
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          setNome(parsedData.nome || '');
+          setCpf(parsedData.cpf || '');
+          setEmail(parsedData.email || '');
+          setSolicitante(parsedData.solicitante || '');
+          setProtocolo(parsedData.protocolo || '');
+          setHasSavedData(true);
+        } catch (error) {
+          console.error('Erro ao carregar dados salvos:', error);
+        }
+      } else {
+        setHasSavedData(false);
+      }
+    }
+  }, [show]);
+
+  // Salvar dados automaticamente conforme o usuário digita
+  useEffect(() => {
+    if (show) {
+      const formData = {
+        nome,
+        cpf,
+        email,
+        solicitante,
+        protocolo
+      };
+      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(formData));
+    }
+  }, [nome, cpf, email, solicitante, protocolo, show]);
+
+  // Função para limpar dados salvos
+  const clearSavedData = () => {
+    localStorage.removeItem(FORM_DATA_KEY);
+    setHasSavedData(false);
+  };
+
+  // Função para lidar com o fechamento do modal
+  const handleClose = () => {
+    // Não limpa os dados salvos ao fechar, apenas ao cancelar explicitamente ou após sucesso
+    onClose();
+  };
+
+  // Função para cancelar e limpar dados
+  const handleCancel = () => {
+    if (nome || cpf || email || solicitante || protocolo) {
+      const shouldClear = window.confirm('Deseja descartar os dados preenchidos? Eles serão perdidos permanentemente.');
+      if (shouldClear) {
+        setNome('');
+        setCpf('');
+        setEmail('');
+        setSolicitante('');
+        setProtocolo('');
+        clearSavedData();
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
 
   const isValidCpf = (cpf: string) => /^[0-9]{11}$/.test(cpf);
 
@@ -131,6 +201,8 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
             setSolicitante('');
             setProtocolo('');
             setMessage('');
+            // Limpar dados salvos após sucesso
+            clearSavedData();
             onSuccess();
           }, 2000);
         } else {
@@ -153,7 +225,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-emerald-100 max-h-[90vh] overflow-y-auto">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Fechar"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -170,6 +242,14 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
           <div>
             <h2 className="text-2xl font-bold text-emerald-700">Novo Atendimento</h2>
             <p className="text-sm text-gray-500">Preencha os dados do atendimento</p>
+            {hasSavedData && (
+              <p className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Dados recuperados automaticamente
+              </p>
+            )}
           </div>
         </div>
 
@@ -264,7 +344,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancel}
               className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
               Cancelar
