@@ -89,7 +89,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           }
 
           console.log('✅ EditAppointmentModal: Status atualizado para ausente');
-          setMessage('Atendimento marcado como ausente com sucesso!');
+        setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
           throw error;
@@ -121,14 +121,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         
         try {
           // Atualizar status e motivo
-          const { error: updateError } = await supabase
-            .from('agendamentos')
+        const { error: updateError } = await supabase
+          .from('agendamentos')
             .update({ 
               status: 'cancelado',
               tipo_cancelamento: motivo,
               observacoes: `Cancelado - Motivo: ${motivo}`
             })
-            .eq('id', appointment.id);
+          .eq('id', appointment.id);
 
           if (updateError) {
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
@@ -136,7 +136,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           }
 
           console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
-          setMessage('Atendimento cancelado com sucesso!');
+        setMessage('Atendimento cancelado com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
           throw error;

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import NotificationSound from '@/components/NotificationSound';
+import ChamadaNotification from '@/components/ChamadaNotification';
 
 interface ChamadaSenha {
   id: number;
@@ -26,6 +27,9 @@ export default function ChamadaSenhasPage() {
   const [error, setError] = useState<string | null>(null);
   const [playSound, setPlaySound] = useState(false);
   const [previousChamadasCount, setPreviousChamadasCount] = useState(0);
+  const [showChamadaNotification, setShowChamadaNotification] = useState(false);
+  const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
+  const [lastChamadaId, setLastChamadaId] = useState<number | null>(null);
 
   // Atualizar horário a cada segundo
   useEffect(() => {
@@ -62,29 +66,44 @@ export default function ChamadaSenhasPage() {
     }
   };
 
-  // Buscar chamadas a cada 3 segundos
+  // Buscar chamadas imediatamente e depois a cada 500ms para tempo real
   useEffect(() => {
     fetchChamadas();
-    const interval = setInterval(fetchChamadas, 3000);
+    const interval = setInterval(fetchChamadas, 500);
     return () => clearInterval(interval);
   }, []);
 
   // Detectar novas chamadas e tocar som
   useEffect(() => {
-    if (chamadas.length > previousChamadasCount && chamadas.length > 0) {
+    if (chamadas.length > 0) {
       const ultimaChamada = chamadas[0];
       
-      if (ultimaChamada && ultimaChamada.nome) {
-        console.log('🔊 Nova chamada detectada!', ultimaChamada);
+      // Verificar se é uma nova chamada baseada no ID
+      if (ultimaChamada && ultimaChamada.id && ultimaChamada.id !== lastChamadaId) {
+        console.log('🔊 NOVA CHAMADA DETECTADA!', {
+          id: ultimaChamada.id,
+          nome: ultimaChamada.nome,
+          horario: ultimaChamada.horario,
+          lastId: lastChamadaId
+        });
         
-        // Tocar som apenas se for uma nova chamada
+        // Mostrar notificação visual IMEDIATAMENTE
+        setChamadaData({
+          nome: ultimaChamada.nome,
+          horario: ultimaChamada.horario ? ultimaChamada.horario.substring(0, 5) : '00:00',
+          preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
+        });
+        setShowChamadaNotification(true);
+        
+        // Tocar som
         setPlaySound(true);
         setTimeout(() => setPlaySound(false), 100);
         
-        setPreviousChamadasCount(chamadas.length);
+        // Atualizar o ID da última chamada
+        setLastChamadaId(ultimaChamada.id);
       }
     }
-  }, [chamadas.length, previousChamadasCount]);
+  }, [chamadas, lastChamadaId]);
 
   const formatTime = (timeString: string) => {
     return timeString.substring(0, 5);
@@ -280,12 +299,26 @@ export default function ChamadaSenhasPage() {
             <div className="text-center text-blue-200">
               <p>Sistema de Chamadas - Sala Sensorial ALECE</p>
               <p className="text-sm mt-1">
-                Atualizado automaticamente a cada 3 segundos
+                Atualizado automaticamente a cada 500ms
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Notificação de Chamada */}
+      {chamadaData && (
+        <ChamadaNotification
+          isVisible={showChamadaNotification}
+          nome={chamadaData.nome}
+          horario={chamadaData.horario}
+          preferencial={chamadaData.preferencial}
+          onClose={() => {
+            setShowChamadaNotification(false);
+            setChamadaData(null);
+          }}
+        />
+      )}
     </ErrorBoundary>
   );
 }
