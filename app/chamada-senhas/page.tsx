@@ -148,7 +148,7 @@ export default function ChamadaSenhasPage() {
                 Sala Sensorial - ALECE
               </p>
               <p className="text-blue-300 text-sm mt-1">
-                Exibindo as últimas 4 chamadas
+                Exibindo as últimas 6 chamadas
               </p>
             </div>
             <div className="text-right text-white">
@@ -184,49 +184,53 @@ export default function ChamadaSenhasPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Últimas 4 Chamadas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {chamadas.slice(0, 4).map((chamada, index) => (
+            {/* Últimas 6 Chamadas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {chamadas.slice(0, 6).map((chamada, index) => (
                 <div
                   key={chamada.id}
-                  className={`rounded-2xl p-6 border-4 shadow-2xl transition-all duration-300 ${
+                  className={`rounded-2xl p-4 border-4 shadow-2xl transition-all duration-300 ${
                     index === 0
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 border-green-400 animate-pulse'
                       : index === 1
                       ? 'bg-gradient-to-r from-blue-500 to-cyan-600 border-blue-400'
                       : index === 2
                       ? 'bg-gradient-to-r from-purple-500 to-indigo-600 border-purple-400'
-                      : 'bg-gradient-to-r from-orange-500 to-red-600 border-orange-400'
+                      : index === 3
+                      ? 'bg-gradient-to-r from-orange-500 to-red-600 border-orange-400'
+                      : index === 4
+                      ? 'bg-gradient-to-r from-pink-500 to-rose-600 border-pink-400'
+                      : 'bg-gradient-to-r from-teal-500 to-cyan-600 border-teal-400'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-4xl mb-3">
-                      {index === 0 ? '📢' : index === 1 ? '🔔' : index === 2 ? '📣' : '📢'}
+                    <div className="text-3xl mb-2">
+                      {index === 0 ? '📢' : index === 1 ? '🔔' : index === 2 ? '📣' : index === 3 ? '📢' : index === 4 ? '🔔' : '📣'}
                     </div>
-                    <h3 className={`text-2xl font-bold text-white mb-2 ${
-                      index === 0 ? 'text-3xl' : 'text-xl'
+                    <h3 className={`text-lg font-bold text-white mb-2 ${
+                      index === 0 ? 'text-xl' : 'text-base'
                     }`}>
                       {index === 0 ? 'CHAMADA ATUAL' : `CHAMADA ${index + 1}`}
                     </h3>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 mb-3">
-                      <div className={`font-bold text-white mb-2 ${
-                        index === 0 ? 'text-3xl' : 'text-xl'
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 mb-2">
+                      <div className={`font-bold text-white mb-1 ${
+                        index === 0 ? 'text-xl' : 'text-lg'
                       }`}>
                         {chamada.nome}
                       </div>
                       <div className={`text-green-100 ${
-                        index === 0 ? 'text-lg' : 'text-sm'
+                        index === 0 ? 'text-sm' : 'text-xs'
                       }`}>
-                        Horário: {formatTime(chamada.horario)}
+                        {formatTime(chamada.horario)}
                       </div>
                       {chamada.agendamentos?.atendimento_preferencial && (
-                        <div className="mt-3 inline-block bg-yellow-500 text-yellow-900 px-3 py-1 rounded-full font-bold text-sm">
-                          ⭐ ATENDIMENTO PREFERENCIAL
+                        <div className="mt-2 inline-block bg-yellow-500 text-yellow-900 px-2 py-1 rounded-full font-bold text-xs">
+                          ⭐ PREFERENCIAL
                         </div>
                       )}
                     </div>
                     <div className={`text-green-100 ${
-                      index === 0 ? 'text-lg' : 'text-sm'
+                      index === 0 ? 'text-sm' : 'text-xs'
                     }`}>
                       {index === 0 ? 'Dirija-se ao atendimento' : 'Aguarde sua vez'}
                     </div>
@@ -246,7 +250,7 @@ export default function ChamadaSenhasPage() {
             </div>
 
             {/* Mensagem se não há chamadas suficientes */}
-            {chamadas.length < 4 && (
+            {chamadas.length < 6 && (
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 text-center">
                 <div className="text-4xl mb-4">⏳</div>
                 <h3 className="text-xl font-bold text-white mb-2">
@@ -255,7 +259,7 @@ export default function ChamadaSenhasPage() {
                 <p className="text-blue-200">
                   {chamadas.length === 0 
                     ? 'Nenhuma chamada ainda hoje'
-                    : `Apenas ${chamadas.length} chamada${chamadas.length > 1 ? 's' : ''} até agora`
+                    : `${chamadas.length} de 6 chamadas exibidas`
                   }
                 </p>
               </div>

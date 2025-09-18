@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       .eq('data_chamada', data)
       .eq('status', status)
       .order('created_at', { ascending: false })
-      .limit(4);
+      .limit(6);
 
     if (error) {
       console.error('Erro ao buscar chamadas:', error);
@@ -46,7 +46,23 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json(chamadas || []);
+    // Ordenar chamadas: preferenciais primeiro, depois por horário
+    const chamadasOrdenadas = (chamadas || []).sort((a, b) => {
+      // Primeiro: atendimentos preferenciais
+      const aPreferencial = a.agendamentos?.atendimento_preferencial || false;
+      const bPreferencial = b.agendamentos?.atendimento_preferencial || false;
+      
+      if (aPreferencial && !bPreferencial) return -1;
+      if (!aPreferencial && bPreferencial) return 1;
+      
+      // Segundo: por horário (mais cedo primeiro)
+      const aHorario = a.horario || '00:00:00';
+      const bHorario = b.horario || '00:00:00';
+      
+      return aHorario.localeCompare(bHorario);
+    });
+
+    return NextResponse.json(chamadasOrdenadas);
   } catch (error) {
     console.error('Erro ao processar requisição:', error);
     return NextResponse.json(
