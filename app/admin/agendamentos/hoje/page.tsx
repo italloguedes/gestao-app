@@ -75,6 +75,7 @@ export default function AgendamentosHojePage() {
   const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | "edit" | "delete" | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [chamadaLoading, setChamadaLoading] = useState<number | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -237,6 +238,36 @@ export default function AgendamentosHojePage() {
       alert("Erro ao excluir agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleChamarSenha = async (agendamento: Agendamento) => {
+    setChamadaLoading(agendamento.id);
+    try {
+      const response = await fetch('/api/chamada-senhas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agendamento_id: agendamento.id,
+          atendente_id: user?.id,
+          observacoes: `Chamada automática - ${agendamento.nome}`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao chamar senha');
+      }
+
+      alert(`Senha chamada com sucesso para ${agendamento.nome}!`);
+      await loadAgendamentos(); // Recarregar para atualizar status
+    } catch (err) {
+      console.error("Erro ao chamar senha:", err);
+      alert(`Erro ao chamar senha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+    } finally {
+      setChamadaLoading(null);
     }
   };
 
@@ -419,58 +450,92 @@ export default function AgendamentosHojePage() {
       <DashboardHeader />
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pt-20">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 sticky top-20 z-30 bg-slate-50/90 backdrop-blur">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
-              <div className="flex items-center text-base text-slate-600">
-                <FiCalendar className="w-4 h-4 mr-2" />
-                {formatDate(selectedDate)}
-                <span className="ml-4 px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-sm font-medium">
-                  {agendamentos.length} agendamentos
-                </span>
+          {/* Header Principal */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-4 lg:mb-0">
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center text-base text-slate-600">
+                    <FiCalendar className="w-4 h-4 mr-2" />
+                    {formatDate(selectedDate)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-sm font-medium">
+                      {agendamentos.length} agendamentos
+                    </span>
+                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                      {agendamentos.filter(a => a.status === 'confirmado').length} confirmados
+                    </span>
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
+                      {agendamentos.filter(a => a.status === 'concluido').length} concluídos
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Controles de Data */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                />
+                <button
+                  onClick={() => loadAgendamentos()}
+                  className="flex items-center px-3 py-2 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
+                >
+                  <FiClock className="w-4 h-4 mr-1.5" />
+                  Atualizar
+                </button>
               </div>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-3">
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="border rounded px-2 py-1"
-              />
+          </div>
+
+          {/* Barra de Ações */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center px-3 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200"
+                className="flex items-center px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <FiUser className="w-4 h-4 mr-1.5" />
+                <FiUser className="w-4 h-4 mr-2" />
                 Criar Agendamento
               </button>
-              <button
-                onClick={() => loadAgendamentos()}
-                className="flex items-center px-3 py-1.5 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
-              >
-                <FiClock className="w-4 h-4 mr-1.5" />
-                Atualizar
-              </button>
+              
               <button
                 onClick={generateReport}
                 disabled={agendamentos.length === 0 || actionLoading}
-                className="flex items-center px-3 py-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-4 py-2 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
               >
-                <FiFileText className="w-4 h-4 mr-1.5" />
+                <FiFileText className="w-4 h-4 mr-2" />
                 {actionLoading ? "Gerando..." : "Relatório PDF"}
               </button>
+              
+              <button
+                onClick={() => window.open("/chamada-senhas", "_blank")}
+                className="flex items-center px-4 py-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                title="Abrir tela de chamadas em nova aba"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
+                </svg>
+                Tela de Chamadas
+              </button>
+              
               <button
                 onClick={() => router.push("/admin/gestao")}
-                className="flex items-center px-3 py-1.5 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200"
+                className="flex items-center px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <FiArrowLeft className="w-4 h-4 mr-1.5" />
+                <FiArrowLeft className="w-4 h-4 mr-2" />
                 Voltar
               </button>
             </div>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
@@ -482,7 +547,7 @@ export default function AgendamentosHojePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
@@ -494,21 +559,21 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[200px] ${
+                    className={`rounded-xl shadow-sm border transition-all duration-200 min-h-[280px] ${
                       agendamentosHorario.length > 0
                         ? hasConcluded
-                          ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
+                          ? "bg-emerald-50 border-emerald-300 hover:shadow-lg"
                           : hasPreferential
-                            ? "bg-amber-50 border-amber-300 hover:shadow-md"
-                            : "bg-white border-slate-200 hover:shadow-md"
+                            ? "bg-amber-50 border-amber-300 hover:shadow-lg"
+                            : "bg-white border-slate-200 hover:shadow-lg"
                         : "bg-slate-50 border-slate-200 border-dashed"
                     }`}
                   >
-                    <div className="p-4 h-full flex flex-col">
+                    <div className="p-5 h-full flex flex-col">
                       {/* Header com horário */}
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-4">
                         <div
-                          className={`flex items-center rounded px-2 py-1 text-sm font-medium ${
+                          className={`flex items-center rounded-lg px-3 py-2 text-sm font-semibold ${
                             isPassedTime
                               ? "bg-slate-100 text-slate-600"
                               : isFull
@@ -516,33 +581,36 @@ export default function AgendamentosHojePage() {
                               : "bg-sky-50 text-sky-700"
                           }`}
                         >
-                          <FiClock className="w-4 h-4 mr-1" />
+                          <FiClock className="w-4 h-4 mr-2" />
                           <span>{horario}</span>
                         </div>
                         {isFull && (
-                          <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-800 font-medium">
+                          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium">
                             Cheio
                           </span>
                         )}
                       </div>
 
                       {agendamentosHorario.length > 0 ? (
-                        <div className="flex-1 space-y-2">
+                        <div className="flex-1 space-y-3">
                           {agendamentosHorario.map((agendamento, index) => (
-                            <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-2' : ''}`}>
+                            <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-3' : ''}`}>
                               {/* Status e preferencial */}
-                              <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center justify-between mb-3">
                                 {getStatusBadge(agendamento.status as AppointmentStatus)}
                                 {agendamento.atendimento_preferencial && (
-                                  <FiStar className="w-4 h-4 text-amber-500" title="Atendimento Preferencial" />
+                                  <div className="flex items-center text-amber-600">
+                                    <FiStar className="w-4 h-4 mr-1" />
+                                    <span className="text-xs font-medium">Preferencial</span>
+                                  </div>
                                 )}
                               </div>
                               
                               {/* Informações do agendamento */}
-                              <div className="space-y-1 mb-2">
+                              <div className="space-y-2 mb-4">
                                 <div className="flex items-center text-slate-700">
                                   <FiUser className="w-4 h-4 mr-2 text-slate-500" />
-                                  <span className="font-medium text-sm truncate">
+                                  <span className="font-semibold text-sm truncate">
                                     {agendamento.nome}
                                   </span>
                                 </div>
@@ -553,7 +621,7 @@ export default function AgendamentosHojePage() {
                               </div>
 
                               {/* Botões de ação */}
-                              <div className="space-y-1">
+                              <div className="space-y-3">
                                 {/* Botão de editar sempre visível */}
                                 <button
                                   onClick={() => {
@@ -561,7 +629,7 @@ export default function AgendamentosHojePage() {
                                     setModalAction("edit");
                                     setIsModalOpen(true);
                                   }}
-                                  className="w-full px-3 py-2 text-sm rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
+                                  className="w-full px-3 py-2 text-sm rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center shadow-sm hover:shadow-md"
                                   title="Editar Agendamento"
                                 >
                                   <FiEdit className="w-4 h-4 mr-2" />
@@ -569,55 +637,90 @@ export default function AgendamentosHojePage() {
                                 </button>
 
                                 {agendamento.status === "confirmado" && (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-3">
+                                    {/* Botão de Chamar Senha - Destaque especial */}
                                     <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("iniciar");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                                      title="Iniciar Atendimento"
+                                      onClick={() => handleChamarSenha(agendamento)}
+                                      disabled={chamadaLoading === agendamento.id}
+                                      className="w-full px-4 py-3 text-sm rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                      title="Chamar Senha"
                                     >
-                                      <FiEdit className="w-4 h-4 mr-2" />
-                                      Iniciar
+                                      {chamadaLoading === agendamento.id ? (
+                                        <>
+                                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          Chamando...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
+                                          </svg>
+                                          📢 CHAMAR SENHA
+                                        </>
+                                      )}
                                     </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("ausente");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                      title="Marcar ausente"
-                                    >
-                                      <FiXCircle className="w-3 h-3 mr-1" />
-                                      Ausente
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
-                                          handleStatusChange(agendamento.id, "concluido");
-                                        }
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                                      title="Marcar concluido"
-                                    >
-                                      <FiCheckCircle className="w-3 h-3 mr-1" />
-                                      Concluído
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm("Deseja realmente cancelar este atendimento?")) {
-                                          handleStatusChange(agendamento.id, "cancelado");
-                                        }
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                                      title="Cancelar"
-                                    >
-                                      <FiSlash className="w-3 h-3 mr-1" />
-                                      Cancelar
-                                    </button>
+                                    
+                                    {/* Outros botões em grid */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("iniciar");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-3 py-2 text-xs rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center shadow-sm hover:shadow-md"
+                                        title="Iniciar Atendimento"
+                                      >
+                                        <FiEdit className="w-4 h-4 mr-1" />
+                                        Iniciar
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("ausente");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-3 py-2 text-xs rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center shadow-sm hover:shadow-md"
+                                        title="Marcar ausente"
+                                      >
+                                        <FiXCircle className="w-3 h-3 mr-1" />
+                                        Ausente
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (window.confirm("Deseja realmente marcar este atendimento como concluído?")) {
+                                            handleStatusChange(agendamento.id, "concluido");
+                                          }
+                                        }}
+                                        className="px-3 py-2 text-xs rounded-lg bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center shadow-sm hover:shadow-md"
+                                        title="Marcar concluido"
+                                      >
+                                        <FiCheckCircle className="w-3 h-3 mr-1" />
+                                        Concluído
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (window.confirm("Deseja realmente cancelar este atendimento?")) {
+                                            handleStatusChange(agendamento.id, "cancelado");
+                                          }
+                                        }}
+                                        className="px-3 py-2 text-xs rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center shadow-sm hover:shadow-md"
+                                        title="Cancelar"
+                                      >
+                                        <FiSlash className="w-3 h-3 mr-1" />
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Status especial para agendamentos chamados */}
+                                {agendamento.status === "chamado" && (
+                                  <div className="w-full px-4 py-3 text-sm rounded-lg bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-center shadow-lg">
+                                    📢 SENHA CHAMADA
                                   </div>
                                 )}
                               </div>
@@ -626,7 +729,11 @@ export default function AgendamentosHojePage() {
                         </div>
                       ) : (
                         <div className="flex-1 flex items-center justify-center">
-                          <p className="text-slate-500 text-sm font-medium">Horário Livre</p>
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">⏰</div>
+                            <p className="text-slate-500 text-sm font-medium">Horário Livre</p>
+                            <p className="text-slate-400 text-xs mt-1">Disponível para agendamento</p>
+                          </div>
                         </div>
                       )}
                     </div>

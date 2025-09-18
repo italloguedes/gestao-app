@@ -1,0 +1,225 @@
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase-client';
+
+// Interface para chamada de senha
+interface ChamadaSenha {
+  id: number;
+  agendamento_id: number;
+  nome: string;
+  horario: string;
+  status: 'chamada' | 'atendido' | 'ausente';
+  data_chamada: string;
+  atendente_id?: string;
+  observacoes?: string;
+}
+
+// GET - Buscar chamadas ativas
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status') || 'chamada';
+    const data = searchParams.get('data') || new Date().toISOString().split('T')[0];
+
+    const { data: chamadas, error } = await supabase
+      .from('chamada_senhas')
+      .select(`
+        *,
+        agendamentos (
+          id,
+          nome,
+          horario,
+          data,
+          status,
+          atendimento_preferencial
+        )
+      `)
+      .eq('data_chamada', data)
+      .eq('status', status)
+      .order('created_at', { ascending: false })
+      .limit(4);
+
+    if (error) {
+      console.error('Erro ao buscar chamadas:', error);
+      return NextResponse.json(
+        { error: 'Erro ao buscar chamadas' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(chamadas || []);
+  } catch (error) {
+    console.error('Erro ao processar requisição:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Criar nova chamada de senha
+export async function POST(request: Request) {
+  try {
+    const { agendamento_id, atendente_id, observacoes } = await request.json();
+
+    if (!agendamento_id) {
+      return NextResponse.json(
+        { error: 'ID do agendamento é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar dados do agendamento
+    const { data: agendamento, error: agendamentoError } = await supabase
+      .from('agendamentos')
+      .select('*')
+      .eq('id', agendamento_id)
+      .single();
+
+    if (agendamentoError || !agendamento) {
+      return NextResponse.json(
+        { error: 'Agendamento não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se já existe chamada ativa para este agendamento hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    const { data: chamadaExistente } = await supabase
+      .from('chamada_senhas')
+      .select('id')
+      .eq('agendamento_id', agendamento_id)
+      .eq('data_chamada', hoje)
+      .eq('status', 'chamada')
+      .single();
+
+    if (chamadaExistente) {
+      return NextResponse.json(
+        { error: 'Já existe uma chamada ativa para este agendamento' },
+        { status: 409 }
+      );
+    }
+
+    // Criar nova chamada
+    const { data: novaChamada, error: chamadaError } = await supabase
+      .from('chamada_senhas')
+      .insert({
+        agendamento_id,
+        nome: agendamento.nome,
+        horario: agendamento.horario,
+        status: 'chamada',
+        data_chamada: hoje,
+        atendente_id,
+        observacoes,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (chamadaError) {
+      console.error('Erro ao criar chamada:', chamadaError);
+      return NextResponse.json(
+        { error: 'Erro ao criar chamada' },
+        { status: 500 }
+      );
+    }
+
+    // Atualizar status do agendamento para "chamado"
+    await supabase
+      .from('agendamentos')
+      .update({ status: 'chamado' })
+      .eq('id', agendamento_id);
+
+    return NextResponse.json(novaChamada, { status: 201 });
+  } catch (error) {
+    console.error('Erro ao processar requisição:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Atualizar status da chamada
+export async function PUT(request: Request) {
+  try {
+    const { id, status, observacoes } = await request.json();
+
+    if (!id || !status) {
+      return NextResponse.json(
+        { error: 'ID e status são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    const { data: chamada, error } = await supabase
+      .from('chamada_senhas')
+      .update({
+        status,
+        observacoes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar chamada:', error);
+      return NextResponse.json(
+        { error: 'Erro ao atualizar chamada' },
+        { status: 500 }
+      );
+    }
+
+    // Se marcado como atendido, atualizar agendamento para concluído
+    if (status === 'atendido') {
+      await supabase
+        .from('agendamentos')
+        .update({ status: 'concluido' })
+        .eq('id', chamada.agendamento_id);
+    }
+
+    return NextResponse.json(chamada);
+  } catch (error) {
+    console.error('Erro ao processar requisição:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Remover chamada
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from('chamada_senhas')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao deletar chamada:', error);
+      return NextResponse.json(
+        { error: 'Erro ao deletar chamada' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ message: 'Chamada removida com sucesso' });
+  } catch (error) {
+    console.error('Erro ao processar requisição:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
