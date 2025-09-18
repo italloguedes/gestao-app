@@ -54,11 +54,15 @@ export default function TextToSpeech({
   }, [play, text, isSupported]);
 
   const speakText = () => {
+    console.log('🔊 TextToSpeech: Iniciando fala...', { isSupported, text, play });
+    
     if (!isSupported) {
+      console.error('❌ Síntese de voz não suportada neste navegador');
       return;
     }
     
     if (!text) {
+      console.error('❌ Texto vazio para falar');
       return;
     }
 
@@ -68,41 +72,55 @@ export default function TextToSpeech({
     // Criar novo utterance
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
+    
+    console.log('🔊 TextToSpeech: Utterance criado', utterance);
 
     // Configurar voz usando a função otimizada
     const bestVoice = getBestPortugueseVoice();
+    console.log('🔊 TextToSpeech: Vozes disponíveis', voices.length);
+    console.log('🔊 TextToSpeech: Melhor voz em português', bestVoice);
     
     if (bestVoice) {
       utterance.voice = bestVoice;
+      console.log('🔊 TextToSpeech: Usando voz em português:', bestVoice.name);
     } else if (voices.length > 0) {
       // Fallback para voz especificada ou primeira disponível
       const selectedVoice = voices.find(v => v.name === voice) || voices[0];
       if (selectedVoice) {
         utterance.voice = selectedVoice;
+        console.log('🔊 TextToSpeech: Usando voz fallback:', selectedVoice.name);
       }
+    } else {
+      console.log('🔊 TextToSpeech: Usando voz padrão do sistema');
     }
 
     // Configurar parâmetros
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
+    
+    console.log('🔊 TextToSpeech: Configurações aplicadas', { rate, pitch, volume });
 
     // Eventos
     utterance.onstart = () => {
+      console.log('🔊 TextToSpeech: Fala iniciada');
       setIsPlaying(true);
     };
 
     utterance.onend = () => {
+      console.log('🔊 TextToSpeech: Fala finalizada');
       setIsPlaying(false);
       onComplete?.();
     };
 
     utterance.onerror = (event) => {
+      console.error('❌ TextToSpeech: Erro na síntese de voz:', event.error);
       setIsPlaying(false);
       onComplete?.();
     };
 
     // Falar
+    console.log('🔊 TextToSpeech: Iniciando speechSynthesis.speak()');
     speechSynthesis.speak(utterance);
   };
 

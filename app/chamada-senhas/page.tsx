@@ -63,8 +63,15 @@ export default function ChamadaSenhasPage() {
 
   // Reproduzir som e falar nome quando nova chamada for adicionada
   useEffect(() => {
+    console.log('🔊 Debug: Verificando chamadas', { 
+      chamadasLength: chamadas.length, 
+      previousCount: previousChamadasCount 
+    });
+    
     if (chamadas.length > previousChamadasCount && chamadas.length > 0) {
       const novaChamada = chamadas[0]; // A primeira é sempre a mais recente
+      console.log('🔊 Debug: Nova chamada detectada', novaChamada);
+      
       if (novaChamada) {
         // Tocar som de notificação
         setPlaySound(true);
@@ -73,6 +80,8 @@ export default function ChamadaSenhasPage() {
         const textoFala = novaChamada.agendamentos?.atendimento_preferencial 
           ? getVoiceMessage('chamadaPreferencial', novaChamada.nome)
           : getVoiceMessage('chamada', novaChamada.nome);
+        
+        console.log('🔊 Debug: Texto para falar', textoFala);
         setSpeakText(textoFala);
         setShouldSpeak(true);
         
@@ -254,17 +263,66 @@ export default function ChamadaSenhasPage() {
           </div>
         )}
 
-        {/* Instruções */}
-        <div className="mt-12 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 max-w-2xl mx-auto">
-            <h3 className="text-xl font-bold text-white mb-4">
-              Instruções
-            </h3>
-            <div className="text-blue-200 space-y-2">
-              <p>• Aguarde sua chamada aparecer na tela</p>
-              <p>• Dirija-se ao atendimento quando seu nome for chamado</p>
-              <p>• O sistema falará seu nome automaticamente</p>
-              <p>• Em caso de dúvidas, procure um atendente</p>
+        {/* Instruções e Teste */}
+        <div className="mt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Instruções */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Instruções
+              </h3>
+              <div className="text-blue-200 space-y-2">
+                <p>• Aguarde sua chamada aparecer na tela</p>
+                <p>• Dirija-se ao atendimento quando seu nome for chamado</p>
+                <p>• O sistema falará seu nome automaticamente</p>
+                <p>• Em caso de dúvidas, procure um atendente</p>
+              </div>
+            </div>
+            
+            {/* Teste de Voz */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Teste de Voz
+              </h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    console.log('🔊 Teste: Iniciando teste de voz');
+                    const textoTeste = getVoiceMessage('teste');
+                    setSpeakText(textoTeste);
+                    setShouldSpeak(true);
+                  }}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Testar Voz
+                </button>
+                
+                <button
+                  onClick={() => {
+                    console.log('🔊 Teste: Verificando suporte');
+                    const supported = 'speechSynthesis' in window;
+                    const voices = supported ? speechSynthesis.getVoices() : [];
+                    console.log('Suporte:', supported);
+                    console.log('Vozes disponíveis:', voices.length);
+                    console.log('Vozes:', voices.map(v => ({ name: v.name, lang: v.lang })));
+                    alert(`Suporte: ${supported}\nVozes: ${voices.length}\nVerifique o console para detalhes`);
+                  }}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Verificar Suporte
+                </button>
+                
+                <div className="text-blue-200 text-sm">
+                  <p>Status: {shouldSpeak ? '🔊 Falando...' : '⏸️ Aguardando'}</p>
+                  <p className="text-xs mt-1">Abra o console (F12) para ver logs</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
