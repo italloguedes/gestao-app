@@ -17,6 +17,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
+  const [motivo, setMotivo] = React.useState('');
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -64,8 +65,30 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         setMessage('Atendimento iniciado e concluído com sucesso!');
       } else if (action === 'ausente') {
         console.log('🔄 EditAppointmentModal: Marcando como ausente...');
+        
+        if (!motivo.trim()) {
+          setMessage('Por favor, informe o motivo da ausência.');
+          setLoading(false);
+          return;
+        }
+        
         try {
-          await onStatusChange(appointment.id, 'ausente');
+          // Atualizar status e motivo
+          const { error: updateError } = await supabase
+            .from('agendamentos')
+            .update({ 
+              status: 'ausente',
+              tipo_cancelamento: motivo,
+              observacoes: `Ausente - Motivo: ${motivo}`
+            })
+            .eq('id', appointment.id);
+
+          if (updateError) {
+            console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+            throw updateError;
+          }
+
+          console.log('✅ EditAppointmentModal: Status atualizado para ausente');
           setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
@@ -89,8 +112,30 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
         console.log('🔄 EditAppointmentModal: Cancelando atendimento...');
+        
+        if (!motivo.trim()) {
+          setMessage('Por favor, informe o motivo do cancelamento.');
+          setLoading(false);
+          return;
+        }
+        
         try {
-          await onStatusChange(appointment.id, 'cancelado');
+          // Atualizar status e motivo
+          const { error: updateError } = await supabase
+            .from('agendamentos')
+            .update({ 
+              status: 'cancelado',
+              tipo_cancelamento: motivo,
+              observacoes: `Cancelado - Motivo: ${motivo}`
+            })
+            .eq('id', appointment.id);
+
+          if (updateError) {
+            console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+            throw updateError;
+          }
+
+          console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
           setMessage('Atendimento cancelado com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
@@ -205,6 +250,58 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               <FiClock className="w-5 h-5" />
               <span className="font-medium text-lg">{appointment.horario}</span>
             </div>
+
+            {/* Ações simples - Concluído */}
+            {(action === 'concluido') && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <div className="text-green-600 text-lg font-semibold mb-2">
+                  Confirmar Conclusão do Atendimento
+                </div>
+                <div className="text-green-700">
+                  Tem certeza que deseja marcar o atendimento de <strong>{appointment.nome}</strong> como concluído?
+                </div>
+              </div>
+            )}
+
+            {/* Ações com motivo - Ausente e Cancelado */}
+            {(action === 'ausente' || action === 'cancelar') && (
+              <div className="space-y-4">
+                <div className={`border rounded-lg p-4 ${
+                  action === 'ausente' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
+                }`}>
+                  <div className={`text-lg font-semibold mb-2 ${
+                    action === 'ausente' ? 'text-rose-800' : 'text-amber-800'
+                  }`}>
+                    {action === 'ausente' ? 'Marcar como Ausente' : 'Cancelar Atendimento'}
+                  </div>
+                  <div className={`${
+                    action === 'ausente' ? 'text-rose-700' : 'text-amber-700'
+                  }`}>
+                    {action === 'ausente' 
+                      ? `Confirme que ${appointment.nome} não compareceu ao atendimento.`
+                      : `Confirme o cancelamento do atendimento de ${appointment.nome}.`
+                    }
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {action === 'ausente' ? 'Motivo da Ausência' : 'Motivo do Cancelamento'} *
+                  </label>
+                  <textarea
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder={action === 'ausente' 
+                      ? 'Ex: Cliente não compareceu, não atendeu o telefone...'
+                      : 'Ex: Cliente solicitou cancelamento, reagendamento...'
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
           {(action === 'iniciar' || action === 'edit') && (
             <>
@@ -364,6 +461,8 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 >
                   Cancelar
                 </button>
+                
+                {/* Botão de submit - sempre visível exceto para ações simples */}
                 <button
                   type="submit"
                   className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center ${getButtonStyle(action)}`}
@@ -378,6 +477,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                     <>
                       {action === 'ausente' && <FiXCircle className="w-4 h-4 mr-2" />}
                       {action === 'concluido' && <FiCheck className="w-4 h-4 mr-2" />}
+                      {action === 'cancelar' && <FiXCircle className="w-4 h-4 mr-2" />}
                       {getButtonText(action)}
                     </>
                   )}

@@ -25,6 +25,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 import CreateAppointmentModal from "@/components/CreateAppointmentModal";
 import ChamadaNotification from "@/components/ChamadaNotification";
+import SimpleConfirmModal from "@/components/SimpleConfirmModal";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
@@ -79,6 +80,8 @@ export default function AgendamentosHojePage() {
   const [chamadaLoading, setChamadaLoading] = useState<number | null>(null);
   const [showChamadaNotification, setShowChamadaNotification] = useState(false);
   const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
+  const [showSimpleConfirm, setShowSimpleConfirm] = useState(false);
+  const [simpleConfirmData, setSimpleConfirmData] = useState<{id: number, nome: string, action: string} | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -266,6 +269,22 @@ export default function AgendamentosHojePage() {
     } catch (err) {
       console.error("Erro ao excluir agendamento:", err);
       alert("Erro ao excluir agendamento. Por favor, tente novamente.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSimpleConfirm = async () => {
+    if (!simpleConfirmData) return;
+    
+    setActionLoading(true);
+    try {
+      await handleStatusChange(simpleConfirmData.id, simpleConfirmData.action);
+      setShowSimpleConfirm(false);
+      setSimpleConfirmData(null);
+    } catch (err) {
+      console.error("Erro ao confirmar ação:", err);
+      alert(`Erro ao ${simpleConfirmData.action}: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
     }
@@ -503,16 +522,16 @@ export default function AgendamentosHojePage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
               <div className="mb-4 lg:mb-0">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">Agendamentos de Hoje</h1>
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center text-base text-slate-600">
-                    <FiCalendar className="w-4 h-4 mr-2" />
-                    {formatDate(selectedDate)}
+              <div className="flex items-center text-base text-slate-600">
+                <FiCalendar className="w-4 h-4 mr-2" />
+                {formatDate(selectedDate)}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-sm font-medium">
-                      {agendamentos.length} agendamentos
-                    </span>
+                  {agendamentos.length} agendamentos
+                </span>
                     <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                       {agendamentos.filter(a => a.status === 'confirmado').length} confirmados
                     </span>
@@ -520,24 +539,24 @@ export default function AgendamentosHojePage() {
                       {agendamentos.filter(a => a.status === 'concluido').length} concluídos
                     </span>
                   </div>
-                </div>
               </div>
+            </div>
               
               {/* Controles de Data */}
               <div className="flex items-center gap-3">
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
-                <button
-                  onClick={() => loadAgendamentos()}
+              <button
+                onClick={() => loadAgendamentos()}
                   className="flex items-center px-3 py-2 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
-                >
-                  <FiClock className="w-4 h-4 mr-1.5" />
-                  Atualizar
-                </button>
+              >
+                <FiClock className="w-4 h-4 mr-1.5" />
+                Atualizar
+              </button>
               </div>
             </div>
           </div>
@@ -714,54 +733,57 @@ export default function AgendamentosHojePage() {
                                     
                                     {/* Outros botões em grid */}
                                     <div className="grid grid-cols-2 gap-1">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("iniciar");
-                                          setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                                        title="Iniciar Atendimento"
-                                      >
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(agendamento);
+                                        setModalAction("iniciar");
+                                        setIsModalOpen(true);
+                                      }}
+                                      className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                                      title="Iniciar Atendimento"
+                                    >
                                         <FiEdit className="w-3 h-3 mr-1" />
-                                        Iniciar
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("ausente");
-                                          setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-1 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                        title="Marcar ausente"
-                                      >
-                                        <FiXCircle className="w-3 h-3 mr-1" />
-                                        Ausente
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("concluido");
-                                          setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                                        title="Marcar concluido"
-                                      >
-                                        <FiCheckCircle className="w-3 h-3 mr-1" />
-                                        Concluído
-                                      </button>
-                                      <button
-                                        onClick={() => {
+                                      Iniciar
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(agendamento);
+                                        setModalAction("ausente");
+                                        setIsModalOpen(true);
+                                      }}
+                                      className="px-2 py-1 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                      title="Marcar ausente"
+                                    >
+                                      <FiXCircle className="w-3 h-3 mr-1" />
+                                      Ausente
+                                    </button>
+                                     <button
+                                       onClick={() => {
+                                         setSimpleConfirmData({
+                                           id: agendamento.id,
+                                           nome: agendamento.nome,
+                                           action: 'concluido'
+                                         });
+                                         setShowSimpleConfirm(true);
+                                       }}
+                                       className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                                       title="Marcar concluido"
+                                     >
+                                       <FiCheckCircle className="w-3 h-3 mr-1" />
+                                       Concluído
+                                     </button>
+                                    <button
+                                      onClick={() => {
                                           setSelectedAppointment(agendamento);
                                           setModalAction("cancelar");
                                           setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-1 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                                        title="Cancelar"
-                                      >
-                                        <FiSlash className="w-3 h-3 mr-1" />
-                                        Cancelar
-                                      </button>
+                                      }}
+                                      className="px-2 py-1 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                                      title="Cancelar"
+                                    >
+                                      <FiSlash className="w-3 h-3 mr-1" />
+                                      Cancelar
+                                    </button>
                                     </div>
                                   </div>
                                 )}
@@ -830,6 +852,21 @@ export default function AgendamentosHojePage() {
           }}
         />
       )}
+
+      {/* Modal de Confirmação Simples */}
+      <SimpleConfirmModal
+        isOpen={showSimpleConfirm}
+        onClose={() => {
+          setShowSimpleConfirm(false);
+          setSimpleConfirmData(null);
+        }}
+        onConfirm={handleSimpleConfirm}
+        title="Confirmar Conclusão"
+        message={`Tem certeza que deseja marcar o atendimento de ${simpleConfirmData?.nome} como concluído?`}
+        confirmText="Concluir"
+        confirmColor="bg-green-600 hover:bg-green-700"
+        loading={actionLoading}
+      />
     </>
   );
 }
