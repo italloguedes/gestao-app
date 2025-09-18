@@ -10,9 +10,9 @@ export interface VoiceConfig {
 
 // Configurações padrão para chamadas
 export const DEFAULT_VOICE_CONFIG: VoiceConfig = {
-  rate: 0.8,           // Velocidade um pouco mais lenta para clareza
-  pitch: 1.1,          // Tom ligeiramente mais alto
-  volume: 0.9,         // Volume alto mas confortável
+  rate: 0.7,           // Velocidade mais lenta para melhor clareza
+  pitch: 1.0,          // Tom neutro para clareza
+  volume: 1.0,         // Volume máximo para audibilidade
   language: 'pt-BR',   // Português brasileiro
 };
 
@@ -20,41 +20,41 @@ export const DEFAULT_VOICE_CONFIG: VoiceConfig = {
 export const VOICE_CONFIGS = {
   // Para chamadas de senhas
   chamada: {
-    rate: 0.8,
-    pitch: 1.1,
-    volume: 0.9,
+    rate: 0.7,
+    pitch: 1.0,
+    volume: 1.0,
     language: 'pt-BR',
   },
   
   // Para notificações gerais
   notificacao: {
-    rate: 0.9,
+    rate: 0.8,
     pitch: 1.0,
-    volume: 0.7,
+    volume: 0.8,
     language: 'pt-BR',
   },
   
   // Para mensagens de erro
   erro: {
-    rate: 0.7,
+    rate: 0.6,
     pitch: 0.9,
-    volume: 0.8,
+    volume: 0.9,
     language: 'pt-BR',
   },
   
   // Para mensagens de sucesso
   sucesso: {
-    rate: 0.9,
-    pitch: 1.2,
-    volume: 0.8,
+    rate: 0.8,
+    pitch: 1.1,
+    volume: 0.9,
     language: 'pt-BR',
   }
 } as const;
 
 // Textos padrão para diferentes situações
 export const VOICE_MESSAGES = {
-  chamada: (nome: string) => `Chamada para ${nome}. Dirija-se ao atendimento.`,
-  chamadaPreferencial: (nome: string) => `Chamada preferencial para ${nome}. Dirija-se ao atendimento.`,
+  chamada: (nome: string) => `Atenção! Chamada para ${nome}. Dirija-se ao atendimento, por favor.`,
+  chamadaPreferencial: (nome: string) => `Atenção! Chamada preferencial para ${nome}. Dirija-se ao atendimento, por favor.`,
   teste: "Teste de voz. Sistema funcionando corretamente.",
   proxima: (nome: string) => `Próxima chamada será para ${nome}.`,
   aguarde: "Aguarde sua chamada. Obrigado pela paciência.",

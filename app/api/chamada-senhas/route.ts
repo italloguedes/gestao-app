@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') || 'chamada';
     const data = searchParams.get('data') || new Date().toISOString().split('T')[0];
 
+    console.log('🔍 Buscando chamadas:', { status, data });
+
     const { data: chamadas, error } = await supabase
       .from('chamada_senhas')
       .select(`
@@ -39,12 +41,14 @@ export async function GET(request: Request) {
       .limit(6);
 
     if (error) {
-      console.error('Erro ao buscar chamadas:', error);
+      console.error('❌ Erro ao buscar chamadas:', error);
       return NextResponse.json(
         { error: 'Erro ao buscar chamadas' },
         { status: 500 }
       );
     }
+
+    console.log('✅ Chamadas encontradas:', chamadas?.length || 0);
 
     // Ordenar chamadas: preferenciais primeiro, depois por horário
     const chamadasOrdenadas = (chamadas || []).sort((a, b) => {
@@ -64,7 +68,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(chamadasOrdenadas);
   } catch (error) {
-    console.error('Erro ao processar requisição:', error);
+    console.error('❌ Erro ao processar requisição:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -76,6 +80,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { agendamento_id, atendente_id, observacoes } = await request.json();
+
+    console.log('📢 Criando nova chamada:', { agendamento_id, atendente_id });
 
     if (!agendamento_id) {
       return NextResponse.json(
@@ -92,11 +98,14 @@ export async function POST(request: Request) {
       .single();
 
     if (agendamentoError || !agendamento) {
+      console.error('❌ Agendamento não encontrado:', agendamentoError);
       return NextResponse.json(
         { error: 'Agendamento não encontrado' },
         { status: 404 }
       );
     }
+
+    console.log('✅ Agendamento encontrado:', agendamento.nome);
 
     // Verificar se já existe chamada ativa para este agendamento hoje
     const hoje = new Date().toISOString().split('T')[0];
@@ -109,6 +118,7 @@ export async function POST(request: Request) {
       .single();
 
     if (chamadaExistente) {
+      console.warn('⚠️ Chamada já existe para este agendamento');
       return NextResponse.json(
         { error: 'Já existe uma chamada ativa para este agendamento' },
         { status: 409 }
@@ -132,22 +142,35 @@ export async function POST(request: Request) {
       .single();
 
     if (chamadaError) {
-      console.error('Erro ao criar chamada:', chamadaError);
+      console.error('❌ Erro ao criar chamada:', chamadaError);
       return NextResponse.json(
         { error: 'Erro ao criar chamada' },
         { status: 500 }
       );
     }
 
+    console.log('✅ Chamada criada com sucesso:', novaChamada.id);
+
     // Atualizar status do agendamento para "chamado"
-    await supabase
+    const { error: updateError } = await supabase
       .from('agendamentos')
       .update({ status: 'chamado' })
       .eq('id', agendamento_id);
 
-    return NextResponse.json(novaChamada, { status: 201 });
+    if (updateError) {
+      console.error('⚠️ Erro ao atualizar status do agendamento:', updateError);
+      // Não falhar a operação por causa disso
+    }
+
+    console.log('✅ Status do agendamento atualizado para "chamado"');
+
+    return NextResponse.json({
+      ...novaChamada,
+      success: true,
+      message: `Chamada criada para ${agendamento.nome}`
+    }, { status: 201 });
   } catch (error) {
-    console.error('Erro ao processar requisição:', error);
+    console.error('❌ Erro ao processar requisição:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -179,7 +202,7 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error('Erro ao atualizar chamada:', error);
+      console.error('❌ Erro ao atualizar chamada:', error);
       return NextResponse.json(
         { error: 'Erro ao atualizar chamada' },
         { status: 500 }
@@ -196,7 +219,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(chamada);
   } catch (error) {
-    console.error('Erro ao processar requisição:', error);
+    console.error('❌ Erro ao processar requisição:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -223,7 +246,7 @@ export async function DELETE(request: Request) {
       .eq('id', id);
 
     if (error) {
-      console.error('Erro ao deletar chamada:', error);
+      console.error('❌ Erro ao deletar chamada:', error);
       return NextResponse.json(
         { error: 'Erro ao deletar chamada' },
         { status: 500 }
@@ -232,7 +255,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ message: 'Chamada removida com sucesso' });
   } catch (error) {
-    console.error('Erro ao processar requisição:', error);
+    console.error('❌ Erro ao processar requisição:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

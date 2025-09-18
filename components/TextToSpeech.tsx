@@ -66,62 +66,82 @@ export default function TextToSpeech({
       return;
     }
 
-    // Parar qualquer fala anterior
-    speechSynthesis.cancel();
+    // Aguardar um pouco para garantir que as vozes estejam carregadas
+    setTimeout(() => {
+      // Parar qualquer fala anterior
+      speechSynthesis.cancel();
 
-    // Criar novo utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
-    
-    console.log('🔊 TextToSpeech: Utterance criado', utterance);
+      // Aguardar um pouco após cancelar
+      setTimeout(() => {
+        // Criar novo utterance
+        const utterance = new SpeechSynthesisUtterance(text);
+        utteranceRef.current = utterance;
+        
+        console.log('🔊 TextToSpeech: Utterance criado', utterance);
 
-    // Configurar voz usando a função otimizada
-    const bestVoice = getBestPortugueseVoice();
-    console.log('🔊 TextToSpeech: Vozes disponíveis', voices.length);
-    console.log('🔊 TextToSpeech: Melhor voz em português', bestVoice);
-    
-    if (bestVoice) {
-      utterance.voice = bestVoice;
-      console.log('🔊 TextToSpeech: Usando voz em português:', bestVoice.name);
-    } else if (voices.length > 0) {
-      // Fallback para voz especificada ou primeira disponível
-      const selectedVoice = voices.find(v => v.name === voice) || voices[0];
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log('🔊 TextToSpeech: Usando voz fallback:', selectedVoice.name);
-      }
-    } else {
-      console.log('🔊 TextToSpeech: Usando voz padrão do sistema');
-    }
+        // Configurar voz usando a função otimizada
+        const bestVoice = getBestPortugueseVoice();
+        console.log('🔊 TextToSpeech: Vozes disponíveis', voices.length);
+        console.log('🔊 TextToSpeech: Melhor voz em português', bestVoice);
+        
+        if (bestVoice) {
+          utterance.voice = bestVoice;
+          utterance.lang = 'pt-BR';
+          console.log('🔊 TextToSpeech: Usando voz em português:', bestVoice.name);
+        } else if (voices.length > 0) {
+          // Fallback para voz especificada ou primeira disponível
+          const selectedVoice = voices.find(v => v.name === voice) || voices[0];
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+            console.log('🔊 TextToSpeech: Usando voz fallback:', selectedVoice.name);
+          }
+        } else {
+          utterance.lang = 'pt-BR';
+          console.log('🔊 TextToSpeech: Usando voz padrão do sistema');
+        }
 
-    // Configurar parâmetros
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-    utterance.volume = volume;
-    
-    console.log('🔊 TextToSpeech: Configurações aplicadas', { rate, pitch, volume });
+        // Configurar parâmetros otimizados para clareza
+        utterance.rate = Math.max(0.5, Math.min(1.2, rate)); // Limitar entre 0.5 e 1.2
+        utterance.pitch = Math.max(0.8, Math.min(1.5, pitch)); // Limitar entre 0.8 e 1.5
+        utterance.volume = Math.max(0.3, Math.min(1.0, volume)); // Limitar entre 0.3 e 1.0
+        
+        console.log('🔊 TextToSpeech: Configurações aplicadas', { 
+          rate: utterance.rate, 
+          pitch: utterance.pitch, 
+          volume: utterance.volume,
+          lang: utterance.lang
+        });
 
-    // Eventos
-    utterance.onstart = () => {
-      console.log('🔊 TextToSpeech: Fala iniciada');
-      setIsPlaying(true);
-    };
+        // Eventos
+        utterance.onstart = () => {
+          console.log('🔊 TextToSpeech: Fala iniciada');
+          setIsPlaying(true);
+        };
 
-    utterance.onend = () => {
-      console.log('🔊 TextToSpeech: Fala finalizada');
-      setIsPlaying(false);
-      onComplete?.();
-    };
+        utterance.onend = () => {
+          console.log('🔊 TextToSpeech: Fala finalizada');
+          setIsPlaying(false);
+          onComplete?.();
+        };
 
-    utterance.onerror = (event) => {
-      console.error('❌ TextToSpeech: Erro na síntese de voz:', event.error);
-      setIsPlaying(false);
-      onComplete?.();
-    };
+        utterance.onerror = (event) => {
+          console.error('❌ TextToSpeech: Erro na síntese de voz:', event.error);
+          setIsPlaying(false);
+          onComplete?.();
+        };
 
-    // Falar
-    console.log('🔊 TextToSpeech: Iniciando speechSynthesis.speak()');
-    speechSynthesis.speak(utterance);
+        // Falar
+        console.log('🔊 TextToSpeech: Iniciando speechSynthesis.speak()');
+        try {
+          speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('❌ TextToSpeech: Erro ao executar speak():', error);
+          setIsPlaying(false);
+          onComplete?.();
+        }
+      }, 100);
+    }, 200);
   };
 
   const stopSpeaking = () => {

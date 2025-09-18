@@ -24,6 +24,7 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 import CreateAppointmentModal from "@/components/CreateAppointmentModal";
+import ChamadaNotification from "@/components/ChamadaNotification";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
@@ -76,6 +77,8 @@ export default function AgendamentosHojePage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [chamadaLoading, setChamadaLoading] = useState<number | null>(null);
+  const [showChamadaNotification, setShowChamadaNotification] = useState(false);
+  const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -270,6 +273,15 @@ export default function AgendamentosHojePage() {
 
   const handleChamarSenha = async (agendamento: Agendamento) => {
     setChamadaLoading(agendamento.id);
+    
+    // Mostrar notificação IMEDIATAMENTE
+    setChamadaData({
+      nome: agendamento.nome,
+      horario: agendamento.horario.substring(0, 5),
+      preferencial: agendamento.atendimento_preferencial || false
+    });
+    setShowChamadaNotification(true);
+    
     try {
       const response = await fetch('/api/chamada-senhas', {
         method: 'POST',
@@ -288,10 +300,13 @@ export default function AgendamentosHojePage() {
         throw new Error(errorData.error || 'Erro ao chamar senha');
       }
 
-      alert(`Senha chamada com sucesso para ${agendamento.nome}!`);
+      console.log(`✅ Senha chamada com sucesso para ${agendamento.nome}!`);
       await loadAgendamentos(); // Recarregar para atualizar status
     } catch (err) {
-      console.error("Erro ao chamar senha:", err);
+      console.error("❌ Erro ao chamar senha:", err);
+      // Fechar notificação em caso de erro
+      setShowChamadaNotification(false);
+      setChamadaData(null);
       alert(`Erro ao chamar senha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setChamadaLoading(null);
@@ -801,6 +816,20 @@ export default function AgendamentosHojePage() {
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
       />
+
+      {/* Notificação de Chamada */}
+      {chamadaData && (
+        <ChamadaNotification
+          isVisible={showChamadaNotification}
+          nome={chamadaData.nome}
+          horario={chamadaData.horario}
+          preferencial={chamadaData.preferencial}
+          onClose={() => {
+            setShowChamadaNotification(false);
+            setChamadaData(null);
+          }}
+        />
+      )}
     </>
   );
 }
