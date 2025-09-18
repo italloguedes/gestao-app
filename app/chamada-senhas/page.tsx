@@ -72,10 +72,10 @@ export default function ChamadaSenhasPage() {
     }
   };
 
-  // Buscar chamadas imediatamente e depois a cada 500ms para tempo real
+  // Buscar chamadas imediatamente e depois a cada 200ms para detecção instantânea
   useEffect(() => {
     fetchChamadas();
-    const interval = setInterval(fetchChamadas, 500);
+    const interval = setInterval(fetchChamadas, 200);
     return () => clearInterval(interval);
   }, []);
 
@@ -356,11 +356,18 @@ export default function ChamadaSenhasPage() {
                           }`}>
                             {chamada.horario ? formatTime(chamada.horario) : 'Horário não disponível'}
                           </div>
-                          {chamada.agendamentos?.atendimento_preferencial && (
-                            <div className="mt-2 inline-block bg-yellow-500 text-yellow-900 px-2 py-1 rounded-full font-bold text-xs">
-                              ⭐ PREFERENCIAL
-                            </div>
-                          )}
+                          <div className="mt-2 flex flex-wrap gap-1 justify-center">
+                            {chamada.agendamentos?.atendimento_preferencial && (
+                              <div className="inline-block bg-yellow-500 text-yellow-900 px-2 py-1 rounded-full font-bold text-xs">
+                                ⭐ PREFERENCIAL
+                              </div>
+                            )}
+                            {chamada.observacoes?.includes('Rechamada') && (
+                              <div className="inline-block bg-red-500 text-white px-2 py-1 rounded-full font-bold text-xs">
+                                🔄 RECHAMADA
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className={`text-green-100 ${
                           index === 0 ? 'text-sm' : 'text-xs'
@@ -414,7 +421,7 @@ export default function ChamadaSenhasPage() {
             <div className="text-center text-blue-200">
               <p>Sistema de Chamadas - Sala Sensorial ALECE</p>
               <p className="text-sm mt-1">
-                Atualizado automaticamente a cada 500ms
+                Atualizado automaticamente a cada 200ms
               </p>
             </div>
           </div>

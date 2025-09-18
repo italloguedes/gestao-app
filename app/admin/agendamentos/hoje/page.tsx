@@ -287,7 +287,7 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const handleChamarSenha = async (agendamento: Agendamento) => {
+  const handleChamarSenha = async (agendamento: Agendamento, isRechamar = false) => {
     setChamadaLoading(agendamento.id);
     
     try {
@@ -299,7 +299,7 @@ export default function AgendamentosHojePage() {
         body: JSON.stringify({
           agendamento_id: agendamento.id,
           atendente_id: user?.id,
-          observacoes: `Chamada automática - ${agendamento.nome}`
+          observacoes: isRechamar ? `Rechamada - ${agendamento.nome}` : `Chamada automática - ${agendamento.nome}`
         }),
       });
 
@@ -308,14 +308,14 @@ export default function AgendamentosHojePage() {
         throw new Error(errorData.error || 'Erro ao chamar senha');
       }
 
-      console.log(`✅ Senha chamada com sucesso para ${agendamento.nome}!`);
+      console.log(`✅ ${isRechamar ? 'Rechamada' : 'Chamada'} realizada com sucesso para ${agendamento.nome}!`);
       await loadAgendamentos(); // Recarregar para atualizar status
       
       // Mostrar confirmação simples
-      alert(`✅ Senha chamada com sucesso para ${agendamento.nome}!`);
+      alert(`✅ ${isRechamar ? 'Rechamada' : 'Chamada'} realizada com sucesso para ${agendamento.nome}!`);
     } catch (err) {
-      console.error("❌ Erro ao chamar senha:", err);
-      alert(`Erro ao chamar senha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      console.error(`❌ Erro ao ${isRechamar ? 'rechamar' : 'chamar'} senha:`, err);
+      alert(`Erro ao ${isRechamar ? 'rechamar' : 'chamar'} senha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setChamadaLoading(null);
     }
@@ -779,8 +779,33 @@ export default function AgendamentosHojePage() {
                                 
                                 {/* Status especial para agendamentos chamados */}
                                 {agendamento.status === "chamado" && (
-                                  <div className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-center">
-                                    📢 CHAMADA
+                                  <div className="space-y-2">
+                                    <div className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-center">
+                                      📢 CHAMADA
+                                    </div>
+                                    <button
+                                      onClick={() => handleChamarSenha(agendamento, true)}
+                                      disabled={chamadaLoading === agendamento.id}
+                                      className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                      title="Rechamar Senha"
+                                    >
+                                      {chamadaLoading === agendamento.id ? (
+                                        <>
+                                          <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          Rechamando...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                          </svg>
+                                          🔄 RECHAMAR
+                                        </>
+                                      )}
+                                    </button>
                                   </div>
                                 )}
                               </div>

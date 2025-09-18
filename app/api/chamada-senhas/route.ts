@@ -117,12 +117,35 @@ export async function POST(request: Request) {
       .eq('status', 'chamada')
       .single();
 
+    // Se já existe chamada, atualizar timestamp para "rechamar"
     if (chamadaExistente) {
-      console.warn('⚠️ Chamada já existe para este agendamento');
-      return NextResponse.json(
-        { error: 'Já existe uma chamada ativa para este agendamento' },
-        { status: 409 }
-      );
+      console.log('🔄 Atualizando chamada existente (rechamar)');
+      
+      const { data: chamadaAtualizada, error: updateError } = await supabase
+        .from('chamada_senhas')
+        .update({
+          created_at: new Date().toISOString(),
+          observacoes: observacoes
+        })
+        .eq('id', chamadaExistente.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar chamada:', updateError);
+        return NextResponse.json(
+          { error: 'Erro ao rechamar senha' },
+          { status: 500 }
+        );
+      }
+
+      console.log('✅ Chamada atualizada com sucesso (rechamar)');
+      return NextResponse.json({
+        ...chamadaAtualizada,
+        success: true,
+        message: `Rechamada realizada para ${agendamento.nome}`,
+        isRechamar: true
+      }, { status: 200 });
     }
 
     // Criar nova chamada
