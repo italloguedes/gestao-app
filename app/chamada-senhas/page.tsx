@@ -30,6 +30,7 @@ export default function ChamadaSenhasPage() {
   const [showChamadaNotification, setShowChamadaNotification] = useState(false);
   const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
   const [lastChamadaId, setLastChamadaId] = useState<number | null>(null);
+  const [lastChamadaTimestamp, setLastChamadaTimestamp] = useState<string | null>(null);
 
   // Atualizar horário a cada segundo
   useEffect(() => {
@@ -47,6 +48,10 @@ export default function ChamadaSenhasPage() {
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data)) {
+          console.log('📡 Chamadas recebidas:', data.length, 'chamadas');
+          if (data.length > 0) {
+            console.log('📡 Primeira chamada:', data[0]);
+          }
           setChamadas(data);
         } else {
           console.warn('Dados recebidos não são um array:', data);
@@ -78,35 +83,61 @@ export default function ChamadaSenhasPage() {
     if (chamadas.length > 0) {
       const ultimaChamada = chamadas[0];
       
-      // Verificar se é uma nova chamada baseada no ID
-      if (ultimaChamada && ultimaChamada.id && ultimaChamada.id !== lastChamadaId) {
-        console.log('🔊 NOVA CHAMADA DETECTADA!', {
-          id: ultimaChamada.id,
-          nome: ultimaChamada.nome,
-          horario: ultimaChamada.horario,
-          lastId: lastChamadaId
-        });
+      // Verificar se é uma nova chamada baseada no ID e timestamp
+      if (ultimaChamada && ultimaChamada.id) {
+        const isNewId = lastChamadaId === null || ultimaChamada.id !== lastChamadaId;
+        const isNewTimestamp = lastChamadaTimestamp === null || ultimaChamada.created_at !== lastChamadaTimestamp;
         
-        // Mostrar notificação visual IMEDIATAMENTE
-        setChamadaData({
-          nome: ultimaChamada.nome,
-          horario: ultimaChamada.horario ? ultimaChamada.horario.substring(0, 5) : '00:00',
-          preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
-        });
-        setShowChamadaNotification(true);
-        
-        // Tocar som
-        setPlaySound(true);
-        setTimeout(() => setPlaySound(false), 100);
-        
-        // Atualizar o ID da última chamada
-        setLastChamadaId(ultimaChamada.id);
+        if (isNewId || isNewTimestamp) {
+          console.log('🔊 NOVA CHAMADA DETECTADA!', {
+            id: ultimaChamada.id,
+            nome: ultimaChamada.nome,
+            horario: ultimaChamada.horario,
+            created_at: ultimaChamada.created_at,
+            lastId: lastChamadaId,
+            lastTimestamp: lastChamadaTimestamp,
+            isFirstLoad: lastChamadaId === null
+          });
+          
+          // Só mostrar notificação se não for o primeiro carregamento
+          if (lastChamadaId !== null) {
+            console.log('🔔 MOSTRANDO NOTIFICAÇÃO!');
+            // Mostrar notificação visual IMEDIATAMENTE
+            setChamadaData({
+              nome: ultimaChamada.nome,
+              horario: ultimaChamada.horario ? ultimaChamada.horario.substring(0, 5) : '00:00',
+              preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
+            });
+            setShowChamadaNotification(true);
+            
+            // Tocar som
+            setPlaySound(true);
+            setTimeout(() => setPlaySound(false), 100);
+          }
+          
+          // Atualizar o ID e timestamp da última chamada
+          setLastChamadaId(ultimaChamada.id);
+          setLastChamadaTimestamp(ultimaChamada.created_at);
+        }
       }
     }
-  }, [chamadas, lastChamadaId]);
+  }, [chamadas, lastChamadaId, lastChamadaTimestamp]);
 
   const formatTime = (timeString: string) => {
     return timeString.substring(0, 5);
+  };
+
+  // Função para testar notificação
+  const testNotification = () => {
+    console.log('🧪 Testando notificação...');
+    setChamadaData({
+      nome: 'TESTE DE NOTIFICAÇÃO',
+      horario: '12:00',
+      preferencial: false
+    });
+    setShowChamadaNotification(true);
+    setPlaySound(true);
+    setTimeout(() => setPlaySound(false), 100);
   };
 
   if (loading) {
@@ -174,6 +205,12 @@ export default function ChamadaSenhasPage() {
                     day: 'numeric'
                   })}
                 </div>
+                <button
+                  onClick={testNotification}
+                  className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                >
+                  🧪 Testar Notificação
+                </button>
               </div>
             </div>
           </div>
