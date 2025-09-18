@@ -8,6 +8,7 @@ interface ChamadaNotificationProps {
   nome: string;
   horario: string;
   preferencial?: boolean;
+  timeLeft?: number;
   onClose: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function ChamadaNotification({
   nome, 
   horario, 
   preferencial = false,
+  timeLeft = 8,
   onClose 
 }: ChamadaNotificationProps) {
   const [showNotification, setShowNotification] = useState(false);
@@ -37,16 +39,10 @@ export default function ChamadaNotification({
         setPlaySound(true);
         setTimeout(() => setPlaySound(false), 100);
       }, 4000);
-      
-      // Auto-close após 15 segundos
-      const timer = setTimeout(() => {
-        setShowNotification(false);
-        setTimeout(() => onClose(), 300); // Aguarda animação
-      }, 15000);
-
-      return () => clearTimeout(timer);
+    } else {
+      setShowNotification(false);
     }
-  }, [isVisible, onClose]);
+  }, [isVisible]);
 
   const handleClose = () => {
     setShowNotification(false);
@@ -77,6 +73,13 @@ export default function ChamadaNotification({
               <div className="text-orange-100 text-lg">
                 ATENÇÃO! Sua senha foi chamada
               </div>
+              {timeLeft && timeLeft > 0 && (
+                <div className="mt-3 inline-block bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                  <div className="text-white font-bold text-lg">
+                    ⏰ Fecha em {timeLeft}s
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Conteúdo */}

@@ -28,9 +28,10 @@ export default function ChamadaSenhasPage() {
   const [playSound, setPlaySound] = useState(false);
   const [previousChamadasCount, setPreviousChamadasCount] = useState(0);
   const [showChamadaNotification, setShowChamadaNotification] = useState(false);
-  const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
+  const [chamadaData, setChamadaData] = useState<{nome: string, horario: string, preferencial: boolean, timeLeft?: number} | null>(null);
   const [lastChamadaId, setLastChamadaId] = useState<number | null>(null);
   const [lastChamadaTimestamp, setLastChamadaTimestamp] = useState<string | null>(null);
+  const [notificationTimer, setNotificationTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Atualizar horário a cada segundo
   useEffect(() => {
@@ -78,6 +79,15 @@ export default function ChamadaSenhasPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Cleanup do timer quando componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (notificationTimer) {
+        clearTimeout(notificationTimer);
+      }
+    };
+  }, [notificationTimer]);
+
   // Detectar novas chamadas e tocar som
   useEffect(() => {
     if (chamadas.length > 0) {
@@ -102,17 +112,23 @@ export default function ChamadaSenhasPage() {
           // Só mostrar notificação se não for o primeiro carregamento
           if (lastChamadaId !== null) {
             console.log('🔔 MOSTRANDO NOTIFICAÇÃO!');
-            // Mostrar notificação visual IMEDIATAMENTE
-            setChamadaData({
-              nome: ultimaChamada.nome,
-              horario: ultimaChamada.horario ? ultimaChamada.horario.substring(0, 5) : '00:00',
-              preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
-            });
-            setShowChamadaNotification(true);
             
-            // Tocar som
-            setPlaySound(true);
-            setTimeout(() => setPlaySound(false), 100);
+            // Reset da notificação anterior se estiver ativa
+            if (showChamadaNotification) {
+              console.log('🔄 Resetando notificação anterior...');
+              setShowChamadaNotification(false);
+              setChamadaData(null);
+            }
+            
+            // Pequeno delay para garantir que o reset aconteça
+            setTimeout(() => {
+              // Mostrar notificação com auto-close
+              showNotificationWithTimer({
+                nome: ultimaChamada.nome,
+                horario: ultimaChamada.horario ? ultimaChamada.horario.substring(0, 5) : '00:00',
+                preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
+              });
+            }, 100);
           }
           
           // Atualizar o ID e timestamp da última chamada
@@ -127,17 +143,64 @@ export default function ChamadaSenhasPage() {
     return timeString.substring(0, 5);
   };
 
+  // Função para mostrar notificação com auto-close
+  const showNotificationWithTimer = (data: {nome: string, horario: string, preferencial: boolean}) => {
+    // Limpar timer anterior se existir
+    if (notificationTimer) {
+      clearTimeout(notificationTimer);
+    }
+
+    // Mostrar notificação com contador inicial
+    setChamadaData({...data, timeLeft: 8});
+    setShowChamadaNotification(true);
+    
+    // Tocar som
+    setPlaySound(true);
+    setTimeout(() => setPlaySound(false), 100);
+
+    // Atualizar contador a cada segundo
+    let timeLeft = 8;
+    const countdownInterval = setInterval(() => {
+      timeLeft--;
+      setChamadaData(prev => prev ? {...prev, timeLeft} : null);
+      
+      if (timeLeft <= 0) {
+        clearInterval(countdownInterval);
+      }
+    }, 1000);
+
+    // Configurar auto-close após 8 segundos
+    const timer = setTimeout(() => {
+      console.log('⏰ Auto-fechando notificação após 8 segundos...');
+      clearInterval(countdownInterval);
+      setShowChamadaNotification(false);
+      setTimeout(() => {
+        setChamadaData(null);
+      }, 300); // Aguarda animação de fechamento
+    }, 8000);
+
+    setNotificationTimer(timer);
+  };
+
   // Função para testar notificação
   const testNotification = () => {
     console.log('🧪 Testando notificação...');
-    setChamadaData({
-      nome: 'TESTE DE NOTIFICAÇÃO',
-      horario: '12:00',
-      preferencial: false
-    });
-    setShowChamadaNotification(true);
-    setPlaySound(true);
-    setTimeout(() => setPlaySound(false), 100);
+    
+    // Reset da notificação anterior se estiver ativa
+    if (showChamadaNotification) {
+      console.log('🔄 Resetando notificação anterior...');
+      setShowChamadaNotification(false);
+      setChamadaData(null);
+    }
+    
+    // Pequeno delay para garantir que o reset aconteça
+    setTimeout(() => {
+      showNotificationWithTimer({
+        nome: `TESTE ${Date.now()}`,
+        horario: '12:00',
+        preferencial: false
+      });
+    }, 100);
   };
 
   if (loading) {
@@ -205,12 +268,27 @@ export default function ChamadaSenhasPage() {
                     day: 'numeric'
                   })}
                 </div>
-                <button
-                  onClick={testNotification}
-                  className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
-                >
-                  🧪 Testar Notificação
-                </button>
+                <div className="mt-2 space-x-2">
+                  <button
+                    onClick={testNotification}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                  >
+                    🧪 Testar Notificação
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Testar múltiplas notificações
+                      for (let i = 1; i <= 3; i++) {
+                        setTimeout(() => {
+                          testNotification();
+                        }, i * 2000);
+                      }
+                    }}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                  >
+                    🔄 Testar Sequência
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -350,6 +428,7 @@ export default function ChamadaSenhasPage() {
           nome={chamadaData.nome}
           horario={chamadaData.horario}
           preferencial={chamadaData.preferencial}
+          timeLeft={chamadaData.timeLeft}
           onClose={() => {
             setShowChamadaNotification(false);
             setChamadaData(null);
