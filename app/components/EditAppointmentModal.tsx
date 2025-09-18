@@ -30,6 +30,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     setMessage('');
 
     try {
+      console.log('🔄 EditAppointmentModal: handleSubmit iniciado', { action, appointmentId: appointment?.id });
       const formData = new FormData(e.target as HTMLFormElement);
       const updatedAppointment = {
         ...appointment,
@@ -46,145 +47,57 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       };
 
       if (action === 'iniciar') {
-        console.log('Iniciando processo de conclusão do atendimento...');
+        console.log('🔄 EditAppointmentModal: Iniciando atendimento...');
         
-        // Update appointment details
-        const { error: appointmentError } = await supabase
-          .from('agendamentos')
-          .update({ ...updatedAppointment, status: 'concluido' })
-          .eq('id', appointment.id);
-
-        if (appointmentError) {
-          console.error('Erro ao atualizar agendamento:', appointmentError);
-          throw appointmentError;
-        }
-        
-        console.log('Agendamento atualizado com sucesso para status: concluido');
-
-        // Create atendimento record
-        const now = new Date();
-        const diaAtual = now.toISOString().split('T')[0];
-        const horario = now.toTimeString().split(' ')[0];
-
-        const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
-        if (protocolError) throw protocolError;
-
-        const protocolo = protocolData;
-        console.log('Protocolo gerado:', protocolo);
-
-        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
-          {
-            nome: updatedAppointment.nome,
-            cpf: updatedAppointment.cpf,
-            email: updatedAppointment.email,
-            solicitante: formData.get('solicitante'),
-            observacoes: updatedAppointment.observacoes,
-            horario,
-            dia_atual: diaAtual,
-            usuario_id: (await supabase.auth.getUser()).data.user?.id,
-            protocolo,
-            status: 'em_andamento',
-          },
-        ]);
-
-        if (atendimentoError) {
-          console.error('Erro ao criar atendimento:', atendimentoError);
-          throw atendimentoError;
-        }
-        
-        console.log('Atendimento criado com sucesso');
-
-        // Send email
-        try {
-          const res = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: updatedAppointment.email,
-              subject: `Atendimento Realizado, ${updatedAppointment.nome}! 🎉`,
-              html: `
-                <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
-                  <div style="text-align: center; margin-bottom: 24px;">
-                    <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
-                  </div>
-                  <div style="background: #fff; border-radius: 10px; padding: 32px 24px; box-shadow: 0 2px 8px #0001;">
-                    <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 18px;">
-                      Atendimento para emissão da CIN (Carteira de Identidade Nacional)
-                    </h2>
-                    <p style="margin-bottom: 18px;">
-                      Olá, ${updatedAppointment.nome}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
-                    </p>
-                    <p style="margin-bottom: 10px;">
-                      <b>Nome:</b> ${updatedAppointment.nome}<br>
-                      <b>CPF:</b> ${updatedAppointment.cpf}<br>
-                      <b>Número de Protocolo:</b> ${protocolo}
-                    </p>
-                    <p style="margin-bottom: 0;">
-                      Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
-                    </p>
-                  </div>
-                  <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
-                    © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
-                  </div>
-                </div>
-              `,
-            }),
-          });
-
-          if (!res.ok) {
-            console.error('Erro ao enviar email:', await res.json());
-          } else {
-            console.log('Email enviado com sucesso');
-          }
-        } catch (err) {
-          console.error('Erro ao enviar email:', err);
-        }
-
-        console.log('Processo de conclusão finalizado com sucesso');
-        setMessage('Atendimento concluído com sucesso!');
-      } else if (action === 'ausente') {
-        await onStatusChange(appointment.id, 'ausente');
-        setMessage('Atendimento marcado como ausente com sucesso!');
-      } else if (action === 'concluido') {
-        const now = new Date();
-        const diaAtual = now.toISOString().split('T')[0];
-        const horario = now.toTimeString().split(' ')[0];
-
-        const { data: protocolData, error: protocolError } = await supabase.rpc('generate_protocolo');
-        if (protocolError) throw protocolError;
-
-        const protocolo = protocolData;
-
-        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
-          {
-            nome: updatedAppointment.nome,
-            cpf: updatedAppointment.cpf,
-            email: updatedAppointment.email,
-            solicitante: formData.get('solicitante') || appointment.solicitante,
-            observacoes: updatedAppointment.observacoes,
-            horario,
-            dia_atual: diaAtual,
-            usuario_id: (await supabase.auth.getUser()).data.user?.id,
-            protocolo,
-            status: 'em_andamento',
-          },
-        ]);
-
-        if (atendimentoError) throw atendimentoError;
-
-        // Atualize o agendamento com status 'concluido'
+        // Apenas atualizar o status do agendamento para 'concluido'
         const { error: updateError } = await supabase
           .from('agendamentos')
-          .update({ ...updatedAppointment, status: 'concluido' })
+          .update({ status: 'concluido' })
           .eq('id', appointment.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+          throw updateError;
+        }
 
+        console.log('✅ EditAppointmentModal: Status atualizado para concluido');
+        setMessage('Atendimento iniciado e concluído com sucesso!');
+      } else if (action === 'ausente') {
+        console.log('🔄 EditAppointmentModal: Marcando como ausente...');
+        try {
+          await onStatusChange(appointment.id, 'ausente');
+          setMessage('Atendimento marcado como ausente com sucesso!');
+        } catch (error) {
+          console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
+          throw error;
+        }
+      } else if (action === 'concluido') {
+        console.log('🔄 EditAppointmentModal: Concluindo atendimento...');
+        
+        // Apenas atualizar o status do agendamento para 'concluido'
+        const { error: updateError } = await supabase
+          .from('agendamentos')
+          .update({ status: 'concluido' })
+          .eq('id', appointment.id);
+
+        if (updateError) {
+          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ EditAppointmentModal: Status atualizado para concluido');
         setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
-        await onStatusChange(appointment.id, 'cancelado');
-        setMessage('Atendimento cancelado com sucesso!');
+        console.log('🔄 EditAppointmentModal: Cancelando atendimento...');
+        try {
+          await onStatusChange(appointment.id, 'cancelado');
+          setMessage('Atendimento cancelado com sucesso!');
+        } catch (error) {
+          console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
+          throw error;
+        }
       } else if (action === 'edit') {
+        console.log('🔄 EditAppointmentModal: Editando agendamento...');
         // Apenas atualizar os dados do agendamento
         const { error } = await supabase
           .from('agendamentos')
@@ -202,12 +115,15 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
       }
 
+      // Fechar modal após 2 segundos se não houver erro
       setTimeout(() => {
+        console.log('🔄 EditAppointmentModal: Fechando modal após sucesso');
         onClose();
       }, 2000);
     } catch (err) {
-      console.error('Erro:', err);
-      setMessage(`Erro ao ${action} atendimento. Por favor, tente novamente.`);
+      console.error('❌ EditAppointmentModal: Erro no handleSubmit:', err);
+      console.error('❌ Stack trace:', err instanceof Error ? err.stack : 'No stack trace available');
+      setMessage(`Erro ao ${action} atendimento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
