@@ -578,7 +578,18 @@ export default function AgendamentosHojePage() {
                 <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
                 </svg>
-                Tela de Chamadas
+                Tela Pública
+              </button>
+              
+              <button
+                onClick={() => router.push("/admin/chamadas")}
+                className="flex items-center px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                title="Abrir painel de chamadas para administradores"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Painel de Chamadas
               </button>
               
               <button
@@ -663,152 +674,92 @@ export default function AgendamentosHojePage() {
                                 )}
                               </div>
                               
-                              {/* Informações do agendamento */}
-                              <div className="space-y-1 mb-2">
-                                <div className="flex items-center text-slate-700">
-                                  <FiUser className="w-3 h-3 mr-1 text-slate-500" />
-                                  <span className="font-semibold text-xs truncate">
-                                    {agendamento.nome}
-                                  </span>
+                              {/* Nome do agendamento */}
+                              <div className="mb-3">
+                                <div className="font-semibold text-sm text-slate-800 text-center truncate">
+                                  {agendamento.nome}
                                 </div>
-                                <div className="flex items-center text-slate-600">
-                                  <FiPhone className="w-3 h-3 mr-1 text-slate-500" />
-                                  <span className="text-xs">{agendamento.telefone}</span>
-                                </div>
+                                {agendamento.atendimento_preferencial && (
+                                  <div className="text-center mt-1">
+                                    <span className="inline-block bg-yellow-500 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
+                                      ⭐ PREFERENCIAL
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Botões de ação */}
-                              <div className="space-y-2">
-                                {/* Botão de editar sempre visível */}
+                              {/* Botão de Chamar Senha - Principal */}
+                              {agendamento.status === "confirmado" && (
                                 <button
-                                  onClick={() => {
-                                    setSelectedAppointment(agendamento);
-                                    setModalAction("edit");
-                                    setIsModalOpen(true);
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
-                                  title="Editar Agendamento"
+                                  onClick={() => handleChamarSenha(agendamento)}
+                                  disabled={chamadaLoading === agendamento.id}
+                                  className="w-full px-2 py-3 text-sm rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none animate-pulse"
+                                  title="Chamar Senha - Aparecerá no painel de chamadas"
                                 >
-                                  <FiEdit className="w-3 h-3 mr-1" />
-                                  Editar
+                                  {chamadaLoading === agendamento.id ? (
+                                    <>
+                                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Chamando...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
+                                      </svg>
+                                      📢 CHAMAR
+                                    </>
+                                  )}
                                 </button>
+                              )}
 
-                                {agendamento.status === "confirmado" && (
-                                  <div className="space-y-2">
-                                    {/* Botão de Chamar Senha - Destaque especial */}
-                                    <button
-                                      onClick={() => handleChamarSenha(agendamento)}
-                                      disabled={chamadaLoading === agendamento.id}
-                                      className="w-full px-2 py-2 text-xs rounded bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                                      title="Chamar Senha"
-                                    >
-                                      {chamadaLoading === agendamento.id ? (
-                                        <>
-                                          <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                          </svg>
-                                          Chamando...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
-                                          </svg>
-                                          📢 CHAMAR
-                                        </>
-                                      )}
-                                    </button>
-                                    
-                                    {/* Outros botões em grid */}
-                                    <div className="grid grid-cols-2 gap-1">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("iniciar");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
-                                      title="Iniciar Atendimento"
-                                    >
-                                        <FiEdit className="w-3 h-3 mr-1" />
-                                      Iniciar
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("ausente");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
-                                      title="Marcar ausente"
-                                    >
-                                      <FiXCircle className="w-3 h-3 mr-1" />
-                                      Ausente
-                                    </button>
-                                     <button
-                                       onClick={() => {
-                                         setSimpleConfirmData({
-                                           id: agendamento.id,
-                                           nome: agendamento.nome,
-                                           action: 'concluido'
-                                         });
-                                         setShowSimpleConfirm(true);
-                                       }}
-                                       className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
-                                       title="Marcar concluido"
-                                     >
-                                       <FiCheckCircle className="w-3 h-3 mr-1" />
-                                       Concluído
-                                     </button>
-                                    <button
-                                      onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("cancelar");
-                                          setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-1 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
-                                      title="Cancelar"
-                                    >
-                                      <FiSlash className="w-3 h-3 mr-1" />
-                                      Cancelar
-                                    </button>
-                                    </div>
+                              {/* Status especial para agendamentos chamados */}
+                              {agendamento.status === "chamado" && (
+                                <div className="space-y-2">
+                                  <div className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-center">
+                                    📢 CHAMADA
                                   </div>
-                                )}
-                                
-                                {/* Status especial para agendamentos chamados */}
-                                {agendamento.status === "chamado" && (
-                                  <div className="space-y-2">
-                                    <div className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-center">
-                                      📢 CHAMADA
-                                    </div>
-                                    <button
-                                      onClick={() => handleChamarSenha(agendamento, true)}
-                                      disabled={chamadaLoading === agendamento.id}
-                                      className="w-full px-2 py-1.5 text-xs rounded bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                                      title="Rechamar Senha"
-                                    >
-                                      {chamadaLoading === agendamento.id ? (
-                                        <>
-                                          <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                          </svg>
-                                          Rechamando...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                          </svg>
-                                          🔄 RECHAMAR
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                                  <button
+                                    onClick={() => handleChamarSenha(agendamento, true)}
+                                    disabled={chamadaLoading === agendamento.id}
+                                    className="w-full px-2 py-2 text-sm rounded-lg bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                    title="Rechamar Senha - Aparecerá novamente no painel"
+                                  >
+                                    {chamadaLoading === agendamento.id ? (
+                                      <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Rechamando...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        🔄 RECHAMAR
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Botão de editar - discreto */}
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(agendamento);
+                                  setModalAction("edit");
+                                  setIsModalOpen(true);
+                                }}
+                                className="w-full px-2 py-1 text-xs rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center justify-center mt-2"
+                                title="Editar Agendamento"
+                              >
+                                <FiEdit className="w-3 h-3 mr-1" />
+                                Editar
+                              </button>
                             </div>
                           ))}
                         </div>

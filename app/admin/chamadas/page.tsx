@@ -20,6 +20,16 @@ import {
   FiEye,
   FiStar,
   FiArrowLeft,
+  FiVolume2,
+  FiVolumeX,
+  FiPlay,
+  FiPause,
+  FiRotateCcw,
+  FiBell,
+  FiBellOff,
+  FiSettings,
+  FiMaximize2,
+  FiMinimize2,
 } from 'react-icons/fi';
 
 interface ChamadaSenha {
@@ -50,6 +60,15 @@ export default function GerenciarChamadasPage() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false); // Desabilitado por padrão
+  const [refreshInterval, setRefreshInterval] = useState(10); // 10 segundos por padrão
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+  const [lastChamadaId, setLastChamadaId] = useState<number | null>(null);
+  const [showChamadaAlert, setShowChamadaAlert] = useState(false);
+  const [chamadaAlertData, setChamadaAlertData] = useState<{nome: string, horario: string, preferencial: boolean} | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const { speak, stop, isPlaying } = useTextToSpeech();
 
   useEffect(() => {
@@ -59,10 +78,44 @@ export default function GerenciarChamadasPage() {
   useEffect(() => {
     if (isAdmin) {
       loadChamadas();
-      const interval = setInterval(loadChamadas, 10000); // Atualizar a cada 10 segundos
-      return () => clearInterval(interval);
+      let interval: NodeJS.Timeout;
+      
+      if (autoRefresh) {
+        interval = setInterval(loadChamadas, refreshInterval * 1000); // Atualizar conforme intervalo configurado
+      }
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
     }
-  }, [isAdmin, selectedDate, filterStatus]);
+  }, [isAdmin, selectedDate, filterStatus, autoRefresh, refreshInterval]);
+
+  // Detectar novas chamadas e mostrar alerta
+  useEffect(() => {
+    if (chamadas.length > 0 && notificationEnabled) {
+      const ultimaChamada = chamadas[0];
+      
+      if (ultimaChamada && ultimaChamada.id && ultimaChamada.id !== lastChamadaId) {
+        console.log('🔔 Nova chamada detectada:', ultimaChamada.nome);
+        
+        // Mostrar alerta visual
+        setChamadaAlertData({
+          nome: ultimaChamada.nome,
+          horario: ultimaChamada.horario.substring(0, 5),
+          preferencial: ultimaChamada.agendamentos?.atendimento_preferencial || false
+        });
+        setShowChamadaAlert(true);
+        
+        // Auto-fechar após 5 segundos
+        setTimeout(() => {
+          setShowChamadaAlert(false);
+          setChamadaAlertData(null);
+        }, 5000);
+        
+        setLastChamadaId(ultimaChamada.id);
+      }
+    }
+  }, [chamadas, lastChamadaId, notificationEnabled]);
 
   const checkUser = async () => {
     try {
@@ -120,6 +173,7 @@ export default function GerenciarChamadasPage() {
       }
       
       setChamadas(data || []);
+      setLastUpdate(new Date());
     } catch (err) {
       console.error('Erro ao carregar chamadas:', err);
     } finally {
@@ -179,6 +233,43 @@ export default function GerenciarChamadasPage() {
       alert(`Erro ao remover chamada: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleChamarSenha = async (agendamento: any) => {
+    try {
+      const response = await fetch('/api/chamada-senhas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agendamento_id: agendamento.id,
+          atendente_id: user?.id,
+          observacoes: `Chamada manual - ${agendamento.nome}`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao chamar senha');
+      }
+
+      await loadChamadas();
+      alert(`✅ Chamada realizada com sucesso para ${agendamento.nome}!`);
+    } catch (err) {
+      console.error('Erro ao chamar senha:', err);
+      alert(`Erro ao chamar senha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
     }
   };
 
@@ -244,30 +335,53 @@ export default function GerenciarChamadasPage() {
   return (
     <>
       <DashboardHeader />
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pt-20">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 sticky top-20 z-30 bg-slate-50/90 backdrop-blur">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">Gerenciar Chamadas de Senhas</h1>
-              <div className="flex items-center text-base text-slate-600">
-                <FiCalendar className="w-4 h-4 mr-2" />
-                {selectedDate}
-                <span className="ml-4 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
-                  {chamadas.length} chamadas
-                </span>
+      <div className={`min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+        {/* Header Principal */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 mx-4 mt-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-4 lg:mb-0">
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">Painel de Chamadas</h1>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center text-base text-slate-600">
+                  <FiCalendar className="w-4 h-4 mr-2" />
+                  {selectedDate}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                    {chamadas.length} chamadas
+                  </span>
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                    {chamadas.filter(c => c.status === 'chamada').length} ativas
+                  </span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                    {chamadas.filter(c => c.status === 'atendido').length} atendidas
+                  </span>
+                  {lastUpdate && (
+                    <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
+                      Atualizado: {lastUpdate.toLocaleTimeString('pt-BR')}
+                    </span>
+                  )}
+                  {autoRefresh && (
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium animate-pulse">
+                      🔄 Auto-refresh ativo
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-3">
+            
+            {/* Controles */}
+            <div className="flex items-center gap-3">
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="border rounded px-2 py-1"
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border rounded px-2 py-1"
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               >
                 <option value="todos">Todos os Status</option>
                 <option value="chamada">Chamadas Ativas</option>
@@ -276,39 +390,100 @@ export default function GerenciarChamadasPage() {
               </select>
               <button
                 onClick={() => loadChamadas()}
-                className="flex items-center px-3 py-1.5 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
+                className="flex items-center px-3 py-2 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-all duration-200"
               >
                 <FiRefreshCw className="w-4 h-4 mr-1.5" />
                 Atualizar
               </button>
               <button
                 onClick={() => window.open("/chamada-senhas", "_blank")}
-                className="flex items-center px-3 py-1.5 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="flex items-center px-3 py-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
                 title="Abrir tela de chamadas em nova aba"
               >
                 <FiEye className="w-4 h-4 mr-1.5" />
-                Ver Tela Pública
-              </button>
-              <button
-                onClick={() => speak("Teste de voz. Sistema funcionando corretamente.")}
-                className="flex items-center px-3 py-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all duration-200"
-                title="Testar síntese de voz"
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                {isPlaying ? "Falando..." : "Testar Voz"}
+                Tela Pública
               </button>
               <button
                 onClick={() => router.push("/admin/agendamentos/hoje")}
-                className="flex items-center px-3 py-1.5 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200"
+                className="flex items-center px-3 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200"
               >
                 <FiArrowLeft className="w-4 h-4 mr-1.5" />
                 Voltar
               </button>
             </div>
           </div>
+        </div>
 
+        {/* Barra de Controles Avançados */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 mx-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  autoRefresh 
+                    ? 'bg-green-100 text-green-700 border border-green-300' 
+                    : 'bg-slate-100 text-slate-700 border border-slate-300'
+                }`}
+              >
+                {autoRefresh ? <FiPlay className="w-4 h-4 mr-1.5" /> : <FiPause className="w-4 h-4 mr-1.5" />}
+                Auto-refresh
+              </button>
+              
+              {autoRefresh && (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600">Intervalo:</label>
+                  <select
+                    value={refreshInterval}
+                    onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                    className="border border-slate-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  >
+                    <option value={5}>5 segundos</option>
+                    <option value={10}>10 segundos</option>
+                    <option value={30}>30 segundos</option>
+                    <option value={60}>1 minuto</option>
+                    <option value={120}>2 minutos</option>
+                  </select>
+                </div>
+              )}
+              
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  soundEnabled 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                    : 'bg-slate-100 text-slate-700 border border-slate-300'
+                }`}
+              >
+                {soundEnabled ? <FiVolume2 className="w-4 h-4 mr-1.5" /> : <FiVolumeX className="w-4 h-4 mr-1.5" />}
+                Som
+              </button>
+              <button
+                onClick={() => setNotificationEnabled(!notificationEnabled)}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  notificationEnabled 
+                    ? 'bg-purple-100 text-purple-700 border border-purple-300' 
+                    : 'bg-slate-100 text-slate-700 border border-slate-300'
+                }`}
+              >
+                {notificationEnabled ? <FiBell className="w-4 h-4 mr-1.5" /> : <FiBellOff className="w-4 h-4 mr-1.5" />}
+                Notificações
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleFullscreen}
+                className="flex items-center px-3 py-2 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-all duration-200"
+              >
+                {isFullscreen ? <FiMinimize2 className="w-4 h-4 mr-1.5" /> : <FiMaximize2 className="w-4 h-4 mr-1.5" />}
+                {isFullscreen ? 'Sair' : 'Tela Cheia'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Conteúdo Principal */}
+        <div className="mx-4">
           {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -445,6 +620,44 @@ export default function GerenciarChamadasPage() {
           )}
         </div>
       </div>
+
+      {/* Alerta de Nova Chamada */}
+      {showChamadaAlert && chamadaAlertData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border-4 border-orange-400 max-w-lg w-full mx-4 overflow-hidden animate-pulse">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-center">
+              <div className="text-6xl mb-3 animate-bounce">📢</div>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                NOVA CHAMADA
+              </h2>
+              <div className="text-orange-100 text-lg">
+                {chamadaAlertData.preferencial && (
+                  <div className="mb-2 inline-block bg-yellow-500 text-yellow-900 px-4 py-2 rounded-full font-bold text-lg">
+                    ⭐ PREFERENCIAL ⭐
+                  </div>
+                )}
+                <div className="text-4xl font-bold text-white mb-2">
+                  {chamadaAlertData.nome.toUpperCase()}
+                </div>
+                <div className="text-xl text-orange-100">
+                  Horário: {chamadaAlertData.horario}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 text-center">
+              <button
+                onClick={() => {
+                  setShowChamadaAlert(false);
+                  setChamadaAlertData(null);
+                }}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                ✅ ENTENDI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

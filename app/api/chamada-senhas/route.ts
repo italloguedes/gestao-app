@@ -19,8 +19,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'chamada';
     const data = searchParams.get('data') || new Date().toISOString().split('T')[0];
+    const limit = parseInt(searchParams.get('limit') || '50'); // Aumentar limite para admin
 
-    console.log('🔍 Buscando chamadas:', { status, data });
+    console.log('🔍 Buscando chamadas:', { status, data, limit });
 
     const { data: chamadas, error } = await supabase
       .from('chamada_senhas')
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
       .eq('data_chamada', data)
       .eq('status', status)
       .order('created_at', { ascending: false })
-      .limit(6);
+      .limit(limit);
 
     if (error) {
       console.error('❌ Erro ao buscar chamadas:', error);
