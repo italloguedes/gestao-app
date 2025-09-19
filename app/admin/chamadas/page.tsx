@@ -98,6 +98,15 @@ export default function GerenciarChamadasPage() {
       if (ultimaChamada && ultimaChamada.id && ultimaChamada.id !== lastChamadaId) {
         console.log('🔔 Nova chamada detectada:', ultimaChamada.nome);
         
+        // Falar o nome da pessoa sendo chamada
+        if (soundEnabled) {
+          const mensagem = ultimaChamada.agendamentos?.atendimento_preferencial 
+            ? `Chamada preferencial para ${ultimaChamada.nome}. Dirija-se ao atendimento.`
+            : `Chamada para ${ultimaChamada.nome}. Dirija-se ao atendimento.`;
+          
+          speak(mensagem);
+        }
+        
         // Mostrar alerta visual
         setChamadaAlertData({
           nome: ultimaChamada.nome,
@@ -106,16 +115,16 @@ export default function GerenciarChamadasPage() {
         });
         setShowChamadaAlert(true);
         
-        // Auto-fechar após 5 segundos
+        // Auto-fechar após 8 segundos (tempo para falar)
         setTimeout(() => {
           setShowChamadaAlert(false);
           setChamadaAlertData(null);
-        }, 5000);
+        }, 8000);
         
         setLastChamadaId(ultimaChamada.id);
       }
     }
-  }, [chamadas, lastChamadaId, notificationEnabled]);
+  }, [chamadas, lastChamadaId, notificationEnabled, soundEnabled, speak]);
 
   const checkUser = async () => {
     try {
@@ -404,6 +413,16 @@ export default function GerenciarChamadasPage() {
                 Tela Pública
               </button>
               <button
+                onClick={() => speak("Teste de voz. Sistema funcionando corretamente.")}
+                className="flex items-center px-3 py-2 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-all duration-200"
+                title="Testar síntese de voz"
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                {isPlaying ? "Falando..." : "Testar Voz"}
+              </button>
+              <button
                 onClick={() => router.push("/admin/agendamentos/hoje")}
                 className="flex items-center px-3 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200"
               >
@@ -645,15 +664,31 @@ export default function GerenciarChamadasPage() {
               </div>
             </div>
             <div className="p-6 text-center">
-              <button
-                onClick={() => {
-                  setShowChamadaAlert(false);
-                  setChamadaAlertData(null);
-                }}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                ✅ ENTENDI
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowChamadaAlert(false);
+                    setChamadaAlertData(null);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  ✅ ENTENDI
+                </button>
+                <button
+                  onClick={() => {
+                    if (chamadaAlertData) {
+                      const mensagem = chamadaAlertData.preferencial 
+                        ? `Chamada preferencial para ${chamadaAlertData.nome}. Dirija-se ao atendimento.`
+                        : `Chamada para ${chamadaAlertData.nome}. Dirija-se ao atendimento.`;
+                      speak(mensagem);
+                    }
+                  }}
+                  className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-bold text-lg"
+                  title="Repetir chamada por voz"
+                >
+                  🔊 FALAR
+                </button>
+              </div>
             </div>
           </div>
         </div>
