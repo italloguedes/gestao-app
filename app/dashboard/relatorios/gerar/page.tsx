@@ -30,6 +30,7 @@ export default function GerarRelatorioPage() {
   const [solicitante, setSolicitante] = useState('');
   const [status, setStatus] = useState('');
   const [ordenacao, setOrdenacao] = useState<'padrao' | 'nome'>('padrao');
+  const [tipoRelatorio, setTipoRelatorio] = useState<'completo' | 'assinatura'>('completo');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -169,6 +170,120 @@ export default function GerarRelatorioPage() {
     doc.save(fileName);
   };
 
+  const generateSignaturePDF = async (atendimentos: Atendimento[]) => {
+    const doc = new jsPDF();
+    
+    // Configurações de estilo
+    const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+    
+    // Cabeçalho
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    const title = 'Lista de Presença - Sala Sensorial / ALECE';
+    const titleWidth = doc.getStringUnitWidth(title) * 18 / doc.internal.scaleFactor;
+    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 20);
+    
+    // Informações do período
+    doc.setTextColor(90, 90, 90);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    const periodo = `Data: ${formatDate(dataInicio)}`;
+    const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
+    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
+    
+    // Linha separadora
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.5);
+    doc.line(20, 40, doc.internal.pageSize.width - 20, 40);
+    
+    // Cabeçalho da tabela
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    
+    // Posições das colunas
+    const col1 = 25; // Número
+    const col2 = 40; // Nome
+    const col3 = 120; // CPF
+    const col4 = 160; // Assinatura
+    
+    // Cabeçalhos
+    doc.text('Nº', col1, 50);
+    doc.text('Nome Completo', col2, 50);
+    doc.text('CPF', col3, 50);
+    doc.text('Assinatura', col4, 50);
+    
+    // Linha do cabeçalho
+    doc.setDrawColor(0, 135, 81);
+    doc.setLineWidth(1);
+    doc.line(20, 52, doc.internal.pageSize.width - 20, 52);
+    
+    // Linhas para os dados
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    
+    let currentY = 60;
+    const lineHeight = 8;
+    
+    atendimentos.forEach((atendimento, index) => {
+      // Verificar se precisa de nova página
+      if (currentY > doc.internal.pageSize.height - 40) {
+        doc.addPage();
+        currentY = 30;
+      }
+      
+      // Número
+      doc.text((index + 1).toString(), col1, currentY);
+      
+      // Nome (truncado se muito longo)
+      const nome = atendimento.nome.length > 30 ? atendimento.nome.substring(0, 27) + '...' : atendimento.nome;
+      doc.text(nome, col2, currentY);
+      
+      // CPF formatado
+      const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      doc.text(cpfFormatado, col3, currentY);
+      
+      // Linha para assinatura
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.5);
+      doc.line(col4, currentY - 2, col4 + 30, currentY - 2);
+      
+      // Linha horizontal separadora
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(20, currentY + 2, doc.internal.pageSize.width - 20, currentY + 2);
+      
+      currentY += lineHeight;
+    });
+    
+    // Rodapé
+    const pageCount = (doc as any).getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      
+      // Data e hora de geração
+      const now = new Date();
+      const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+      doc.text(dataHoraGeracao, 20, doc.internal.pageSize.height - 15);
+      
+      // Número da página
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;
+      doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 20, doc.internal.pageSize.height - 15);
+    }
+
+    // Salvar o PDF
+    const fileName = `lista_presenca_${dataInicio}.pdf`;
+    doc.save(fileName);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -180,17 +295,41 @@ export default function GerarRelatorioPage() {
         return;
       }
 
+      // Validação específica para lista de presença
+      if (tipoRelatorio === 'assinatura' && !dataInicio) {
+        setMessage({ text: 'Para gerar a lista de presença, é necessário selecionar uma data', type: 'error' });
+        return;
+      }
+
+      // Validação para relatório completo
+      if (tipoRelatorio === 'completo' && !dataInicio && !dataFim) {
+        setMessage({ text: 'Para gerar o relatório completo, é necessário selecionar pelo menos uma data', type: 'error' });
+        return;
+      }
+
       let query = supabase
         .from('atendimentos')
         .select('*');
 
       // Aplicar filtros apenas se estiverem preenchidos
-      if (dataInicio && dataFim) {
-        const dataInicioAjustada = dataInicio + 'T00:00:00';
-        const dataFimAjustada = dataFim + 'T23:59:59';
-        query = query
-          .gte('dia_atual', dataInicioAjustada)
-          .lte('dia_atual', dataFimAjustada);
+      if (tipoRelatorio === 'assinatura') {
+        // Para lista de presença, usar apenas a data inicial
+        if (dataInicio) {
+          const dataInicioAjustada = dataInicio + 'T00:00:00';
+          const dataFimAjustada = dataInicio + 'T23:59:59';
+          query = query
+            .gte('dia_atual', dataInicioAjustada)
+            .lte('dia_atual', dataFimAjustada);
+        }
+      } else {
+        // Para relatório completo, usar período
+        if (dataInicio && dataFim) {
+          const dataInicioAjustada = dataInicio + 'T00:00:00';
+          const dataFimAjustada = dataFim + 'T23:59:59';
+          query = query
+            .gte('dia_atual', dataInicioAjustada)
+            .lte('dia_atual', dataFimAjustada);
+        }
       }
 
       if (nome) {
@@ -228,12 +367,20 @@ export default function GerarRelatorioPage() {
       }
 
       console.log('Gerando PDF para', atendimentos.length, 'atendimentos');
-      await generatePDF(atendimentos);
-
-      setMessage({ 
-        text: `Relatório gerado com sucesso! Total de registros: ${atendimentos.length}`,
-        type: 'success'
-      });
+      
+      if (tipoRelatorio === 'assinatura') {
+        await generateSignaturePDF(atendimentos);
+        setMessage({ 
+          text: `Lista de presença gerada com sucesso! Total de registros: ${atendimentos.length}`,
+          type: 'success'
+        });
+      } else {
+        await generatePDF(atendimentos);
+        setMessage({ 
+          text: `Relatório gerado com sucesso! Total de registros: ${atendimentos.length}`,
+          type: 'success'
+        });
+      }
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
@@ -314,7 +461,7 @@ export default function GerarRelatorioPage() {
                   <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Data Inicial
+                  {tipoRelatorio === 'assinatura' ? 'Data' : 'Data Inicial'}
                 </label>
                 <input
                   type="date"
@@ -325,22 +472,24 @@ export default function GerarRelatorioPage() {
                 />
               </div>
 
-              {/* Data Final */}
-              <div className="space-y-2">
-                <label htmlFor="dataFim" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Data Final
-                </label>
-                <input
-                  type="date"
-                  id="dataFim"
-                  value={dataFim}
-                  onChange={(e) => setDataFim(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
-                />
-              </div>
+              {/* Data Final - apenas para relatório completo */}
+              {tipoRelatorio === 'completo' && (
+                <div className="space-y-2">
+                  <label htmlFor="dataFim" className="flex items-center text-sm font-semibold text-gray-700">
+                    <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Data Final
+                  </label>
+                  <input
+                    type="date"
+                    id="dataFim"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  />
+                </div>
+              )}
 
               {/* Nome do Cliente */}
               <div className="space-y-2">
@@ -400,6 +549,25 @@ export default function GerarRelatorioPage() {
                   <option value="bloqueado">🚫 Bloqueado</option>
                 </select>
               </div>
+              {/* Tipo de Relatório */}
+              <div className="md:col-span-2 space-y-2">
+                <label htmlFor="tipoRelatorio" className="flex items-center text-sm font-semibold text-gray-700">
+                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Tipo de Relatório
+                </label>
+                <select
+                  id="tipoRelatorio"
+                  value={tipoRelatorio}
+                  onChange={(e) => setTipoRelatorio(e.target.value as 'completo' | 'assinatura')}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                >
+                  <option value="completo">Relatório Completo (Tabela com todos os dados)</option>
+                  <option value="assinatura">Lista de Presença (Nome, CPF e campo para assinatura)</option>
+                </select>
+              </div>
+
               {/* Ordenação */}
               <div className="md:col-span-2 space-y-2">
                 <label htmlFor="ordenacao" className="flex items-center text-sm font-semibold text-gray-700">
@@ -430,14 +598,14 @@ export default function GerarRelatorioPage() {
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                    <span>Gerando relatório...</span>
+                    <span>{tipoRelatorio === 'assinatura' ? 'Gerando lista de presença...' : 'Gerando relatório...'}</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Gerar Relatório PDF
+                    {tipoRelatorio === 'assinatura' ? 'Gerar Lista de Presença PDF' : 'Gerar Relatório PDF'}
                   </>
                 )}
               </button>
