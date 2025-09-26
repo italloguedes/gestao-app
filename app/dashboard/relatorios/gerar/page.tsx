@@ -190,7 +190,7 @@ export default function GerarRelatorioPage() {
     doc.setTextColor(90, 90, 90);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    const periodo = `Data: ${formatDate(dataInicio)}`;
+    const periodo = `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataInicio)}`;
     const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
     doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
     
