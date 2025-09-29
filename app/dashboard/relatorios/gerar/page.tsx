@@ -208,13 +208,13 @@ export default function GerarRelatorioPage() {
     const col1 = 25; // Número
     const col2 = 40; // Nome
     const col3 = 120; // CPF
-    const col4 = 160; // Assinatura
+    const col4 = 140; // Assinatura
     
     // Cabeçalhos
     doc.text('Nº', col1, 50);
     doc.text('Nome Completo', col2, 50);
     doc.text('CPF', col3, 50);
-    doc.text('Entrega', col4, 50);
+    doc.text('Assinatura', col4, 50);
     
     // Linha do cabeçalho
     doc.setDrawColor(0, 135, 81);
@@ -248,6 +248,10 @@ export default function GerarRelatorioPage() {
       const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       doc.text(cpfFormatado, col3, currentY);
       
+      // Linha para assinatura (maior)
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.5);
+      doc.line(col4, currentY - 2, col4 + 50, currentY - 2);
       
       // Linha horizontal separadora
       doc.setDrawColor(200, 200, 200);
@@ -560,7 +564,7 @@ export default function GerarRelatorioPage() {
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
                 >
                   <option value="completo">Relatório Completo (Tabela com todos os dados)</option>
-                  <option value="assinatura">Lista de Entrega (Nome, CPF e campo para entrega)</option>
+                  <option value="assinatura">Lista de Entrega (Nome, CPF e campo para assinatura)</option>
                 </select>
               </div>
 
