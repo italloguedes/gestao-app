@@ -182,7 +182,7 @@ export default function GerarRelatorioPage() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    const title = 'Lista de Presença - Sala Sensorial / ALECE';
+    const title = 'Lista de Entrega - Sala Sensorial / ALECE';
     const titleWidth = doc.getStringUnitWidth(title) * 18 / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 20);
     
@@ -214,7 +214,7 @@ export default function GerarRelatorioPage() {
     doc.text('Nº', col1, 50);
     doc.text('Nome Completo', col2, 50);
     doc.text('CPF', col3, 50);
-    doc.text('Assinatura', col4, 50);
+    doc.text('Entrega', col4, 50);
     
     // Linha do cabeçalho
     doc.setDrawColor(0, 135, 81);
@@ -248,10 +248,6 @@ export default function GerarRelatorioPage() {
       const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       doc.text(cpfFormatado, col3, currentY);
       
-      // Linha para assinatura
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.5);
-      doc.line(col4, currentY - 2, col4 + 30, currentY - 2);
       
       // Linha horizontal separadora
       doc.setDrawColor(200, 200, 200);
@@ -280,7 +276,7 @@ export default function GerarRelatorioPage() {
     }
 
     // Salvar o PDF
-    const fileName = `lista_presenca_${dataInicio}.pdf`;
+    const fileName = `lista_entrega_${dataInicio}.pdf`;
     doc.save(fileName);
   };
 
@@ -295,9 +291,9 @@ export default function GerarRelatorioPage() {
         return;
       }
 
-      // Validação específica para lista de presença
+      // Validação específica para lista de entrega
       if (tipoRelatorio === 'assinatura' && !dataInicio) {
-        setMessage({ text: 'Para gerar a lista de presença, é necessário selecionar uma data', type: 'error' });
+        setMessage({ text: 'Para gerar a lista de entrega, é necessário selecionar uma data', type: 'error' });
         return;
       }
 
@@ -313,7 +309,7 @@ export default function GerarRelatorioPage() {
 
       // Aplicar filtros apenas se estiverem preenchidos
       if (tipoRelatorio === 'assinatura') {
-        // Para lista de presença, usar apenas a data inicial
+        // Para lista de entrega, usar apenas a data inicial
         if (dataInicio) {
           const dataInicioAjustada = dataInicio + 'T00:00:00';
           const dataFimAjustada = dataInicio + 'T23:59:59';
@@ -371,7 +367,7 @@ export default function GerarRelatorioPage() {
       if (tipoRelatorio === 'assinatura') {
         await generateSignaturePDF(atendimentos);
         setMessage({ 
-          text: `Lista de presença gerada com sucesso! Total de registros: ${atendimentos.length}`,
+          text: `Lista de entrega gerada com sucesso! Total de registros: ${atendimentos.length}`,
           type: 'success'
         });
       } else {
@@ -564,7 +560,7 @@ export default function GerarRelatorioPage() {
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
                 >
                   <option value="completo">Relatório Completo (Tabela com todos os dados)</option>
-                  <option value="assinatura">Lista de Presença (Nome, CPF e campo para assinatura)</option>
+                  <option value="assinatura">Lista de Entrega (Nome, CPF e campo para entrega)</option>
                 </select>
               </div>
 
@@ -598,14 +594,14 @@ export default function GerarRelatorioPage() {
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                    <span>{tipoRelatorio === 'assinatura' ? 'Gerando lista de presença...' : 'Gerando relatório...'}</span>
+                    <span>{tipoRelatorio === 'assinatura' ? 'Gerando lista de entrega...' : 'Gerando relatório...'}</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    {tipoRelatorio === 'assinatura' ? 'Gerar Lista de Presença PDF' : 'Gerar Relatório PDF'}
+                    {tipoRelatorio === 'assinatura' ? 'Gerar Lista de Entrega PDF' : 'Gerar Relatório PDF'}
                   </>
                 )}
               </button>
