@@ -207,7 +207,7 @@ export default function GerarRelatorioPage() {
     // Posições das colunas
     const col1 = 25; // Número
     const col2 = 40; // Nome
-    const col3 = 120; // CPF
+    const col3 = 100; // CPF
     const col4 = 140; // Assinatura
     
     // Cabeçalhos
@@ -247,11 +247,6 @@ export default function GerarRelatorioPage() {
       // CPF formatado
       const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       doc.text(cpfFormatado, col3, currentY);
-      
-      // Linha para assinatura (maior)
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.5);
-      doc.line(col4, currentY - 2, col4 + 50, currentY - 2);
       
       // Linha horizontal separadora
       doc.setDrawColor(200, 200, 200);
