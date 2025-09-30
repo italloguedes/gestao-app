@@ -57,11 +57,19 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           return;
         }
 
+        // Validar CPF
+        const cpfEditado = formData.get('cpf') || appointment.cpf;
+        if (!/^[0-9]{11}$/.test(cpfEditado)) {
+          setMessage('CPF inválido. Use apenas números, sem pontos ou traços.');
+          setLoading(false);
+          return;
+        }
+
         // Verificar se o CPF já existe na tabela de atendimentos
         const { data: existingCpf, error: cpfCheckError } = await supabase
           .from('atendimentos')
           .select('cpf')
-          .eq('cpf', appointment.cpf)
+          .eq('cpf', cpfEditado)
           .single();
 
         if (cpfCheckError && cpfCheckError.code !== 'PGRST116') {
@@ -94,9 +102,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
-            nome: appointment.nome,
-            cpf: appointment.cpf,
-            email: appointment.email,
+            nome: formData.get('nome') || appointment.nome,
+            cpf: formData.get('cpf') || appointment.cpf,
+            email: formData.get('email') || appointment.email,
             solicitante: formData.get('solicitante') || '',
             horario,
             dia_atual: diaAtual,
@@ -113,12 +121,16 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
         // Enviar e-mail de confirmação
         try {
+          const nomeEditado = formData.get('nome') || appointment.nome;
+          const emailEditado = formData.get('email') || appointment.email;
+          const cpfEditado = formData.get('cpf') || appointment.cpf;
+          
           const res = await fetch('/api/send-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              to: appointment.email,
-              subject: `Atendimento Realizado, ${appointment.nome}! 🎉`,
+              to: emailEditado,
+              subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
               html: `
   <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
     <div style="text-align: center; margin-bottom: 24px;">
@@ -129,11 +141,11 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         Atendimento para emissão da CIN (Carteira de Identidade Nacional)
       </h2>
       <p style="margin-bottom: 18px;">
-        Olá, ${appointment.nome}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
+        Olá, ${nomeEditado}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
       </p>
       <p style="margin-bottom: 10px;">
-        <b>Nome:</b> ${appointment.nome}<br>
-        <b>CPF:</b> ${appointment.cpf}<br>
+        <b>Nome:</b> ${nomeEditado}<br>
+        <b>CPF:</b> ${cpfEditado}<br>
         <b>Número de Protocolo:</b> ${protocolo}
       </p>
       <p style="margin-bottom: 0;">
@@ -402,7 +414,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           {action === 'iniciar' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <div className="text-blue-800 text-base font-semibold mb-3">
-                📋 Dados do Cliente
+                📋 Dados do Cliente (Editáveis)
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -422,11 +434,65 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <span className="ml-1 text-blue-600">{appointment.telefone}</span>
                 </div>
               </div>
+              <p className="text-xs text-blue-600 mt-2">
+                💡 Você pode editar os dados do cliente nos campos abaixo se necessário
+              </p>
             </div>
           )}
 
           {action === 'iniciar' && (
             <div className="space-y-4">
+              {/* Campos editáveis do cliente */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome *</label>
+                  <input
+                    type="text"
+                    name="nome"
+                    defaultValue={appointment.nome}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="Nome completo do cliente"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    defaultValue={appointment.email}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="email@exemplo.com"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">CPF *</label>
+                  <input
+                    type="text"
+                    name="cpf"
+                    defaultValue={appointment.cpf}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="Apenas números"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    defaultValue={appointment.telefone}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="(85) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              {/* Campos específicos do atendimento */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
