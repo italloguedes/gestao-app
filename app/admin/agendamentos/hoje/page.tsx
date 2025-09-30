@@ -78,6 +78,7 @@ export default function AgendamentosHojePage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showSimpleConfirm, setShowSimpleConfirm] = useState(false);
   const [simpleConfirmData, setSimpleConfirmData] = useState<{id: number, nome: string, action: string} | null>(null);
+  const [showEmptySlots, setShowEmptySlots] = useState(true);
 
   useEffect(() => {
     checkUser();
@@ -462,6 +463,13 @@ export default function AgendamentosHojePage() {
 
   // Build list of occupied time slots (HH:MM) to filter available times in create modal
   const occupiedSlots = agendamentos.map(a => a.horario.substring(0, 5));
+  
+  // Calcular quantos horários estão sendo exibidos
+  const visibleSlots = showEmptySlots 
+    ? HORARIOS.length 
+    : HORARIOS.filter(horario => 
+        agendamentos.some(a => a.horario === `${horario}:00`)
+      ).length;
 
   return (
     <>
@@ -487,6 +495,13 @@ export default function AgendamentosHojePage() {
                     </span>
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
                       {agendamentos.filter(a => a.status === 'concluido').length} concluídos
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      showEmptySlots 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {showEmptySlots ? `Mostrando todos os horários (${visibleSlots})` : `Apenas horários ocupados (${visibleSlots})`}
                     </span>
                   </div>
               </div>
@@ -533,6 +548,28 @@ export default function AgendamentosHojePage() {
               
               
               <button
+                onClick={() => setShowEmptySlots(!showEmptySlots)}
+                className={`flex items-center px-4 py-2 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md ${
+                  showEmptySlots 
+                    ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
+                    : 'text-slate-700 bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+                title={showEmptySlots ? 'Ocultar horários livres' : 'Mostrar horários livres'}
+              >
+                {showEmptySlots ? (
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                )}
+                {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
+              </button>
+              
+              <button
                 onClick={() => router.push("/admin/gestao")}
                 className="flex items-center px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200 shadow-sm hover:shadow-md"
               >
@@ -555,7 +592,7 @@ export default function AgendamentosHojePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 transition-all duration-300">
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
@@ -563,11 +600,17 @@ export default function AgendamentosHojePage() {
                 const hasConcluded = agendamentosHorario.some(a => a.status === 'concluido');
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
                 const isFull = agendamentosHorario.length >= 1;
+                const isEmpty = agendamentosHorario.length === 0;
+
+                // Se showEmptySlots for false e o horário estiver vazio, não renderizar
+                if (!showEmptySlots && isEmpty) {
+                  return null;
+                }
 
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-200 min-h-[200px] ${
+                    className={`rounded-lg shadow-sm border transition-all duration-300 min-h-[200px] ${
                       agendamentosHorario.length > 0
                         ? hasConcluded
                           ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
