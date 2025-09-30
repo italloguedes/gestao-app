@@ -18,6 +18,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   const [message, setMessage] = React.useState('');
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
   const [motivo, setMotivo] = React.useState('');
+  const [protocolo, setProtocolo] = React.useState('');
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -50,7 +51,32 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       if (action === 'iniciar') {
         console.log('🔄 EditAppointmentModal: Iniciando atendimento...');
         
-        // Apenas atualizar o status do agendamento para 'concluido'
+        if (!protocolo.trim()) {
+          setMessage('Por favor, informe o número de protocolo.');
+          setLoading(false);
+          return;
+        }
+
+        // Verificar se o CPF já existe na tabela de atendimentos
+        const { data: existingCpf, error: cpfCheckError } = await supabase
+          .from('atendimentos')
+          .select('cpf')
+          .eq('cpf', appointment.cpf)
+          .single();
+
+        if (cpfCheckError && cpfCheckError.code !== 'PGRST116') {
+          setMessage('Erro ao verificar CPF: ' + cpfCheckError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (existingCpf) {
+          setMessage('CPF já cadastrado no sistema. Verifique se o atendimento já foi realizado.');
+          setLoading(false);
+          return;
+        }
+
+        // Atualizar o status do agendamento para 'concluido'
         const { error: updateError } = await supabase
           .from('agendamentos')
           .update({ status: 'concluido' })
@@ -61,8 +87,78 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           throw updateError;
         }
 
-        console.log('✅ EditAppointmentModal: Status atualizado para concluido');
-        setMessage('Atendimento iniciado e concluído com sucesso!');
+        // Criar registro na tabela de atendimentos
+        const now = new Date();
+        const diaAtual = now.toISOString().split('T')[0];
+        const horario = now.toTimeString().split(' ')[0];
+
+        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
+          {
+            nome: appointment.nome,
+            cpf: appointment.cpf,
+            email: appointment.email,
+            solicitante: formData.get('solicitante') || '',
+            horario,
+            dia_atual: diaAtual,
+            usuario_id: appointment.usuario_id || appointment.user_id,
+            protocolo,
+            status: 'em_andamento',
+          },
+        ]);
+
+        if (atendimentoError) {
+          console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
+          throw atendimentoError;
+        }
+
+        // Enviar e-mail de confirmação
+        try {
+          const res = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: appointment.email,
+              subject: `Atendimento Realizado, ${appointment.nome}! 🎉`,
+              html: `
+  <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
+    </div>
+    <div style="background: #fff; border-radius: 10px; padding: 32px 24px; box-shadow: 0 2px 8px #0001;">
+      <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 18px;">
+        Atendimento para emissão da CIN (Carteira de Identidade Nacional)
+      </h2>
+      <p style="margin-bottom: 18px;">
+        Olá, ${appointment.nome}! Seu atendimento foi realizado com sucesso. O prazo para retirada é de 20 dias.
+      </p>
+      <p style="margin-bottom: 10px;">
+        <b>Nome:</b> ${appointment.nome}<br>
+        <b>CPF:</b> ${appointment.cpf}<br>
+        <b>Número de Protocolo:</b> ${protocolo}
+      </p>
+      <p style="margin-bottom: 0;">
+        Para dúvidas, entre em contato pelo telefone (85) 2180-6587.
+      </p>
+    </div>
+    <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
+      © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+    </div>
+  </div>
+`,
+            }),
+          });
+
+          const result = await res.json();
+          if (res.ok) {
+            setMessage('Atendimento concluído com sucesso! E-mail enviado.');
+          } else {
+            setMessage('Atendimento concluído, mas erro ao enviar e-mail: ' + result.error);
+          }
+        } catch (err) {
+          setMessage('Atendimento concluído, mas houve erro ao enviar o e-mail.');
+        }
+
+        console.log('✅ EditAppointmentModal: Atendimento criado e concluído');
       } else if (action === 'ausente') {
         console.log('🔄 EditAppointmentModal: Marcando como ausente...');
         
@@ -179,7 +275,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       <div className="bg-white rounded-2xl p-6 w-full max-w-4xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-slate-800">
-            {action === 'iniciar' ? 'Concluir Atendimento' :
+            {action === 'iniciar' ? 'Iniciar Atendimento' :
               action === 'ausente' ? 'Marcar Ausente' :
               action === 'concluido' ? 'Concluir Atendimento' :
               action === 'edit' ? 'Editar Agendamento' :
@@ -303,6 +399,32 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               </div>
             )}
 
+          {action === 'iniciar' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <div className="text-blue-800 text-lg font-semibold mb-4">
+                📋 Iniciar Atendimento - Dados do Cliente
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-blue-700">Nome:</span>
+                  <span className="ml-2 text-blue-600">{appointment.nome}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">CPF:</span>
+                  <span className="ml-2 text-blue-600">{appointment.cpf}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">Email:</span>
+                  <span className="ml-2 text-blue-600">{appointment.email}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">Telefone:</span>
+                  <span className="ml-2 text-blue-600">{appointment.telefone}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {(action === 'iniciar' || action === 'edit') && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -414,16 +536,34 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               </div>
 
               {action === 'iniciar' && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
-                  <input
-                    type="text"
-                    name="solicitante"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Nome do solicitante"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
+                    <input
+                      type="text"
+                      name="solicitante"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="Nome do solicitante"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <span className="text-red-600">*</span> Número de Protocolo
+                    </label>
+                    <input
+                      type="text"
+                      value={protocolo}
+                      onChange={(e) => setProtocolo(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50"
+                      placeholder="Digite o número do protocolo"
+                      required
+                    />
+                    <p className="text-xs text-blue-600 mt-1">
+                      Este número será usado para rastreamento do atendimento
+                    </p>
+                  </div>
+                </>
               )}
             </>
           )}
@@ -513,7 +653,7 @@ const getButtonStyle = (action: string | null) => {
 const getButtonText = (action: string | null) => {
   switch (action) {
     case 'iniciar':
-      return 'Concluir Atendimento';
+      return 'Iniciar Atendimento';
     case 'ausente':
       return 'Marcar Ausente';
     case 'concluido':
