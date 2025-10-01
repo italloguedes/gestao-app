@@ -573,14 +573,24 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       (F8 para copiar)
                     </span>
                   </label>
-                  <input
-                    type="text"
-                    name="cpf"
-                    defaultValue={appointment.cpf}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Apenas números"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="cpf"
+                      defaultValue={appointment.cpf}
+                      className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="Apenas números"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyCPF()}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                      title="Copiar CPF (F8)"
+                    >
+                      📋
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -589,13 +599,23 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       (F7 para copiar)
                     </span>
                   </label>
-                  <input
-                    type="tel"
-                    name="telefone"
-                    defaultValue={appointment.telefone}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="(85) 99999-9999"
-                  />
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="telefone"
+                      defaultValue={appointment.telefone}
+                      className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="(85) 99999-9999"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyPhone()}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                      title="Copiar Telefone (F7)"
+                    >
+                      📋
+                    </button>
+                  </div>
                 </div>
               </div>
 
