@@ -24,6 +24,57 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     setAction(initialAction);
   }, [initialAction]);
 
+  // Função para copiar texto para a área de transferência
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage(`Copiado: ${text}`);
+      setTimeout(() => setMessage(''), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar:', err);
+      setMessage('Erro ao copiar para área de transferência');
+      setTimeout(() => setMessage(''), 2000);
+    }
+  };
+
+  // Função para copiar telefone (F7)
+  const copyPhone = () => {
+    if (appointment?.telefone) {
+      copyToClipboard(appointment.telefone);
+    }
+  };
+
+  // Função para copiar CPF (F8)
+  const copyCPF = () => {
+    if (appointment?.cpf) {
+      copyToClipboard(appointment.cpf);
+    }
+  };
+
+  // Event listener para atalhos de teclado
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Só funciona quando o modal está aberto e a ação é 'iniciar'
+      if (!isOpen || action !== 'iniciar') return;
+
+      if (event.key === 'F7') {
+        event.preventDefault();
+        copyPhone();
+      } else if (event.key === 'F8') {
+        event.preventDefault();
+        copyCPF();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, action, appointment]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -434,6 +485,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <span className="ml-1 text-blue-600">{appointment.telefone}</span>
                 </div>
               </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+                <p className="text-xs text-amber-700 font-medium mb-1">
+                  ⌨️ Atalhos de Teclado:
+                </p>
+                <p className="text-xs text-amber-600">
+                  <strong>F7</strong> - Copiar telefone | <strong>F8</strong> - Copiar CPF
+                </p>
+              </div>
               <p className="text-xs text-blue-600 mt-2">
                 💡 Você pode editar os dados do cliente nos campos abaixo se necessário
               </p>
@@ -470,7 +529,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">CPF *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    CPF * 
+                    <span className="ml-2 text-xs text-blue-600 font-normal">
+                      (F8 para copiar)
+                    </span>
+                  </label>
                   <input
                     type="text"
                     name="cpf"
@@ -481,7 +545,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Telefone
+                    <span className="ml-2 text-xs text-blue-600 font-normal">
+                      (F7 para copiar)
+                    </span>
+                  </label>
                   <input
                     type="tel"
                     name="telefone"
