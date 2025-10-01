@@ -79,7 +79,7 @@ export default function AtendimentosPage() {
 
   useEffect(() => {
     fetchAtendimentos();
-  }, [currentPage]);
+  }, [currentPage, searchTerm]);
 
   const fetchAtendimentos = async () => {
     try {
@@ -364,17 +364,17 @@ export default function AtendimentosPage() {
                   <span className="text-sm">Sistema atualizado</span>
                 </div>
               </div>
-          </div>
-          <Link
-            href="/dashboard/atendimentos/novo"
+            </div>
+            <Link
+              href="/dashboard/atendimentos/novo"
               className="group bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          >
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
               Novo Atendimento
-          </Link>
-        </div>
+            </Link>
+          </div>
 
         <div className="space-y-6">
           <div className="relative">
@@ -525,6 +525,7 @@ export default function AtendimentosPage() {
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
