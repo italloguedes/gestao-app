@@ -471,22 +471,48 @@ export default function AtendimentosPage() {
                         <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
                       </td>
                               <td className="px-6 py-4">
-                                <span 
-                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border cursor-pointer transition-all duration-200 hover:scale-105 ${
+                                <div className="flex items-center gap-3">
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
                                     visualStatus[atendimento.id] 
                                       ? getStatusColor(visualStatus[atendimento.id])
                                       : getStatusColor(atendimento.status)
-                                  }`}
-                                  onClick={() => {
-                                    const currentStatus = visualStatus[atendimento.id] || atendimento.status;
-                                    if (currentStatus === 'pendente' || currentStatus === 'confirmar') {
-                                      handleToggleStatusVisual(atendimento.id, currentStatus);
-                                    }
-                                  }}
-                                  title={visualStatus[atendimento.id] || atendimento.status === 'pendente' || atendimento.status === 'confirmar' ? 'Clique para alternar' : ''}
-                                >
-                                  {getStatusLabel(visualStatus[atendimento.id] || atendimento.status)}
-                                </span>
+                                  }`}>
+                                    {getStatusLabel(visualStatus[atendimento.id] || atendimento.status)}
+                                  </span>
+                                  
+                                  {(visualStatus[atendimento.id] || atendimento.status) === 'pendente' && (
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                      <input
+                                        type="checkbox"
+                                        checked={visualStatus[atendimento.id] === 'confirmar'}
+                                        onChange={() => {
+                                          const currentStatus = visualStatus[atendimento.id] || atendimento.status;
+                                          handleToggleStatusVisual(atendimento.id, currentStatus);
+                                        }}
+                                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                                      />
+                                      <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
+                                        Confirmar
+                                      </span>
+                                    </label>
+                                  )}
+                                  
+                                  {visualStatus[atendimento.id] === 'confirmar' && (
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                      <input
+                                        type="checkbox"
+                                        checked={true}
+                                        onChange={() => {
+                                          handleToggleStatusVisual(atendimento.id, 'confirmar');
+                                        }}
+                                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                                      />
+                                      <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
+                                        Confirmado
+                                      </span>
+                                    </label>
+                                  )}
+                                </div>
                               </td>
                       <td className="px-6 py-4">
                         <button
