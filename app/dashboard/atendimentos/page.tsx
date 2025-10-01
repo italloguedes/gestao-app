@@ -38,6 +38,9 @@ export default function AtendimentosPage() {
   const [editingAtendimento, setEditingAtendimento] = useState<Partial<Atendimento>>({});
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Estado para controlar status visuais (pendente -> confirmar)
+  const [visualStatus, setVisualStatus] = useState<Record<number, string>>({});
 
   const router = useRouter();
   const { user } = useAuth();
@@ -149,6 +152,10 @@ export default function AtendimentosPage() {
         return 'bg-gray-100 text-gray-600 border-gray-200';
       case 'entregue':
         return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pendente':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'confirmar':
+        return 'bg-green-100 text-green-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -168,6 +175,10 @@ export default function AtendimentosPage() {
         return 'Cancelado';
       case 'entregue':
         return 'Entregue';
+      case 'pendente':
+        return 'Pendente';
+      case 'confirmar':
+        return 'Confirmar';
       default:
         return status;
     }
@@ -339,6 +350,21 @@ export default function AtendimentosPage() {
     }
   };
 
+  // Função para alternar status visual (pendente <-> confirmar)
+  const handleToggleStatusVisual = (atendimentoId: number, currentStatus: string) => {
+    if (currentStatus === 'pendente') {
+      setVisualStatus(prev => ({
+        ...prev,
+        [atendimentoId]: 'confirmar'
+      }));
+    } else if (currentStatus === 'confirmar') {
+      setVisualStatus(prev => ({
+        ...prev,
+        [atendimentoId]: 'pendente'
+      }));
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -444,11 +470,24 @@ export default function AtendimentosPage() {
                         <div className="text-sm font-medium text-slate-800">{formatDate(atendimento.dia_atual)}</div>
                         <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
-                          {getStatusLabel(atendimento.status)}
-                        </span>
-                      </td>
+                              <td className="px-6 py-4">
+                                <span 
+                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border cursor-pointer transition-all duration-200 hover:scale-105 ${
+                                    visualStatus[atendimento.id] 
+                                      ? getStatusColor(visualStatus[atendimento.id])
+                                      : getStatusColor(atendimento.status)
+                                  }`}
+                                  onClick={() => {
+                                    const currentStatus = visualStatus[atendimento.id] || atendimento.status;
+                                    if (currentStatus === 'pendente' || currentStatus === 'confirmar') {
+                                      handleToggleStatusVisual(atendimento.id, currentStatus);
+                                    }
+                                  }}
+                                  title={visualStatus[atendimento.id] || atendimento.status === 'pendente' || atendimento.status === 'confirmar' ? 'Clique para alternar' : ''}
+                                >
+                                  {getStatusLabel(visualStatus[atendimento.id] || atendimento.status)}
+                                </span>
+                              </td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
