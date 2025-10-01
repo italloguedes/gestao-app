@@ -465,25 +465,28 @@ export default function AtendimentosPage() {
                       </td>
                               <td className="px-6 py-4">
                                 {atendimento.status === 'pendente' ? (
-                                  <label className="flex items-center gap-2 cursor-pointer group">
+                                  <div className="flex items-center gap-2">
                                     <input
                                       type="checkbox"
                                       checked={checkboxStates[atendimento.id] || false}
                                       onChange={() => handleToggleCheckbox(atendimento.id)}
-                                      className={`w-5 h-5 rounded border-2 focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
-                                        checkboxStates[atendimento.id]
-                                          ? 'bg-green-500 border-green-500 text-white focus:ring-green-300'
-                                          : 'bg-red-500 border-red-500 text-white focus:ring-red-300'
-                                      }`}
+                                      style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        cursor: 'pointer',
+                                        accentColor: checkboxStates[atendimento.id] ? '#22c55e' : '#ef4444'
+                                      }}
                                     />
-                                    <span className={`text-sm font-medium transition-colors ${
-                                      checkboxStates[atendimento.id]
-                                        ? 'text-green-600'
-                                        : 'text-red-600'
-                                    }`}>
+                                    <span 
+                                      onClick={() => handleToggleCheckbox(atendimento.id)}
+                                      className="text-sm font-medium cursor-pointer"
+                                      style={{
+                                        color: checkboxStates[atendimento.id] ? '#22c55e' : '#ef4444'
+                                      }}
+                                    >
                                       {checkboxStates[atendimento.id] ? 'Confirmado' : 'Aguardando'}
                                     </span>
-                                  </label>
+                                  </div>
                                 ) : (
                                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
                                     {getStatusLabel(atendimento.status)}
