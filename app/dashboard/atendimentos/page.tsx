@@ -19,6 +19,7 @@ interface Atendimento {
   horario: string;
   status: string;
   observacoes?: string;
+  fotos_coletadas?: boolean;
 }
 
 export default function AtendimentosPage() {
@@ -137,15 +138,19 @@ export default function AtendimentosPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'concluido':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'em_andamento':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'correcao':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'bloqueado':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'cancelado':
+        return 'bg-gray-100 text-gray-600 border-gray-200';
+      case 'entregue':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -159,6 +164,10 @@ export default function AtendimentosPage() {
         return 'Correção';
       case 'bloqueado':
         return 'Bloqueado';
+      case 'cancelado':
+        return 'Cancelado';
+      case 'entregue':
+        return 'Entregue';
       default:
         return status;
     }
@@ -273,35 +282,111 @@ export default function AtendimentosPage() {
     setValidationErrors({});
   };
 
+  const handleDeleteAtendimento = async () => {
+    if (!selectedAtendimento) return;
+
+    if (!confirm(`Tem certeza que deseja excluir o atendimento de ${selectedAtendimento.nome}?`)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const { error } = await supabase
+        .from('atendimentos')
+        .delete()
+        .eq('id', selectedAtendimento.id);
+
+      if (error) throw error;
+      
+      // Atualizar a lista de atendimentos
+      setAtendimentos(prev => 
+        prev.filter(a => a.id !== selectedAtendimento.id)
+      );
+
+      setShowEditModal(false);
+      setSelectedAtendimento(null);
+      setEditingAtendimento({});
+      setValidationErrors({});
+    } catch (err: any) {
+      console.error('Erro ao excluir atendimento:', err);
+      alert('Erro ao excluir atendimento. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleFotosColetadas = async (atendimentoId: number, fotosColetadas: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('atendimentos')
+        .update({ fotos_coletadas: !fotosColetadas })
+        .eq('id', atendimentoId);
+
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setAtendimentos(prev => 
+        prev.map(a => 
+          a.id === atendimentoId 
+            ? { ...a, fotos_coletadas: !fotosColetadas } 
+            : a
+        )
+      );
+    } catch (err: any) {
+      console.error('Erro ao atualizar status das fotos:', err);
+      alert('Erro ao atualizar status das fotos. Tente novamente.');
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="bg-white shadow-lg rounded-xl p-6 space-y-8">
-        <div className="flex justify-between items-center pb-6 border-b border-gray-100">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Lista de Atendimentos</h1>
-            <p className="text-gray-500 mt-2 text-lg">
-              Total de {totalCount} atendimento{totalCount !== 1 ? 's' : ''}
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl border border-white/20 p-8 space-y-8">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 pb-8 border-b border-slate-200">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                Gestão de Atendimentos
+              </h1>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  <span className="text-lg font-medium">
+                    {totalCount} atendimento{totalCount !== 1 ? 's' : ''} registrado{totalCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-500">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm">Sistema atualizado</span>
+                </div>
+              </div>
           </div>
           <Link
             href="/dashboard/atendimentos/novo"
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center gap-2"
+              className="group bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
-            Registrar Atendimento
+              Novo Atendimento
           </Link>
         </div>
 
         <div className="space-y-6">
-          <div className="relative flex gap-2">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
   type="text"
-  placeholder="Buscar por nome, protocolo ou CPF..."
-  className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              placeholder="Buscar por nome, protocolo, CPF ou solicitante..."
+              className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50 backdrop-blur-sm text-slate-700 placeholder-slate-400"
   value={searchTerm}
   onChange={(e) => setSearchTerm(e.target.value)}
   onKeyDown={(e) => {
@@ -312,7 +397,7 @@ export default function AtendimentosPage() {
 />
             <button
               onClick={handleSearch}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
             >
               Buscar
             </button>
@@ -324,56 +409,84 @@ export default function AtendimentosPage() {
             </div>
           )}
 
-          <div className="overflow-hidden">
+          <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Protocolo</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Nome</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">CPF</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Data</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Horário</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Ações</th>
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Protocolo</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Nome</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">CPF</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Data/Hora</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Fotos</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-200">
                   {atendimentos.map((atendimento) => (
-                    <tr key={atendimento.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4">{atendimento.protocolo}</td>
-                      <td className="px-6 py-4">{atendimento.nome}</td>
-                      <td className="px-6 py-4">{atendimento.cpf}</td>
-                      <td className="px-6 py-4">{formatDate(atendimento.dia_atual)}</td>
-                      <td className="px-6 py-4">{formatTime(atendimento.horario)}</td>
+                    <tr key={atendimento.id} className="hover:bg-slate-50/50 transition-all duration-200 group">
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getStatusColor(atendimento.status)}`}>
+                        <div className="font-mono text-sm font-semibold text-slate-800">
+                          {atendimento.protocolo}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-800">{atendimento.nome}</div>
+                        <div className="text-sm text-slate-500">{atendimento.solicitante}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-sm text-slate-700">
+                          {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-slate-800">{formatDate(atendimento.dia_atual)}</div>
+                        <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
                           {getStatusLabel(atendimento.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/dashboard/atendimentos/${atendimento.id}`}
-                            className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-200 text-sm font-medium gap-1"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        <button
+                          onClick={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            atendimento.fotos_coletadas
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                          }`}
+                        >
+                          {atendimento.fotos_coletadas ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Coletadas
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            Ver
-                          </Link>
+                              Pendente
+                            </>
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
                           <button
                             onClick={() => handleEditAtendimento(atendimento)}
-                            className="inline-flex items-center px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors duration-200 text-sm font-medium gap-1"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             title="Editar atendimento"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Editar
                           </button>
-                        </div>
                       </td>
                     </tr>
                   ))}
@@ -382,27 +495,33 @@ export default function AtendimentosPage() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-            <div className="text-sm text-gray-600">
-              Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, totalCount)} de {totalCount} registros
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-slate-200">
+            <div className="text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
+              Mostrando <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> a <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, totalCount)}</span> de <span className="font-semibold text-slate-800">{totalCount}</span> registros
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
               >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
                 Anterior
               </button>
-              <span className="px-4 py-2 text-sm text-gray-700">
+              <span className="px-4 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg font-medium">
                 Página {currentPage} de {totalPages}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Próxima
+                <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
           </div>
@@ -411,10 +530,10 @@ export default function AtendimentosPage() {
 
       {/* Modal de edição de atendimento */}
       {showEditModal && selectedAtendimento && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-emerald-100 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-3xl relative border border-white/20 max-h-[90vh] overflow-y-auto">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-100 transition-all duration-200 focus:outline-none"
               onClick={() => {
                 setShowEditModal(false);
                 setSelectedAtendimento(null);
@@ -423,7 +542,7 @@ export default function AtendimentosPage() {
               }}
               aria-label="Fechar"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -574,6 +693,7 @@ export default function AtendimentosPage() {
                       <option value="concluido">Concluído</option>
                       <option value="correcao">Correção</option>
                       <option value="bloqueado">Bloqueado</option>
+                      <option value="cancelado">Cancelado</option>
                       <option value="entregue">Entregue</option>
                     </select>
                     {validationErrors.status && (
@@ -620,39 +740,52 @@ export default function AtendimentosPage() {
             </div>
 
             {/* Botões de ação */}
-            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-6 border-t border-slate-200">
               <button
-                onClick={handleCancelEdit}
-                className="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                onClick={handleDeleteAtendimento}
                 disabled={saving}
+                className="px-6 py-3 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Cancelar
+                Excluir Atendimento
               </button>
-              <button
-                onClick={handleSaveAtendimento}
-                disabled={saving}
-                className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Salvar Alterações
-                  </>
-                )}
-              </button>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-6 py-3 bg-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-300 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  disabled={saving}
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveAtendimento}
+                  disabled={saving}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {saving ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Salvar Alterações
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
