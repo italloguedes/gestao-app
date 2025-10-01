@@ -465,27 +465,18 @@ export default function AtendimentosPage() {
                       </td>
                               <td className="px-6 py-4">
                                 {atendimento.status === 'pendente' ? (
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center justify-center">
                                     <input
                                       type="checkbox"
                                       checked={checkboxStates[atendimento.id] || false}
                                       onChange={() => handleToggleCheckbox(atendimento.id)}
                                       style={{
-                                        width: '20px',
-                                        height: '20px',
+                                        width: '24px',
+                                        height: '24px',
                                         cursor: 'pointer',
                                         accentColor: checkboxStates[atendimento.id] ? '#22c55e' : '#ef4444'
                                       }}
                                     />
-                                    <span 
-                                      onClick={() => handleToggleCheckbox(atendimento.id)}
-                                      className="text-sm font-medium cursor-pointer"
-                                      style={{
-                                        color: checkboxStates[atendimento.id] ? '#22c55e' : '#ef4444'
-                                      }}
-                                    >
-                                      {checkboxStates[atendimento.id] ? 'Confirmado' : 'Aguardando'}
-                                    </span>
                                   </div>
                                 ) : (
                                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
