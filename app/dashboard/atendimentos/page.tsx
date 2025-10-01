@@ -471,48 +471,34 @@ export default function AtendimentosPage() {
                         <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
                       </td>
                               <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                                    visualStatus[atendimento.id] 
-                                      ? getStatusColor(visualStatus[atendimento.id])
-                                      : getStatusColor(atendimento.status)
-                                  }`}>
-                                    {getStatusLabel(visualStatus[atendimento.id] || atendimento.status)}
+                                {atendimento.status === 'pendente' ? (
+                                  <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                      type="checkbox"
+                                      checked={visualStatus[atendimento.id] === 'confirmar'}
+                                      onChange={() => {
+                                        const currentStatus = visualStatus[atendimento.id] || atendimento.status;
+                                        handleToggleStatusVisual(atendimento.id, currentStatus);
+                                      }}
+                                      className={`w-5 h-5 rounded border-2 focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
+                                        visualStatus[atendimento.id] === 'confirmar'
+                                          ? 'bg-green-500 border-green-500 text-white focus:ring-green-300'
+                                          : 'bg-red-500 border-red-500 text-white focus:ring-red-300'
+                                      }`}
+                                    />
+                                    <span className={`text-sm font-medium transition-colors ${
+                                      visualStatus[atendimento.id] === 'confirmar'
+                                        ? 'text-green-600'
+                                        : 'text-red-600'
+                                    }`}>
+                                      {visualStatus[atendimento.id] === 'confirmar' ? 'Confirmado' : 'Pendente'}
+                                    </span>
+                                  </label>
+                                ) : (
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
+                                    {getStatusLabel(atendimento.status)}
                                   </span>
-                                  
-                                  {(visualStatus[atendimento.id] || atendimento.status) === 'pendente' && (
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                      <input
-                                        type="checkbox"
-                                        checked={visualStatus[atendimento.id] === 'confirmar'}
-                                        onChange={() => {
-                                          const currentStatus = visualStatus[atendimento.id] || atendimento.status;
-                                          handleToggleStatusVisual(atendimento.id, currentStatus);
-                                        }}
-                                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-                                      />
-                                      <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
-                                        Confirmar
-                                      </span>
-                                    </label>
-                                  )}
-                                  
-                                  {visualStatus[atendimento.id] === 'confirmar' && (
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                      <input
-                                        type="checkbox"
-                                        checked={true}
-                                        onChange={() => {
-                                          handleToggleStatusVisual(atendimento.id, 'confirmar');
-                                        }}
-                                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-                                      />
-                                      <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
-                                        Confirmado
-                                      </span>
-                                    </label>
-                                  )}
-                                </div>
+                                )}
                               </td>
                       <td className="px-6 py-4">
                         <button
