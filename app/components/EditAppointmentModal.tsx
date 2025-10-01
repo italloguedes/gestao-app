@@ -24,56 +24,111 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     setAction(initialAction);
   }, [initialAction]);
 
-  // Função para copiar texto para a área de transferência
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setMessage(`Copiado: ${text}`);
-      setTimeout(() => setMessage(''), 2000);
-    } catch (err) {
-      console.error('Erro ao copiar:', err);
-      setMessage('Erro ao copiar para área de transferência');
-      setTimeout(() => setMessage(''), 2000);
-    }
-  };
-
   // Função para copiar telefone (F7)
   const copyPhone = () => {
     if (appointment?.telefone) {
-      copyToClipboard(appointment.telefone);
+      copyToClipboardWithFallback(appointment.telefone);
     }
   };
 
   // Função para copiar CPF (F8)
   const copyCPF = () => {
     if (appointment?.cpf) {
-      copyToClipboard(appointment.cpf);
+      copyToClipboardWithFallback(appointment.cpf);
     }
   };
 
-  // Event listener para atalhos de teclado
+  // Event listener para atalhos de teclado - funciona globalmente quando o modal está aberto
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Só funciona quando o modal está aberto e a ação é 'iniciar'
       if (!isOpen || action !== 'iniciar') return;
 
+      // Verifica se as teclas F7 ou F8 foram pressionadas
       if (event.key === 'F7') {
         event.preventDefault();
+        event.stopPropagation();
         copyPhone();
+        // Foca na janela para garantir que a cópia funcione
+        window.focus();
       } else if (event.key === 'F8') {
         event.preventDefault();
+        event.stopPropagation();
         copyCPF();
+        // Foca na janela para garantir que a cópia funcione
+        window.focus();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+    // Adiciona o listener no window para capturar eventos globais
+    if (isOpen && action === 'iniciar') {
+      window.addEventListener('keydown', handleKeyDown, true); // true = capture phase
+      
+      // Solicita permissão para notificações para manter o contexto ativo
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen, action, appointment]);
+
+  // Função para copiar com fallback para navegadores mais antigos
+  const copyToClipboardWithFallback = async (text: string) => {
+    try {
+      // Tenta usar a API moderna primeiro
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        setMessage(`✅ Copiado: ${text}`);
+        setTimeout(() => setMessage(''), 3000);
+        
+        // Mostra notificação se disponível
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Dados Copiados!', {
+            body: `Telefone/CPF copiado: ${text}`,
+            icon: '/logoautismo.png',
+            tag: 'copy-notification'
+          });
+        }
+        return;
+      }
+      
+      // Fallback para navegadores mais antigos ou contextos não seguros
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        setMessage(`✅ Copiado: ${text}`);
+        setTimeout(() => setMessage(''), 3000);
+        
+        // Mostra notificação se disponível
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Dados Copiados!', {
+            body: `Telefone/CPF copiado: ${text}`,
+            icon: '/logoautismo.png',
+            tag: 'copy-notification'
+          });
+        }
+      } else {
+        throw new Error('Falha no comando de cópia');
+      }
+    } catch (err) {
+      console.error('Erro ao copiar:', err);
+      setMessage(`❌ Erro ao copiar: ${text}`);
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -487,10 +542,13 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
                 <p className="text-xs text-amber-700 font-medium mb-1">
-                  ⌨️ Atalhos de Teclado:
+                  ⌨️ Atalhos de Teclado (Funcionam Globalmente):
                 </p>
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-amber-600 mb-1">
                   <strong>F7</strong> - Copiar telefone | <strong>F8</strong> - Copiar CPF
+                </p>
+                <p className="text-xs text-amber-500">
+                  💡 Funciona mesmo quando você está em outra janela ou aplicação!
                 </p>
               </div>
               <p className="text-xs text-blue-600 mt-2">
