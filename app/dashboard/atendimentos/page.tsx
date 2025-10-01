@@ -38,9 +38,6 @@ export default function AtendimentosPage() {
   const [editingAtendimento, setEditingAtendimento] = useState<Partial<Atendimento>>({});
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  
-  // Estado para controlar checkboxes visuais (apenas visual)
-  const [checkboxStates, setCheckboxStates] = useState<Record<number, boolean>>({});
 
   const router = useRouter();
   const { user } = useAuth();
@@ -350,14 +347,6 @@ export default function AtendimentosPage() {
     }
   };
 
-  // Função para alternar checkbox visual (apenas visual)
-  const handleToggleCheckbox = (atendimentoId: number) => {
-    setCheckboxStates(prev => ({
-      ...prev,
-      [atendimentoId]: !prev[atendimentoId]
-    }));
-  };
-
   if (loading) return <Loading />;
 
   return (
@@ -469,48 +458,18 @@ export default function AtendimentosPage() {
                                 </span>
                               </td>
                       <td className="px-6 py-4">
-                        {atendimento.status === 'pendente' ? (
-                          <div className="flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={atendimento.fotos_coletadas || false}
-                              onChange={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
-                              style={{
-                                width: '24px',
-                                height: '24px',
-                                cursor: 'pointer',
-                                accentColor: atendimento.fotos_coletadas ? '#22c55e' : '#ef4444'
-                              }}
-                              title={atendimento.fotos_coletadas ? 'Fotos coletadas' : 'Fotos não coletadas'}
-                            />
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                              atendimento.fotos_coletadas
-                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                            }`}
-                          >
-                            {atendimento.fotos_coletadas ? (
-                              <>
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Coletadas
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                                Pendente
-                              </>
-                            )}
-                          </button>
-                        )}
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={atendimento.fotos_coletadas || false}
+                            onChange={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
+                            className="w-6 h-6 cursor-pointer transition-all duration-200 rounded focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                            style={{
+                              accentColor: atendimento.fotos_coletadas ? '#10b981' : '#64748b'
+                            }}
+                            title={atendimento.fotos_coletadas ? 'Fotos coletadas - clique para desmarcar' : 'Fotos não coletadas - clique para marcar'}
+                          />
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                           <button
