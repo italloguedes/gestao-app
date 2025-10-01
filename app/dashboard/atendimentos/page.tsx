@@ -464,54 +464,53 @@ export default function AtendimentosPage() {
                         <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
                       </td>
                               <td className="px-6 py-4">
-                                {atendimento.status === 'pendente' ? (
-                                  <div className="flex items-center justify-center gap-2">
-                                    <div 
-                                      className={`w-4 h-4 rounded-full border-2 ${
-                                        atendimento.fotos_coletadas 
-                                          ? 'bg-green-500 border-green-600' 
-                                          : 'bg-red-500 border-red-600'
-                                      }`}
-                                      title={atendimento.fotos_coletadas ? 'Fotos coletadas' : 'Fotos não coletadas'}
-                                    ></div>
-                                    <span className={`text-xs font-medium ${
-                                      atendimento.fotos_coletadas ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                      Pendente
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
-                                    {getStatusLabel(atendimento.status)}
-                                  </span>
-                                )}
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
+                                  {getStatusLabel(atendimento.status)}
+                                </span>
                               </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
-                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            atendimento.fotos_coletadas
-                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                          }`}
-                        >
-                          {atendimento.fotos_coletadas ? (
-                            <>
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {atendimento.status === 'pendente' ? (
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={atendimento.fotos_coletadas || false}
+                              onChange={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                cursor: 'pointer',
+                                accentColor: atendimento.fotos_coletadas ? '#22c55e' : '#ef4444'
+                              }}
+                              title={atendimento.fotos_coletadas ? 'Fotos coletadas' : 'Fotos não coletadas'}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false)}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                              atendimento.fotos_coletadas
+                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                            }`}
+                          >
+                            {atendimento.fotos_coletadas ? (
+                              <>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Coletadas
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
-                              Coletadas
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                              Pendente
-                            </>
-                          )}
-                        </button>
+                                Pendente
+                              </>
+                            )}
+                          </button>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                           <button
