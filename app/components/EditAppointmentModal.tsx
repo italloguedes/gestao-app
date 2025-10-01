@@ -19,7 +19,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
   const [motivo, setMotivo] = React.useState('');
   const [protocolo, setProtocolo] = React.useState('');
-  const [showCopyButtons, setShowCopyButtons] = React.useState(false);
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -39,48 +38,27 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     }
   };
 
-  // Event listener para atalhos de teclado - funciona globalmente quando o modal está aberto
+  // Event listener para atalhos de teclado - funciona quando o modal está aberto
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Só funciona quando o modal está aberto e a ação é 'iniciar'
       if (!isOpen || action !== 'iniciar') return;
 
-      // Atalhos com Ctrl que funcionam melhor globalmente
-      if (event.ctrlKey && event.key === '7') {
+      // Atalhos F7 e F8
+      if (event.key === 'F7') {
         event.preventDefault();
         event.stopPropagation();
         copyPhone();
-        // Foca na janela para garantir que a cópia funcione
-        window.focus();
-      } else if (event.ctrlKey && event.key === '8') {
-        event.preventDefault();
-        event.stopPropagation();
-        copyCPF();
-        // Foca na janela para garantir que a cópia funcione
-        window.focus();
-      }
-      // Mantém F7 e F8 como alternativa
-      else if (event.key === 'F7') {
-        event.preventDefault();
-        event.stopPropagation();
-        copyPhone();
-        window.focus();
       } else if (event.key === 'F8') {
         event.preventDefault();
         event.stopPropagation();
         copyCPF();
-        window.focus();
       }
     };
 
-    // Adiciona o listener no window para capturar eventos globais
+    // Adiciona o listener no window para capturar eventos
     if (isOpen && action === 'iniciar') {
-      window.addEventListener('keydown', handleKeyDown, true); // true = capture phase
-      
-      // Solicita permissão para notificações para manter o contexto ativo
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
+      window.addEventListener('keydown', handleKeyDown, true);
     }
 
     return () => {
@@ -553,25 +531,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <span className="ml-1 text-blue-600">{appointment.telefone}</span>
                 </div>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
-                <p className="text-xs text-amber-700 font-medium mb-2">
-                  📋 Como Copiar os Dados:
-                </p>
-                <div className="space-y-1">
-                  <p className="text-xs text-amber-600">
-                    <strong>1. Botões de Cópia:</strong> Clique nos botões "📋 Copiar" ao lado dos campos
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    <strong>2. Atalhos de Teclado:</strong> <strong>Ctrl+7</strong> (telefone) | <strong>Ctrl+8</strong> (CPF)
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    <strong>3. Teclas de Função:</strong> <strong>F7</strong> (telefone) | <strong>F8</strong> (CPF)
-                  </p>
-                </div>
-                <p className="text-xs text-amber-500 mt-2">
-                  💡 <strong>Dica:</strong> Os botões funcionam sempre, mesmo quando você está em outros programas!
-                </p>
-              </div>
               <p className="text-xs text-blue-600 mt-2">
                 💡 Você pode editar os dados do cliente nos campos abaixo se necessário
               </p>
@@ -611,52 +570,32 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     CPF * 
                     <span className="ml-2 text-xs text-blue-600 font-normal">
-                      (Ctrl+8 ou F8 para copiar)
+                      (F8 para copiar)
                     </span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="cpf"
-                      defaultValue={appointment.cpf}
-                      className="w-full px-3 py-2 pr-20 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      placeholder="Apenas números"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyCPF()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
-                      title="Copiar CPF (Ctrl+8 ou F8)"
-                    >
-                      📋 Copiar
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    name="cpf"
+                    defaultValue={appointment.cpf}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="Apenas números"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Telefone
                     <span className="ml-2 text-xs text-blue-600 font-normal">
-                      (Ctrl+7 ou F7 para copiar)
+                      (F7 para copiar)
                     </span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      name="telefone"
-                      defaultValue={appointment.telefone}
-                      className="w-full px-3 py-2 pr-20 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      placeholder="(85) 99999-9999"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyPhone()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
-                      title="Copiar Telefone (Ctrl+7 ou F7)"
-                    >
-                      📋 Copiar
-                    </button>
-                  </div>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    defaultValue={appointment.telefone}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="(85) 99999-9999"
+                  />
                 </div>
               </div>
 
