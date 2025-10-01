@@ -465,18 +465,20 @@ export default function AtendimentosPage() {
                       </td>
                               <td className="px-6 py-4">
                                 {atendimento.status === 'pendente' ? (
-                                  <div className="flex items-center justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={checkboxStates[atendimento.id] || false}
-                                      onChange={() => handleToggleCheckbox(atendimento.id)}
-                                      style={{
-                                        width: '24px',
-                                        height: '24px',
-                                        cursor: 'pointer',
-                                        accentColor: checkboxStates[atendimento.id] ? '#22c55e' : '#ef4444'
-                                      }}
-                                    />
+                                  <div className="flex items-center justify-center gap-2">
+                                    <div 
+                                      className={`w-4 h-4 rounded-full border-2 ${
+                                        atendimento.fotos_coletadas 
+                                          ? 'bg-green-500 border-green-600' 
+                                          : 'bg-red-500 border-red-600'
+                                      }`}
+                                      title={atendimento.fotos_coletadas ? 'Fotos coletadas' : 'Fotos não coletadas'}
+                                    ></div>
+                                    <span className={`text-xs font-medium ${
+                                      atendimento.fotos_coletadas ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      Pendente
+                                    </span>
                                   </div>
                                 ) : (
                                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
