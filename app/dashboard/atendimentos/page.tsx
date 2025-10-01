@@ -39,8 +39,8 @@ export default function AtendimentosPage() {
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
-  // Estado para controlar status visuais (pendente -> confirmar)
-  const [visualStatus, setVisualStatus] = useState<Record<number, string>>({});
+  // Estado para controlar checkboxes visuais (apenas visual)
+  const [checkboxStates, setCheckboxStates] = useState<Record<number, boolean>>({});
 
   const router = useRouter();
   const { user } = useAuth();
@@ -350,19 +350,12 @@ export default function AtendimentosPage() {
     }
   };
 
-  // Função para alternar status visual (pendente <-> confirmar)
-  const handleToggleStatusVisual = (atendimentoId: number, currentStatus: string) => {
-    if (currentStatus === 'pendente') {
-      setVisualStatus(prev => ({
-        ...prev,
-        [atendimentoId]: 'confirmar'
-      }));
-    } else if (currentStatus === 'confirmar') {
-      setVisualStatus(prev => ({
-        ...prev,
-        [atendimentoId]: 'pendente'
-      }));
-    }
+  // Função para alternar checkbox visual (apenas visual)
+  const handleToggleCheckbox = (atendimentoId: number) => {
+    setCheckboxStates(prev => ({
+      ...prev,
+      [atendimentoId]: !prev[atendimentoId]
+    }));
   };
 
   if (loading) return <Loading />;
@@ -475,23 +468,20 @@ export default function AtendimentosPage() {
                                   <label className="flex items-center gap-2 cursor-pointer group">
                                     <input
                                       type="checkbox"
-                                      checked={visualStatus[atendimento.id] === 'confirmar'}
-                                      onChange={() => {
-                                        const currentStatus = visualStatus[atendimento.id] || atendimento.status;
-                                        handleToggleStatusVisual(atendimento.id, currentStatus);
-                                      }}
+                                      checked={checkboxStates[atendimento.id] || false}
+                                      onChange={() => handleToggleCheckbox(atendimento.id)}
                                       className={`w-5 h-5 rounded border-2 focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
-                                        visualStatus[atendimento.id] === 'confirmar'
+                                        checkboxStates[atendimento.id]
                                           ? 'bg-green-500 border-green-500 text-white focus:ring-green-300'
                                           : 'bg-red-500 border-red-500 text-white focus:ring-red-300'
                                       }`}
                                     />
                                     <span className={`text-sm font-medium transition-colors ${
-                                      visualStatus[atendimento.id] === 'confirmar'
+                                      checkboxStates[atendimento.id]
                                         ? 'text-green-600'
                                         : 'text-red-600'
                                     }`}>
-                                      {visualStatus[atendimento.id] === 'confirmar' ? 'Confirmado' : 'Pendente'}
+                                      {checkboxStates[atendimento.id] ? 'Confirmado' : 'Aguardando'}
                                     </span>
                                   </label>
                                 ) : (
