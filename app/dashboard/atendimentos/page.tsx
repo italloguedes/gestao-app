@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ export default function AtendimentosPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [fotosPendentes, setFotosPendentes] = useState(0);
   const itemsPerPage = 50;
 
   // Estados para o modal de edição
@@ -85,6 +86,8 @@ export default function AtendimentosPage() {
   const fetchAtendimentos = async () => {
     try {
       setLoading(true);
+      
+      // Query principal para os atendimentos paginados
       let query = supabase
         .from('atendimentos')
         .select('*', { count: 'exact' });
@@ -95,16 +98,24 @@ export default function AtendimentosPage() {
         );
       }
 
-      const { data, error, count } = await query
-        .order('dia_atual', { ascending: false })
-        .order('horario', { ascending: false })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+      // Buscar contagem de fotos pendentes em paralelo (mais eficiente)
+      const [atendimentosResult, fotosPendentesResult] = await Promise.all([
+        query
+          .order('dia_atual', { ascending: false })
+          .order('horario', { ascending: false })
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1),
+        supabase
+          .from('atendimentos')
+          .select('id', { count: 'exact', head: true })
+          .or('fotos_coletadas.is.null,fotos_coletadas.eq.false')
+      ]);
 
-      if (error) throw error;
+      if (atendimentosResult.error) throw atendimentosResult.error;
 
-      setAtendimentos(data || []);
-      setTotalCount(count || 0);
-      setTotalPages(Math.ceil((count || 0) / itemsPerPage));
+      setAtendimentos(atendimentosResult.data || []);
+      setTotalCount(atendimentosResult.count || 0);
+      setTotalPages(Math.ceil((atendimentosResult.count || 0) / itemsPerPage));
+      setFotosPendentes(fotosPendentesResult.count || 0);
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -139,17 +150,17 @@ export default function AtendimentosPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const [datePart] = dateString.split('T');
     const date = new Date(datePart + 'T00:00:00');
     return date.toLocaleDateString('pt-BR', {
       timeZone: 'America/Fortaleza'
     });
-  };
+  }, []);
 
-  const formatTime = (timeString: string) => timeString.substring(0, 5);
+  const formatTime = useCallback((timeString: string) => timeString.substring(0, 5), []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'concluido':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
@@ -170,9 +181,9 @@ export default function AtendimentosPage() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
+  }, []);
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = useCallback((status: string) => {
     switch (status) {
       case 'concluido':
         return 'Concluído';
@@ -193,7 +204,7 @@ export default function AtendimentosPage() {
       default:
         return status;
     }
-  };
+  }, []);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -338,7 +349,7 @@ export default function AtendimentosPage() {
     }
   };
 
-  const handleToggleFotosColetadas = async (atendimentoId: number, fotosColetadas: boolean) => {
+  const handleToggleFotosColetadas = useCallback(async (atendimentoId: number, fotosColetadas: boolean) => {
     try {
       const { error } = await supabase
         .from('atendimentos')
@@ -347,7 +358,7 @@ export default function AtendimentosPage() {
 
       if (error) throw error;
       
-      // Atualizar a lista local
+      // Atualizar a lista local e contador
       setAtendimentos(prev => 
         prev.map(a => 
           a.id === atendimentoId 
@@ -355,11 +366,14 @@ export default function AtendimentosPage() {
             : a
         )
       );
+      
+      // Atualizar contador de fotos pendentes
+      setFotosPendentes(prev => fotosColetadas ? prev + 1 : prev - 1);
     } catch (err: any) {
       console.error('Erro ao atualizar status das fotos:', err);
       alert('Erro ao atualizar status das fotos. Tente novamente.');
     }
-  };
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -382,13 +396,33 @@ export default function AtendimentosPage() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
                 Gestão de Atendimentos
               </h1>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2 text-slate-600">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                   <span className="text-lg font-medium">
                     {totalCount} atendimento{totalCount !== 1 ? 's' : ''} registrado{totalCount !== 1 ? 's' : ''}
                   </span>
                 </div>
+                
+                {/* Contador de fotos pendentes */}
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 transition-all ${
+                  fotosPendentes > 0 
+                    ? 'bg-amber-50 border-amber-300 text-amber-700' 
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                }`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-sm font-semibold">
+                    {fotosPendentes > 0 ? (
+                      <>{fotosPendentes} foto{fotosPendentes !== 1 ? 's' : ''} pendente{fotosPendentes !== 1 ? 's' : ''}</>
+                    ) : (
+                      <>Todas as fotos coletadas ✓</>
+                    )}
+                  </span>
+                </div>
+
                 <div className="flex items-center gap-2 text-slate-500">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
