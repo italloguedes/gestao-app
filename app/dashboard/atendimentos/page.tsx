@@ -81,7 +81,7 @@ export default function AtendimentosPage() {
 
   useEffect(() => {
     fetchAtendimentos();
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
 
   const fetchAtendimentos = async () => {
     try {
@@ -124,18 +124,6 @@ export default function AtendimentosPage() {
     }
   };
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('atendimentos_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atendimentos' }, () => {
-        fetchAtendimentos();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   // Atalho de teclado para refresh (Ctrl + R ou F5)
   useEffect(() => {
