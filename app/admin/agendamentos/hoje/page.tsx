@@ -691,7 +691,7 @@ export default function AgendamentosHojePage() {
                         ? hasConcluded
                           ? "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-300"
                           : hasPreferential
-                            ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-300"
+                            ? "bg-gradient-to-br from-amber-100 to-amber-200 border-amber-400 shadow-amber-100"
                             : "bg-white border-slate-200 hover:border-slate-300"
                         : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 border-dashed"
                     }`}
