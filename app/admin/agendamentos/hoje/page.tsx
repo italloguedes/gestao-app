@@ -80,6 +80,7 @@ export default function AgendamentosHojePage() {
   const [simpleConfirmData, setSimpleConfirmData] = useState<{id: number, nome: string, action: string} | null>(null);
   const [showEmptySlots, setShowEmptySlots] = useState(true);
   const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
 
   useEffect(() => {
     checkUser();
@@ -506,6 +507,14 @@ export default function AgendamentosHojePage() {
       });
     }
     
+    // Filtrar por status se selectedStatusFilter não for 'todos'
+    if (selectedStatusFilter !== 'todos') {
+      filteredHorarios = filteredHorarios.filter(horario => {
+        const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
+        return agendamentosHorario.some((a: Agendamento) => a.status === selectedStatusFilter);
+      });
+    }
+    
     return filteredHorarios.length;
   })();
 
@@ -538,13 +547,17 @@ export default function AgendamentosHojePage() {
                       {agendamentos.filter((a: Agendamento) => a.status === 'concluido').length} concluídos
                     </span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      showOnlyPreferential 
+                      selectedStatusFilter !== 'todos'
+                        ? 'bg-purple-100 text-purple-800'
+                        : showOnlyPreferential 
                         ? 'bg-amber-100 text-amber-800'
                         : showEmptySlots 
                         ? 'bg-blue-100 text-blue-800' 
                         : 'bg-orange-100 text-orange-800'
                     }`}>
-                      {showOnlyPreferential 
+                      {selectedStatusFilter !== 'todos'
+                        ? `Apenas ${selectedStatusFilter}s (${visibleSlots})`
+                        : showOnlyPreferential 
                         ? `Apenas preferenciais (${visibleSlots})`
                         : showEmptySlots 
                         ? `Mostrando todos os horários (${visibleSlots})` 
@@ -638,6 +651,22 @@ export default function AgendamentosHojePage() {
                   </button>
                 </div>
                 
+                {/* Filtro de Status */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-sm font-medium text-slate-600">Status:</span>
+                  <select
+                    value={selectedStatusFilter}
+                    onChange={(e) => setSelectedStatusFilter(e.target.value as AppointmentStatus | 'todos')}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white hover:border-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-200 font-medium"
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="confirmado">Confirmados</option>
+                    <option value="cancelado">Cancelados</option>
+                    <option value="ausente">Ausentes</option>
+                    <option value="concluido">Concluídos</option>
+                  </select>
+                </div>
+                
                 <button
                   onClick={() => router.push("/admin/gestao")}
                   className="flex items-center px-5 py-3 text-slate-600 bg-white hover:bg-slate-50 rounded-xl border border-slate-300 hover:border-slate-400 transition-all duration-300 shadow-sm hover:shadow-md font-medium"
@@ -681,6 +710,14 @@ export default function AgendamentosHojePage() {
                 // Se showOnlyPreferential for true e não houver atendimento preferencial, não renderizar
                 if (showOnlyPreferential && !hasPreferential) {
                   return null;
+                }
+
+                // Se selectedStatusFilter não for 'todos' e não houver agendamento com o status selecionado, não renderizar
+                if (selectedStatusFilter !== 'todos') {
+                  const hasSelectedStatus = agendamentosHorario.some((a: Agendamento) => a.status === selectedStatusFilter);
+                  if (!hasSelectedStatus) {
+                    return null;
+                  }
                 }
 
                 return (
