@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactElement, useEffect, useState, useCallback, useMemo } from "react";
+import React, { ReactElement, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import {
@@ -120,7 +120,7 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const formatDate = useCallback((dateString: string) => {
+  const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString + "T12:00:00Z");
       return date.toLocaleDateString("pt-BR", {
@@ -133,9 +133,9 @@ export default function AgendamentosHojePage() {
       console.error("Erro ao formatar data:", error);
       return dateString;
     }
-  }, []);
+  };
 
-  const loadAgendamentos = useCallback(async () => {
+  const loadAgendamentos = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -156,24 +156,14 @@ export default function AgendamentosHojePage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  };
 
-  const handleStatusChange = useCallback(async (id: number, newStatus: string) => {
+  const handleStatusChange = async (id: number, newStatus: string) => {
     console.log('🔄 handleStatusChange: Iniciando', { id, newStatus });
     setActionLoading(true);
     
-    // Atualização otimista - atualizar o estado local primeiro
-    const previousAgendamentos = agendamentos;
-    setAgendamentos((prevAgendamentos: Agendamento[]) => 
-      prevAgendamentos.map((agendamento: Agendamento) => 
-        agendamento.id === id 
-          ? { ...agendamento, status: newStatus as AppointmentStatus }
-          : agendamento
-      )
-    );
-    
     try {
-      // Atualizar no banco de dados
+      // Atualizar no banco de dados primeiro
       const { error } = await supabase
         .from("agendamentos")
         .update({ status: newStatus })
@@ -181,12 +171,19 @@ export default function AgendamentosHojePage() {
 
       if (error) {
         console.error('❌ handleStatusChange: Erro do Supabase', error);
-        // Reverter a atualização otimista em caso de erro
-        setAgendamentos(previousAgendamentos);
         throw error;
       }
       
       console.log('✅ handleStatusChange: Atualização bem-sucedida');
+      
+      // Atualizar o estado local após sucesso no banco
+      setAgendamentos((prevAgendamentos: Agendamento[]) => 
+        prevAgendamentos.map((agendamento: Agendamento) => 
+          agendamento.id === id 
+            ? { ...agendamento, status: newStatus as AppointmentStatus }
+            : agendamento
+        )
+      );
       
       // Fechar modais
       setIsModalOpen(false);
@@ -202,20 +199,10 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  }, [agendamentos]);
+  };
 
-  const handleEditAppointment = useCallback(async (updatedAppointment: Agendamento) => {
+  const handleEditAppointment = async (updatedAppointment: Agendamento) => {
     setActionLoading(true);
-    
-    // Atualização otimista
-    const previousAgendamentos = agendamentos;
-    setAgendamentos((prevAgendamentos: Agendamento[]) => 
-      prevAgendamentos.map((agendamento: Agendamento) => 
-        agendamento.id === updatedAppointment.id 
-          ? { ...agendamento, ...updatedAppointment }
-          : agendamento
-      )
-    );
     
     try {
       const { error } = await supabase
@@ -224,10 +211,17 @@ export default function AgendamentosHojePage() {
         .eq("id", updatedAppointment.id);
 
       if (error) {
-        // Reverter em caso de erro
-        setAgendamentos(previousAgendamentos);
         throw error;
       }
+      
+      // Atualizar o estado local após sucesso no banco
+      setAgendamentos((prevAgendamentos: Agendamento[]) => 
+        prevAgendamentos.map((agendamento: Agendamento) => 
+          agendamento.id === updatedAppointment.id 
+            ? { ...agendamento, ...updatedAppointment }
+            : agendamento
+        )
+      );
       
       setIsModalOpen(false);
       alert('Agendamento atualizado com sucesso!');
@@ -237,9 +231,9 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  }, [agendamentos]);
+  };
 
-  const handleCreateAppointment = useCallback(async (appointmentData: any) => {
+  const handleCreateAppointment = async (appointmentData: any) => {
     setActionLoading(true);
     try {
       const response = await fetch('/api/agendamentos', {
@@ -269,16 +263,10 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  }, [agendamentos]);
+  };
 
-  const handleDeleteAppointment = useCallback(async (id: number) => {
+  const handleDeleteAppointment = async (id: number) => {
     setActionLoading(true);
-    
-    // Atualização otimista - remover do estado local primeiro
-    const previousAgendamentos = agendamentos;
-    setAgendamentos((prevAgendamentos: Agendamento[]) => 
-      prevAgendamentos.filter((agendamento: Agendamento) => agendamento.id !== id)
-    );
     
     try {
       const { error } = await supabase
@@ -287,10 +275,13 @@ export default function AgendamentosHojePage() {
         .eq("id", id);
 
       if (error) {
-        // Reverter em caso de erro
-        setAgendamentos(previousAgendamentos);
         throw error;
       }
+      
+      // Remover do estado local após sucesso no banco
+      setAgendamentos((prevAgendamentos: Agendamento[]) => 
+        prevAgendamentos.filter((agendamento: Agendamento) => agendamento.id !== id)
+      );
       
       setIsModalOpen(false);
       setSelectedAppointment(null);
@@ -301,9 +292,9 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  }, [agendamentos]);
+  };
 
-  const handleSimpleConfirm = useCallback(async () => {
+  const handleSimpleConfirm = async () => {
     if (!simpleConfirmData) return;
     
     setActionLoading(true);
@@ -316,7 +307,7 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  }, [simpleConfirmData, handleStatusChange]);
+  };
 
 
   const generateReport = async () => {
@@ -366,7 +357,7 @@ export default function AgendamentosHojePage() {
 
       /* ---------- Tabela com autoTable (horário, nome, telefone, CPF e status) ---------- */
       const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status'];
-      const tableRows = agendamentos.map((a: Agendamento) => [
+      const tableRows = agendamentos.map((a: any) => [
           a.horario,
           a.nome.length > 30 ? a.nome.substring(0, 27) + '...' : a.nome,
           a.telefone,
