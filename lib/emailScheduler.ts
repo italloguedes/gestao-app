@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase-client';
 import { sendReminderEmail, sendInstructionsEmail } from './emailService';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export async function scheduleReminderEmails() {
   // Buscar agendamentos para amanhã

@@ -49,22 +49,30 @@ const customStorage = {
   }
 };
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: 'app-session',
-      storage: customStorage
-    },
-    db: {
-      schema: 'public'
-    }
+// Singleton pattern para evitar múltiplas instâncias
+let supabaseInstance: any = null;
+
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: 'app-session',
+          storage: customStorage
+        },
+        db: {
+          schema: 'public'
+        }
+      }
+    );
   }
-);
+  return supabaseInstance;
+})();
 
 // Função para verificar se o Supabase está inicializado corretamente
 export const checkSupabaseConnection = async () => {

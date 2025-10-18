@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactElement, useEffect, useState, useMemo } from "react";
+import React, { ReactElement, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import {
@@ -484,26 +484,17 @@ export default function AgendamentosHojePage() {
   }
 
   // Build list of occupied time slots (HH:MM) to filter available times in create modal
-  const occupiedSlots = useMemo(() => 
-    agendamentos.map(a => a.horario.substring(0, 5)), 
-    [agendamentos]
-  );
+  const occupiedSlots = agendamentos.map((a: any) => a.horario.substring(0, 5));
   
   // Calcular quantos horários estão sendo exibidos
-  const visibleSlots = useMemo(() => 
-    showEmptySlots 
-      ? HORARIOS.length 
-      : HORARIOS.filter(horario => 
-          agendamentos.some((a: Agendamento) => a.horario === `${horario}:00`)
-        ).length,
-    [showEmptySlots, agendamentos]
-  );
+  const visibleSlots = showEmptySlots 
+    ? HORARIOS.length 
+    : HORARIOS.filter(horario => 
+        agendamentos.some((a: Agendamento) => a.horario === `${horario}:00`)
+      ).length;
 
-  // Memoizar os agendamentos existentes para o modal de criação
-  const existingAppointments = useMemo(() => 
-    agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome })),
-    [agendamentos]
-  );
+  // Agendamentos existentes para o modal de criação
+  const existingAppointments = agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome }));
 
   return (
     <>
