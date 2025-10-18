@@ -189,8 +189,20 @@ export default function AgendamentosHojePage() {
         throw error;
       }
       
-      console.log('✅ handleStatusChange: Atualização bem-sucedida, recarregando agendamentos...');
+      console.log('✅ handleStatusChange: Atualização bem-sucedida, atualizando estado local...');
+      
+      // Atualizar o estado local imediatamente para refletir a mudança visual
+      setAgendamentos((prevAgendamentos: Agendamento[]) => 
+        prevAgendamentos.map((agendamento: Agendamento) => 
+          agendamento.id === id 
+            ? { ...agendamento, status: newStatus as AppointmentStatus }
+            : agendamento
+        )
+      );
+      
+      // Recarregar os dados do servidor para garantir consistência
       await loadAgendamentos();
+      
       setIsModalOpen(false);
       setSelectedAppointment(null);
       console.log('✅ handleStatusChange: Concluído com sucesso');
@@ -789,6 +801,7 @@ export default function AgendamentosHojePage() {
         onSave={handleCreateAppointment}
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
+        existingAppointments={agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome }))}
       />
 
 

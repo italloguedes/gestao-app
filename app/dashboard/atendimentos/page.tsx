@@ -31,7 +31,7 @@ export default function AtendimentosPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [fotosPendentes, setFotosPendentes] = useState(0);
-  const itemsPerPage = 50;
+  const itemsPerPage = 30;
 
   // Estados para o modal de edição
   const [showEditModal, setShowEditModal] = useState(false);

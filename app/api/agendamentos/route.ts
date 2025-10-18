@@ -14,6 +14,30 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verificar se já existe um agendamento com o mesmo CPF na mesma data
+    const { data: existingCpfAppointment, error: cpfCheckError } = await supabase
+      .from('agendamentos')
+      .select('id, nome')
+      .eq('cpf', cpf)
+      .eq('data', data)
+      .in('status', ['confirmado', 'bloqueado', 'concluido', 'ausente']);
+
+    if (cpfCheckError) {
+      console.error('Erro ao verificar CPF duplicado:', cpfCheckError);
+      return NextResponse.json(
+        { error: 'Erro ao verificar CPF duplicado' },
+        { status: 500 }
+      );
+    }
+
+    // Não permitir CPF duplicado na mesma data
+    if (existingCpfAppointment && existingCpfAppointment.length > 0) {
+      return NextResponse.json(
+        { error: `Já existe um agendamento para o CPF ${cpf} na data ${data}. Nome: ${existingCpfAppointment[0].nome}` },
+        { status: 409 }
+      );
+    }
+
     // Verificar quantos agendamentos já existem no mesmo horário
     const { data: existingAppointments, error: checkError } = await supabase
       .from('agendamentos')

@@ -19,6 +19,7 @@ interface CreateAppointmentModalProps {
   selectedDate: string;
   selectedTime?: string;
   occupiedSlots: string[];
+  existingAppointments?: Array<{cpf: string, nome: string}>;
 }
 
 export default function CreateAppointmentModal({
@@ -28,6 +29,7 @@ export default function CreateAppointmentModal({
   selectedDate,
   selectedTime = "",
   occupiedSlots,
+  existingAppointments = [],
 }: CreateAppointmentModalProps) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -62,6 +64,13 @@ const [preferential, setPreferential] = useState(false);
       if (!cpf.trim()) errs.cpf = "CPF é obrigatório";
       else if (!/^\d{11}$/.test(cpf))
         errs.cpf = "CPF deve ter 11 dígitos sem pontuação";
+      else {
+        // Verificar se já existe um agendamento com o mesmo CPF na mesma data
+        const existingAppointment = existingAppointments.find(app => app.cpf === cpf);
+        if (existingAppointment) {
+          errs.cpf = `Já existe um agendamento para este CPF na data selecionada. Nome: ${existingAppointment.nome}`;
+        }
+      }
       if (!telefone.trim()) errs.telefone = "Telefone é obrigatório";
       else if (!/^\d{10,11}$/.test(telefone))
         errs.telefone = "Telefone deve ter 10 ou 11 dígitos";
