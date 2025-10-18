@@ -79,6 +79,7 @@ export default function AgendamentosHojePage() {
   const [showSimpleConfirm, setShowSimpleConfirm] = useState(false);
   const [simpleConfirmData, setSimpleConfirmData] = useState<{id: number, nome: string, action: string} | null>(null);
   const [showEmptySlots, setShowEmptySlots] = useState(true);
+  const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -487,11 +488,26 @@ export default function AgendamentosHojePage() {
   const occupiedSlots = agendamentos.map((a: any) => a.horario.substring(0, 5));
   
   // Calcular quantos horários estão sendo exibidos
-  const visibleSlots = showEmptySlots 
-    ? HORARIOS.length 
-    : HORARIOS.filter(horario => 
+  const visibleSlots = (() => {
+    let filteredHorarios = HORARIOS;
+    
+    // Filtrar por horários ocupados se showEmptySlots for false
+    if (!showEmptySlots) {
+      filteredHorarios = filteredHorarios.filter(horario => 
         agendamentos.some((a: Agendamento) => a.horario === `${horario}:00`)
-      ).length;
+      );
+    }
+    
+    // Filtrar por atendimentos preferenciais se showOnlyPreferential for true
+    if (showOnlyPreferential) {
+      filteredHorarios = filteredHorarios.filter(horario => {
+        const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
+        return agendamentosHorario.some((a: Agendamento) => a.atendimento_preferencial);
+      });
+    }
+    
+    return filteredHorarios.length;
+  })();
 
   // Agendamentos existentes para o modal de criação
   const existingAppointments = agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome }));
@@ -522,11 +538,18 @@ export default function AgendamentosHojePage() {
                       {agendamentos.filter((a: Agendamento) => a.status === 'concluido').length} concluídos
                     </span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      showEmptySlots 
+                      showOnlyPreferential 
+                        ? 'bg-amber-100 text-amber-800'
+                        : showEmptySlots 
                         ? 'bg-blue-100 text-blue-800' 
                         : 'bg-orange-100 text-orange-800'
                     }`}>
-                      {showEmptySlots ? `Mostrando todos os horários (${visibleSlots})` : `Apenas horários ocupados (${visibleSlots})`}
+                      {showOnlyPreferential 
+                        ? `Apenas preferenciais (${visibleSlots})`
+                        : showEmptySlots 
+                        ? `Mostrando todos os horários (${visibleSlots})` 
+                        : `Apenas horários ocupados (${visibleSlots})`
+                      }
                     </span>
                   </div>
               </div>
@@ -595,6 +618,19 @@ export default function AgendamentosHojePage() {
               </button>
               
               <button
+                onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
+                className={`flex items-center px-4 py-2 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md ${
+                  showOnlyPreferential 
+                    ? 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100' 
+                    : 'text-slate-700 bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+                title={showOnlyPreferential ? 'Mostrar todos os horários' : 'Mostrar apenas preferenciais'}
+              >
+                <FiStar className="w-4 h-4 mr-2" />
+                {showOnlyPreferential ? 'Todos' : 'Só Preferenciais'}
+              </button>
+              
+              <button
                 onClick={() => router.push("/admin/gestao")}
                 className="flex items-center px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200 shadow-sm hover:shadow-md"
               >
@@ -629,6 +665,11 @@ export default function AgendamentosHojePage() {
 
                 // Se showEmptySlots for false e o horário estiver vazio, não renderizar
                 if (!showEmptySlots && isEmpty) {
+                  return null;
+                }
+
+                // Se showOnlyPreferential for true e não houver atendimento preferencial, não renderizar
+                if (showOnlyPreferential && !hasPreferential) {
                   return null;
                 }
 
