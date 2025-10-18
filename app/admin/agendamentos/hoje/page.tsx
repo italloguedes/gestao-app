@@ -688,10 +688,10 @@ export default function AgendamentosHojePage() {
                     key={horario}
                     className={`rounded-xl shadow-sm border transition-all duration-300 min-h-[220px] hover:shadow-lg hover:scale-[1.02] ${
                       agendamentosHorario.length > 0
-                        ? hasConcluded
-                          ? "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-300"
-                          : hasPreferential
-                            ? "bg-gradient-to-br from-amber-100 to-amber-200 border-amber-400 shadow-amber-100"
+                        ? hasPreferential
+                          ? "bg-gradient-to-br from-amber-100 to-amber-200 border-amber-400 shadow-amber-100"
+                          : hasConcluded
+                            ? "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-300"
                             : "bg-white border-slate-200 hover:border-slate-300"
                         : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 border-dashed"
                     }`}
