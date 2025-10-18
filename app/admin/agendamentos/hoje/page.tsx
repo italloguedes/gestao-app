@@ -575,85 +575,95 @@ export default function AgendamentosHojePage() {
           </div>
 
           {/* Barra de Ações */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <FiUser className="w-4 h-4 mr-2" />
-                Criar Agendamento
-              </button>
-              
-              <button
-                onClick={generateReport}
-                disabled={agendamentos.length === 0 || actionLoading}
-                className="flex items-center px-4 py-2 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
-              >
-                <FiFileText className="w-4 h-4 mr-2" />
-                {actionLoading ? "Gerando..." : "Relatório PDF"}
-              </button>
-              
-              
-              <button
-                onClick={() => setShowEmptySlots(!showEmptySlots)}
-                className={`flex items-center px-4 py-2 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md ${
-                  showEmptySlots 
-                    ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
-                    : 'text-slate-700 bg-white border-slate-200 hover:bg-slate-50'
-                }`}
-                title={showEmptySlots ? 'Ocultar horários livres' : 'Mostrar horários livres'}
-              >
-                {showEmptySlots ? (
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                  </svg>
-                )}
-                {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
-              </button>
-              
-              <button
-                onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
-                className={`flex items-center px-4 py-2 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md ${
-                  showOnlyPreferential 
-                    ? 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100' 
-                    : 'text-slate-700 bg-white border-slate-200 hover:bg-slate-50'
-                }`}
-                title={showOnlyPreferential ? 'Mostrar todos os horários' : 'Mostrar apenas preferenciais'}
-              >
-                <FiStar className="w-4 h-4 mr-2" />
-                {showOnlyPreferential ? 'Todos' : 'Só Preferenciais'}
-              </button>
-              
-              <button
-                onClick={() => router.push("/admin/gestao")}
-                className="flex items-center px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <FiArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </button>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Ações Principais */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center px-5 py-3 text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                >
+                  <FiUser className="w-5 h-5 mr-2" />
+                  Novo Agendamento
+                </button>
+                
+                <button
+                  onClick={generateReport}
+                  disabled={agendamentos.length === 0 || actionLoading}
+                  className="flex items-center px-5 py-3 text-white bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none font-medium"
+                >
+                  <FiFileText className="w-5 h-5 mr-2" />
+                  {actionLoading ? "Gerando..." : "Relatório PDF"}
+                </button>
+              </div>
+
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-sm font-medium text-slate-600">Filtros:</span>
+                  
+                  <button
+                    onClick={() => setShowEmptySlots(!showEmptySlots)}
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-medium ${
+                      showEmptySlots 
+                        ? 'text-white bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-md' 
+                        : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                    }`}
+                    title={showEmptySlots ? 'Ocultar horários livres' : 'Mostrar horários livres'}
+                  >
+                    {showEmptySlots ? (
+                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                      </svg>
+                    )}
+                    {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-medium ${
+                      showOnlyPreferential 
+                        ? 'text-white bg-gradient-to-r from-amber-500 to-amber-600 shadow-md' 
+                        : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                    }`}
+                    title={showOnlyPreferential ? 'Mostrar todos os horários' : 'Mostrar apenas preferenciais'}
+                  >
+                    <FiStar className="w-4 h-4 mr-2" />
+                    {showOnlyPreferential ? 'Todos' : 'Só Preferenciais'}
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => router.push("/admin/gestao")}
+                  className="flex items-center px-5 py-3 text-slate-600 bg-white hover:bg-slate-50 rounded-xl border border-slate-300 hover:border-slate-400 transition-all duration-300 shadow-sm hover:shadow-md font-medium"
+                >
+                  <FiArrowLeft className="w-5 h-5 mr-2" />
+                  Voltar
+                </button>
+              </div>
             </div>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
               {[...Array(12)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 animate-pulse min-h-[200px]"
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-pulse min-h-[220px]"
                 >
-                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
-                  <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+                  <div className="h-5 bg-slate-200 rounded-lg w-1/3 mb-3"></div>
+                  <div className="h-4 bg-slate-200 rounded w-2/3 mb-2"></div>
+                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 transition-all duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 transition-all duration-300">
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
@@ -676,33 +686,33 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-lg shadow-sm border transition-all duration-300 min-h-[200px] ${
+                    className={`rounded-xl shadow-sm border transition-all duration-300 min-h-[220px] hover:shadow-lg hover:scale-[1.02] ${
                       agendamentosHorario.length > 0
                         ? hasConcluded
-                          ? "bg-emerald-50 border-emerald-300 hover:shadow-md"
+                          ? "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-300"
                           : hasPreferential
-                            ? "bg-amber-50 border-amber-300 hover:shadow-md"
-                            : "bg-white border-slate-200 hover:shadow-md"
-                        : "bg-slate-50 border-slate-200 border-dashed"
+                            ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-300"
+                            : "bg-white border-slate-200 hover:border-slate-300"
+                        : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 border-dashed"
                     }`}
                   >
-                    <div className="p-3 h-full flex flex-col">
+                    <div className="p-4 h-full flex flex-col">
                       {/* Header com horário */}
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <div
-                          className={`flex items-center rounded px-2 py-1 text-xs font-semibold ${
+                          className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm ${
                             isPassedTime
                               ? "bg-slate-100 text-slate-600"
                               : isFull
-                              ? "bg-red-50 text-red-700"
-                              : "bg-sky-50 text-sky-700"
+                              ? "bg-gradient-to-r from-red-100 to-red-200 text-red-800"
+                              : "bg-gradient-to-r from-sky-100 to-sky-200 text-sky-800"
                           }`}
                         >
-                          <FiClock className="w-3 h-3 mr-1" />
+                          <FiClock className="w-4 h-4 mr-1.5" />
                           <span>{horario}</span>
                         </div>
                         {isFull && (
-                          <span className="px-1.5 py-0.5 text-xs rounded-full bg-red-100 text-red-800 font-medium">
+                          <span className="px-2 py-1 text-xs rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-bold shadow-sm">
                             Cheio
                           </span>
                         )}
@@ -713,27 +723,27 @@ export default function AgendamentosHojePage() {
                           {agendamentosHorario.map((agendamento: Agendamento, index: number) => (
                             <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-2' : ''}`}>
                               {/* Status e preferencial */}
-                              <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center justify-between mb-3">
                                 {getStatusBadge(agendamento.status as AppointmentStatus)}
                                 {agendamento.atendimento_preferencial && (
-                                  <div className="flex items-center text-amber-600">
+                                  <div className="flex items-center px-2 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-lg shadow-sm">
                                     <FiStar className="w-3 h-3 mr-1" />
-                                    <span className="text-xs font-medium">Pref.</span>
+                                    <span className="text-xs font-bold">Pref.</span>
                                   </div>
                                 )}
                               </div>
                               
                               {/* Informações do agendamento - simplificadas */}
-                              <div className="space-y-1 mb-2">
+                              <div className="space-y-2 mb-3">
                                 <div className="flex items-center text-slate-700">
-                                  <FiUser className="w-3 h-3 mr-1 text-slate-500" />
-                                  <span className="font-semibold text-xs truncate">
+                                  <FiUser className="w-4 h-4 mr-2 text-slate-500" />
+                                  <span className="font-bold text-sm truncate">
                                     {agendamento.nome}
                                   </span>
                                 </div>
                                 <div className="flex items-center text-slate-600">
-                                  <FiPhone className="w-3 h-3 mr-1 text-slate-500" />
-                                  <span className="text-xs">{agendamento.telefone}</span>
+                                  <FiPhone className="w-4 h-4 mr-2 text-slate-500" />
+                                  <span className="text-sm">{agendamento.telefone}</span>
                                 </div>
                               </div>
 
@@ -746,24 +756,24 @@ export default function AgendamentosHojePage() {
                                     setModalAction("edit");
                                     setIsModalOpen(true);
                                   }}
-                                  className="w-full px-2 py-1.5 text-xs rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center"
+                                  className="w-full px-3 py-2 text-sm rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md"
                                   title="Editar Agendamento"
                                 >
-                                  <FiEdit className="w-3 h-3 mr-1" />
+                                  <FiEdit className="w-4 h-4 mr-2" />
                                   Editar
                                 </button>
 
                                 {agendamento.status === "confirmado" && (
                                   <div className="space-y-2">
                                     {/* Botões em grid */}
-                                    <div className="grid grid-cols-2 gap-1">
+                                    <div className="grid grid-cols-2 gap-2">
                                     <button
                                       onClick={() => {
                                         setSelectedAppointment(agendamento);
                                         setModalAction("iniciar");
                                         setIsModalOpen(true);
                                       }}
-                                      className="px-2 py-1 text-xs rounded bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors flex items-center justify-center"
+                                      className="px-2 py-1.5 text-xs rounded-lg bg-gradient-to-r from-sky-50 to-sky-100 hover:from-sky-100 hover:to-sky-200 text-sky-700 transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md"
                                       title="Iniciar Atendimento"
                                     >
                                         <FiEdit className="w-3 h-3 mr-1" />
@@ -775,7 +785,7 @@ export default function AgendamentosHojePage() {
                                         setModalAction("ausente");
                                         setIsModalOpen(true);
                                       }}
-                                      className="px-2 py-1 text-xs rounded bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors flex items-center justify-center"
+                                      className="px-2 py-1.5 text-xs rounded-lg bg-gradient-to-r from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-700 transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md"
                                       title="Marcar ausente"
                                     >
                                       <FiXCircle className="w-3 h-3 mr-1" />
@@ -790,7 +800,7 @@ export default function AgendamentosHojePage() {
                                          });
                                          setShowSimpleConfirm(true);
                                        }}
-                                       className="px-2 py-1 text-xs rounded bg-green-100 hover:bg-green-200 text-green-800 transition-colors flex items-center justify-center"
+                                       className="px-2 py-1.5 text-xs rounded-lg bg-gradient-to-r from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 text-green-800 transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md"
                                        title="Marcar concluido"
                                      >
                                        <FiCheckCircle className="w-3 h-3 mr-1" />
@@ -802,7 +812,7 @@ export default function AgendamentosHojePage() {
                                           setModalAction("cancelar");
                                           setIsModalOpen(true);
                                       }}
-                                      className="px-2 py-1 text-xs rounded bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex items-center justify-center"
+                                      className="px-2 py-1.5 text-xs rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-700 transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md"
                                       title="Cancelar"
                                     >
                                       <FiSlash className="w-3 h-3 mr-1" />
@@ -819,8 +829,8 @@ export default function AgendamentosHojePage() {
                       ) : (
                         <div className="flex-1 flex items-center justify-center">
                           <div className="text-center">
-                            <div className="text-2xl mb-1">⏰</div>
-                            <p className="text-slate-500 text-xs font-medium">Livre</p>
+                            <div className="text-4xl mb-2 opacity-50">⏰</div>
+                            <p className="text-slate-500 text-sm font-bold">Horário Livre</p>
                           </div>
                         </div>
                       )}
