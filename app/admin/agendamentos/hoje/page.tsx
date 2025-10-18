@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactElement, useEffect, useState } from "react";
+import React, { ReactElement, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import {
@@ -120,7 +120,7 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     try {
       const date = new Date(dateString + "T12:00:00Z");
       return date.toLocaleDateString("pt-BR", {
@@ -133,14 +133,14 @@ export default function AgendamentosHojePage() {
       console.error("Erro ao formatar data:", error);
       return dateString;
     }
-  };
+  }, []);
 
-  const loadAgendamentos = async () => {
+  const loadAgendamentos = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("*")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial")
         .eq("data", selectedDate)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
@@ -156,29 +156,24 @@ export default function AgendamentosHojePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = useCallback(async (id: number, newStatus: string) => {
     console.log('🔄 handleStatusChange: Iniciando', { id, newStatus });
     setActionLoading(true);
+    
+    // Atualização otimista - atualizar o estado local primeiro
+    const previousAgendamentos = agendamentos;
+    setAgendamentos((prevAgendamentos: Agendamento[]) => 
+      prevAgendamentos.map((agendamento: Agendamento) => 
+        agendamento.id === id 
+          ? { ...agendamento, status: newStatus as AppointmentStatus }
+          : agendamento
+      )
+    );
+    
     try {
-      // Primeiro, vamos verificar se o agendamento existe
-      console.log('🔄 handleStatusChange: Verificando agendamento existente...');
-      const { data: existingData, error: fetchError } = await supabase
-        .from("agendamentos")
-        .select("id, nome, status")
-        .eq("id", id)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ handleStatusChange: Erro ao buscar agendamento', fetchError);
-        throw new Error(`Agendamento não encontrado: ${fetchError.message}`);
-      }
-
-      console.log('🔄 handleStatusChange: Agendamento encontrado', existingData);
-
-      // Agora vamos atualizar o status
-      console.log('🔄 handleStatusChange: Atualizando no Supabase...');
+      // Atualizar no banco de dados
       const { error } = await supabase
         .from("agendamentos")
         .update({ status: newStatus })
@@ -186,26 +181,18 @@ export default function AgendamentosHojePage() {
 
       if (error) {
         console.error('❌ handleStatusChange: Erro do Supabase', error);
+        // Reverter a atualização otimista em caso de erro
+        setAgendamentos(previousAgendamentos);
         throw error;
       }
       
-      console.log('✅ handleStatusChange: Atualização bem-sucedida, atualizando estado local...');
+      console.log('✅ handleStatusChange: Atualização bem-sucedida');
       
-      // Atualizar o estado local imediatamente para refletir a mudança visual
-      setAgendamentos((prevAgendamentos: Agendamento[]) => 
-        prevAgendamentos.map((agendamento: Agendamento) => 
-          agendamento.id === id 
-            ? { ...agendamento, status: newStatus as AppointmentStatus }
-            : agendamento
-        )
-      );
-      
-      // Recarregar os dados do servidor para garantir consistência
-      await loadAgendamentos();
-      
+      // Fechar modais
       setIsModalOpen(false);
       setSelectedAppointment(null);
-      console.log('✅ handleStatusChange: Concluído com sucesso');
+      setShowSimpleConfirm(false);
+      setSimpleConfirmData(null);
       
       // Mostrar mensagem de sucesso
       alert(`Status atualizado para "${newStatus}" com sucesso!`);
@@ -215,28 +202,44 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [agendamentos]);
 
-  const handleEditAppointment = async (updatedAppointment: Agendamento) => {
+  const handleEditAppointment = useCallback(async (updatedAppointment: Agendamento) => {
     setActionLoading(true);
+    
+    // Atualização otimista
+    const previousAgendamentos = agendamentos;
+    setAgendamentos((prevAgendamentos: Agendamento[]) => 
+      prevAgendamentos.map((agendamento: Agendamento) => 
+        agendamento.id === updatedAppointment.id 
+          ? { ...agendamento, ...updatedAppointment }
+          : agendamento
+      )
+    );
+    
     try {
       const { error } = await supabase
         .from("agendamentos")
         .update(updatedAppointment)
         .eq("id", updatedAppointment.id);
 
-      if (error) throw error;
-      await loadAgendamentos();
+      if (error) {
+        // Reverter em caso de erro
+        setAgendamentos(previousAgendamentos);
+        throw error;
+      }
+      
       setIsModalOpen(false);
+      alert('Agendamento atualizado com sucesso!');
     } catch (err) {
       console.error("Erro ao atualizar agendamento:", err);
       alert("Erro ao atualizar agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [agendamentos]);
 
-  const handleCreateAppointment = async (appointmentData: any) => {
+  const handleCreateAppointment = useCallback(async (appointmentData: any) => {
     setActionLoading(true);
     try {
       const response = await fetch('/api/agendamentos', {
@@ -252,7 +255,13 @@ export default function AgendamentosHojePage() {
         throw new Error(errorData.error || 'Erro ao criar agendamento');
       }
 
-      await loadAgendamentos();
+      const newAppointment = await response.json();
+      
+      // Adicionar o novo agendamento ao estado local
+      setAgendamentos((prevAgendamentos: Agendamento[]) => 
+        [...prevAgendamentos, newAppointment].sort((a, b) => a.horario.localeCompare(b.horario))
+      );
+      
       alert('Agendamento criado com sucesso!');
     } catch (err) {
       console.warn("Erro ao criar agendamento:", err);
@@ -260,18 +269,29 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [agendamentos]);
 
-  const handleDeleteAppointment = async (id: number) => {
+  const handleDeleteAppointment = useCallback(async (id: number) => {
     setActionLoading(true);
+    
+    // Atualização otimista - remover do estado local primeiro
+    const previousAgendamentos = agendamentos;
+    setAgendamentos((prevAgendamentos: Agendamento[]) => 
+      prevAgendamentos.filter((agendamento: Agendamento) => agendamento.id !== id)
+    );
+    
     try {
       const { error } = await supabase
         .from("agendamentos")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
-      await loadAgendamentos();
+      if (error) {
+        // Reverter em caso de erro
+        setAgendamentos(previousAgendamentos);
+        throw error;
+      }
+      
       setIsModalOpen(false);
       setSelectedAppointment(null);
       alert('Agendamento excluído com sucesso!');
@@ -281,23 +301,22 @@ export default function AgendamentosHojePage() {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [agendamentos]);
 
-  const handleSimpleConfirm = async () => {
+  const handleSimpleConfirm = useCallback(async () => {
     if (!simpleConfirmData) return;
     
     setActionLoading(true);
     try {
       await handleStatusChange(simpleConfirmData.id, simpleConfirmData.action);
-      setShowSimpleConfirm(false);
-      setSimpleConfirmData(null);
+      // Os modais já são fechados no handleStatusChange
     } catch (err) {
       console.error("Erro ao confirmar ação:", err);
       alert(`Erro ao ${simpleConfirmData.action}: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [simpleConfirmData, handleStatusChange]);
 
 
   const generateReport = async () => {
@@ -347,7 +366,7 @@ export default function AgendamentosHojePage() {
 
       /* ---------- Tabela com autoTable (horário, nome, telefone, CPF e status) ---------- */
       const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status'];
-      const tableRows = agendamentos.map(a => [
+      const tableRows = agendamentos.map((a: Agendamento) => [
           a.horario,
           a.nome.length > 30 ? a.nome.substring(0, 27) + '...' : a.nome,
           a.telefone,
@@ -474,14 +493,26 @@ export default function AgendamentosHojePage() {
   }
 
   // Build list of occupied time slots (HH:MM) to filter available times in create modal
-  const occupiedSlots = agendamentos.map(a => a.horario.substring(0, 5));
+  const occupiedSlots = useMemo(() => 
+    agendamentos.map(a => a.horario.substring(0, 5)), 
+    [agendamentos]
+  );
   
   // Calcular quantos horários estão sendo exibidos
-  const visibleSlots = showEmptySlots 
-    ? HORARIOS.length 
-    : HORARIOS.filter(horario => 
-        agendamentos.some(a => a.horario === `${horario}:00`)
-      ).length;
+  const visibleSlots = useMemo(() => 
+    showEmptySlots 
+      ? HORARIOS.length 
+      : HORARIOS.filter(horario => 
+          agendamentos.some((a: Agendamento) => a.horario === `${horario}:00`)
+        ).length,
+    [showEmptySlots, agendamentos]
+  );
+
+  // Memoizar os agendamentos existentes para o modal de criação
+  const existingAppointments = useMemo(() => 
+    agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome })),
+    [agendamentos]
+  );
 
   return (
     <>
@@ -503,10 +534,10 @@ export default function AgendamentosHojePage() {
                   {agendamentos.length} agendamentos
                 </span>
                     <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                      {agendamentos.filter(a => a.status === 'confirmado').length} confirmados
+                      {agendamentos.filter((a: Agendamento) => a.status === 'confirmado').length} confirmados
                     </span>
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
-                      {agendamentos.filter(a => a.status === 'concluido').length} concluídos
+                      {agendamentos.filter((a: Agendamento) => a.status === 'concluido').length} concluídos
                     </span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       showEmptySlots 
@@ -524,7 +555,7 @@ export default function AgendamentosHojePage() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value)}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
               <button
@@ -608,8 +639,8 @@ export default function AgendamentosHojePage() {
               {HORARIOS.map((horario) => {
                 // Corrigir o filtro para comparar com formato HH:MM:SS do banco
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
-                const hasPreferential = agendamentosHorario.some(a => a.atendimento_preferencial);
-                const hasConcluded = agendamentosHorario.some(a => a.status === 'concluido');
+                const hasPreferential = agendamentosHorario.some((a: Agendamento) => a.atendimento_preferencial);
+                const hasConcluded = agendamentosHorario.some((a: Agendamento) => a.status === 'concluido');
                 const isPassedTime = new Date(`${selectedDate}T${horario}`) < currentTime;
                 const isFull = agendamentosHorario.length >= 1;
                 const isEmpty = agendamentosHorario.length === 0;
@@ -656,7 +687,7 @@ export default function AgendamentosHojePage() {
 
                       {agendamentosHorario.length > 0 ? (
                         <div className="flex-1 space-y-2">
-                          {agendamentosHorario.map((agendamento, index) => (
+                          {agendamentosHorario.map((agendamento: Agendamento, index: number) => (
                             <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-200 pt-2' : ''}`}>
                               {/* Status e preferencial */}
                               <div className="flex items-center justify-between mb-2">
@@ -801,7 +832,7 @@ export default function AgendamentosHojePage() {
         onSave={handleCreateAppointment}
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
-        existingAppointments={agendamentos.map((a: Agendamento) => ({ cpf: a.cpf, nome: a.nome }))}
+        existingAppointments={existingAppointments}
       />
 
 
