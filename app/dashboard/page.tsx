@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
+import AtendimentoModal from '@/components/AtendimentoModal';
 import jsPDF from 'jspdf';
 
 interface DashboardStats {
@@ -541,23 +542,27 @@ export default function DashboardPage() {
       {pdfUrl && (
         <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
       )}
-      {/* Modal de edição de atendimento */}
+      {/* Modal de edição de atendimento - Unificado */}
       {showEditAtendimentoModal && selectedAtendimentoForEdit && (
-        <EditAtendimentoModal
-          show={showEditAtendimentoModal}
+        <AtendimentoModal
+          atendimento={selectedAtendimentoForEdit}
+          isOpen={showEditAtendimentoModal}
           onClose={() => {
             setShowEditAtendimentoModal(false);
             setSelectedAtendimentoForEdit(null);
-            setEditingAtendimento({});
-            setValidationErrors({});
           }}
-          atendimento={selectedAtendimentoForEdit}
-          editingAtendimento={editingAtendimento}
-          onInputChange={handleInputChange}
-          onSave={handleSaveAtendimento}
-          onCancel={handleCancelEdit}
-          saving={savingAtendimento}
-          validationErrors={validationErrors}
+          onUpdate={(updated) => {
+            // Atualizar lista de atendimentos
+            setRecentAtendimentos(prev =>
+              prev.map(a => a.id === updated.id ? updated : a)
+            );
+            fetchDashboardData();
+          }}
+          onDelete={(id) => {
+            // Remover da lista
+            setRecentAtendimentos(prev => prev.filter(a => a.id !== id));
+            fetchDashboardData();
+          }}
         />
       )}
       {/* Modal de novo atendimento */}
