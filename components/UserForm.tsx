@@ -157,7 +157,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
         // 1. Se deve sincronizar com Auth e tem auth_id
         if (formData.syncWithAuth && user.auth_id) {
           const updateAuthData: any = {
-            auth_id: user.auth_id
+            userId: user.auth_id  // API espera "userId" que é o auth_id do usuário
           };
 
           if (formData.email !== user.email) {
