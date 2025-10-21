@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase-client'
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth'
 
 export async function GET(request: NextRequest) {
-  const id = parseInt(request.url.split('/').pop() || '0')
-  
-  if (!id || isNaN(id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-  }
-
   try {
+    // Verificar autenticação e permissões (requer admin ou superadmin)
+    const authCheck = await checkAuth(request, 'admin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas administradores podem visualizar usuários');
+    }
+
+    const id = parseInt(request.url.split('/').pop() || '0')
+
+    if (!id || isNaN(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
@@ -30,13 +42,24 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const id = parseInt(request.url.split('/').pop() || '0')
-  
-  if (!id || isNaN(id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-  }
-
   try {
+    // Verificar autenticação e permissões (requer admin ou superadmin)
+    const authCheck = await checkAuth(request, 'admin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas administradores podem atualizar usuários');
+    }
+
+    const id = parseInt(request.url.split('/').pop() || '0')
+
+    if (!id || isNaN(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const body = await request.json()
     const { data: user, error } = await supabase
       .from('users')
@@ -56,13 +79,24 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const id = parseInt(request.url.split('/').pop() || '0')
-  
-  if (!id || isNaN(id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-  }
-
   try {
+    // Verificar autenticação e permissões (requer superadmin)
+    const authCheck = await checkAuth(request, 'superadmin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas super administradores podem excluir usuários');
+    }
+
+    const id = parseInt(request.url.split('/').pop() || '0')
+
+    if (!id || isNaN(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const { error } = await supabase
       .from('users')
       .delete()

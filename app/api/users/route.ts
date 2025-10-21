@@ -1,8 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, createUser } from '@/lib/models/User';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Verificar autenticação e permissões (requer admin ou superadmin)
+    const authCheck = await checkAuth(request, 'admin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas administradores podem listar usuários');
+    }
+
     const users = await getUsers();
     return NextResponse.json(users);
   } catch (error) {
@@ -10,8 +22,19 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticação e permissões (requer superadmin)
+    const authCheck = await checkAuth(request, 'superadmin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas super administradores podem criar usuários');
+    }
+
     const body = await request.json();
     const user = await createUser(body);
     return NextResponse.json(user, { status: 201 });
