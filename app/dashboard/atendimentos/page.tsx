@@ -42,8 +42,6 @@ export default function AtendimentosPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Debounce para busca - evita múltiplas requisições
-  const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
 
   const router = useRouter();
   const { user } = useAuth();
@@ -85,7 +83,7 @@ export default function AtendimentosPage() {
 
   useEffect(() => {
     fetchAtendimentos();
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
 
   const fetchAtendimentos = async () => {
     try {
@@ -141,14 +139,6 @@ export default function AtendimentosPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Cleanup do timeout de busca
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchTimeout]);
 
   const formatDate = useCallback((dateString: string) => {
     const [datePart] = dateString.split('T');
@@ -219,19 +209,6 @@ export default function AtendimentosPage() {
 
   const handleSearchInputChange = (value: string) => {
     setSearchTerm(value);
-    
-    // Limpar timeout anterior
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    
-    // Criar novo timeout para debounce
-    const newTimeout = window.setTimeout(() => {
-      setCurrentPage(1);
-      fetchAtendimentos();
-    }, 500); // 500ms de delay
-    
-    setSearchTimeout(newTimeout);
   };
 
   // Funções para edição de atendimento
@@ -507,9 +484,6 @@ export default function AtendimentosPage() {
               onChange={(e) => handleSearchInputChange(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  if (searchTimeout) {
-                    clearTimeout(searchTimeout);
-                  }
                   handleSearch();
                 }
               }}
