@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink, FiPhone } from 'react-icons/fi';
 
 interface UserFormProps {
   user?: User;
@@ -14,18 +14,23 @@ interface UserFormProps {
 type UserFormData = {
   name: string;
   email: string;
+  phone?: string;
   role: User['role'];
   status: User['status'];
   auth_id?: string;
+  password?: string;
+  syncWithAuth?: boolean; // Se deve atualizar dados no Auth também
 };
 
 type AuthUser = {
   id: string;
   email: string;
+  phone?: string;
   created_at: string;
   user_metadata?: {
     full_name?: string;
     name?: string;
+    phone?: string;
   };
 };
 
@@ -33,9 +38,12 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const [formData, setFormData] = useState<UserFormData>({
     name: user?.name || '',
     email: user?.email || '',
+    phone: '',
     role: user?.role || 'user',
     status: user?.status || 'active',
-    auth_id: user?.auth_id || ''
+    auth_id: user?.auth_id || '',
+    password: '',
+    syncWithAuth: false
   });
 
   const [error, setError] = useState<string | null>(null);
