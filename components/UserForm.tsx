@@ -99,32 +99,46 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        {user ? 'Editar Usuário' : 'Novo Usuário'}
-      </h2>
+    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl mx-auto border-2 border-gray-100 animate-slide-up">
+      {/* Modern Header with Gradient Bar */}
+      <div className="mb-8">
+        <div className="h-1.5 w-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mb-4"></div>
+        <h2 className="text-3xl font-bold text-gray-900">
+          {user ? '✏️ Editar Usuário' : '➕ Novo Usuário'}
+        </h2>
+        <p className="text-gray-600 mt-2">
+          {user ? 'Atualize as informações do usuário abaixo' : 'Preencha os dados para criar um novo usuário no sistema'}
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4">
-            <div className="flex">
+          <div className="rounded-2xl bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 p-5 shadow-lg animate-shake">
+            <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+                <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center">
+                  <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="ml-4">
+                <h3 className="text-sm font-bold text-red-900">Erro ao salvar</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="name" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-              <FiUser className="mr-2" />
-              Nome
+        <div className="space-y-6">
+          {/* Name Field */}
+          <div className="group">
+            <label htmlFor="name" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mr-2 group-hover:bg-emerald-200 transition-colors">
+                <FiUser className="h-4 w-4 text-emerald-600" />
+              </div>
+              Nome Completo
+              <span className="ml-auto text-xs font-normal text-red-500">* Obrigatório</span>
             </label>
             <input
               type="text"
@@ -132,18 +146,23 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 ${
-                error ? 'border-red-300' : 'border-gray-300'
+              required
+              className={`w-full px-5 py-3.5 rounded-2xl border-2 shadow-sm focus:outline-none transition-all duration-300 ${
+                error ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100' : 'border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
               }`}
-              placeholder="Digite o nome completo"
+              placeholder="Ex: João da Silva"
             />
             {renderFieldError('name')}
           </div>
 
-          <div>
-            <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-              <FiMail className="mr-2" />
+          {/* Email Field */}
+          <div className="group">
+            <label htmlFor="email" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2 group-hover:bg-blue-200 transition-colors">
+                <FiMail className="h-4 w-4 text-blue-600" />
+              </div>
               Email
+              <span className="ml-auto text-xs font-normal text-red-500">* Obrigatório</span>
             </label>
             <input
               type="email"
@@ -151,36 +170,50 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 ${
-                error ? 'border-red-300' : 'border-gray-300'
+              required
+              className={`w-full px-5 py-3.5 rounded-2xl border-2 shadow-sm focus:outline-none transition-all duration-300 ${
+                error ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100' : 'border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
               }`}
-              placeholder="Digite o email"
+              placeholder="Ex: joao.silva@email.com"
             />
             {renderFieldError('email')}
           </div>
 
-          <div>
-            <label htmlFor="role" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-              <FiShield className="mr-2" />
-              Função
+          {/* Role Field */}
+          <div className="group">
+            <label htmlFor="role" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mr-2 group-hover:bg-purple-200 transition-colors">
+                <FiShield className="h-4 w-4 text-purple-600" />
+              </div>
+              Função / Permissão
+              <span className="ml-auto text-xs font-normal text-gray-400">(Define o nível de acesso)</span>
             </label>
             <select
               id="role"
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 bg-white text-gray-900 font-medium"
             >
-              <option value="user">Usuário</option>
-              <option value="atendente">Atendente</option>
-              <option value="admin">Administrador</option>
-              <option value="superadmin">Super Administrador</option>
+              <option value="user">👤 Usuário - Acesso apenas ao agendamento</option>
+              <option value="atendente">👨‍💼 Atendente - Acesso ao dashboard</option>
+              <option value="admin">⚡ Administrador - Acesso completo ao dashboard</option>
+              <option value="superadmin">👑 Super Administrador - Acesso total ao sistema</option>
             </select>
+            <p className="mt-2 text-xs text-gray-500 ml-10">
+              {formData.role === 'superadmin' && '🔐 Acesso completo: gerenciar usuários, configurações e todos os recursos'}
+              {formData.role === 'admin' && '📊 Acesso ao dashboard: visualizar e gerenciar atendimentos e relatórios'}
+              {formData.role === 'atendente' && '📋 Acesso limitado: gerenciar apenas atendimentos'}
+              {formData.role === 'user' && '🎫 Acesso público: criar e acompanhar agendamentos'}
+            </p>
           </div>
 
-          <div>
-            <label htmlFor="status" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-              <FiToggleRight className="mr-2" />
+          {/* Status Field */}
+          <div className="group">
+            <label htmlFor="status" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-2 group-hover:bg-orange-200 transition-colors">
+                <FiToggleRight className="h-4 w-4 text-orange-600" />
+              </div>
               Status
             </label>
             <select
@@ -188,31 +221,53 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 bg-white text-gray-900 font-medium"
             >
-              <option value="active">Ativo</option>
-              <option value="inactive">Inativo</option>
+              <option value="active">✅ Ativo - Usuário pode acessar o sistema</option>
+              <option value="inactive">❌ Inativo - Acesso bloqueado</option>
             </select>
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4">
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center space-x-4 pt-6 border-t-2 border-gray-100">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              className="group flex-1 inline-flex items-center justify-center px-6 py-3.5 border-2 border-gray-300 rounded-2xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-300 font-semibold"
               disabled={loading}
             >
+              <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
               Cancelar
             </button>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group flex-1 inline-flex items-center justify-center px-8 py-3.5 border-2 border-transparent rounded-2xl shadow-xl text-white bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-200 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100 relative overflow-hidden"
           >
-            {loading ? 'Salvando...' : user ? 'Atualizar' : 'Criar'}
+            {!loading && (
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            )}
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="relative z-10">Salvando...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform duration-300 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="relative z-10">{user ? '💾 Atualizar Usuário' : '✨ Criar Usuário'}</span>
+              </>
+            )}
           </button>
         </div>
       </form>
