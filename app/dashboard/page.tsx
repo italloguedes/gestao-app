@@ -577,15 +577,28 @@ export default function DashboardPage() {
           }}
         />
       )}
-      <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white py-6 px-3 pt-20">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-left">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">Painel de Controle</h1>
-            <p className="text-gray-600 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Cabeçalho do Dashboard - Design Moderno */}
+          <div className="text-left space-y-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
+              <div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  Painel de Controle
+                </h1>
+                <p className="text-gray-500 mt-2 text-sm md:text-base font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Bem-vindo ao gerenciamento de atendimentos
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Cards de Estatísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Cards de Estatísticas - Grid Moderno */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <StatCard title="Total de Atendimentos" value={stats.total} color="text-gray-900" />
             <StatCard title="Correções" value={stats.correcoes} color="text-red-600" />
             <StatCard title="Em Andamento" value={stats.emAndamento} color="text-blue-600" />
@@ -594,25 +607,25 @@ export default function DashboardPage() {
             <StatCard title="Hoje" value={stats.hoje} color="text-emerald-600" />
           </div>
 
-          {/* Container para Ações Rápidas e Atendimentos Recentes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Container para Ações Rápidas e Atendimentos Recentes - Design Aprimorado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Ações Rápidas */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 flex flex-col justify-between transition-all duration-300 hover:shadow-xl animate-slide-up">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
-                  Ações Rápidas
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <div className="flex space-x-2">
-                  <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                  </button>
-                  <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Ações Rápidas
+                  </h2>
+                </div>
+                <div className="flex space-x-2">
+                  <button className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                   </button>
                 </div>
@@ -693,16 +706,22 @@ export default function DashboardPage() {
             </div>
 
             {/* Atendimentos Recentes */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-xl animate-slide-up">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
-                  Atendimentos Recentes
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <Link href="/dashboard/atendimentos" className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Atendimentos Recentes
+                  </h2>
+                </div>
+                <Link href="/dashboard/atendimentos" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-emerald-50 transition-all duration-200">
                   Ver todos
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
@@ -718,10 +737,10 @@ export default function DashboardPage() {
                   recentAtendimentos.map((atendimento) => (
                     <div
                       key={atendimento.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-gray-50 rounded-2xl border-2 border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-emerald-200 transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${getStatusColor(atendimento.status).replace('text-', 'bg-')}`}>
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mr-4 shadow-sm group-hover:scale-110 transition-transform duration-300 ${getStatusColor(atendimento.status).replace('text-', 'bg-')}`}>
                           {atendimento.status === 'correcao' ? (
                             <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -741,14 +760,17 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-800">{atendimento.nome}</p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(atendimento.dia_atual)} - {atendimento.protocolo}
+                          <p className="font-bold text-gray-800 text-base group-hover:text-emerald-700 transition-colors">{atendimento.nome}</p>
+                          <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-1">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatDate(atendimento.dia_atual)} • {atendimento.protocolo}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <span className={`status-badge ${atendimento.status === 'correcao' ? 'status-error' :
+                      <div className="flex items-center gap-3">
+                        <span className={`status-badge font-semibold px-3 py-1.5 text-xs ${atendimento.status === 'correcao' ? 'status-error' :
                           atendimento.status === 'concluido' ? 'status-completed' :
                             atendimento.status === 'em_andamento' ? 'status-in-progress' :
                               'status-pending'}`}>
@@ -759,11 +781,11 @@ export default function DashboardPage() {
                         </span>
                         {/* Botão de navegação */}
                         <button
-                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
                           onClick={() => router.push(`/dashboard/atendimentos/${atendimento.id}/AtendimentoDetalhes`)}
                         ></button>
-                        <button 
-                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                        <button
+                          className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                           onClick={() => handleEditAtendimento(atendimento)}
                           title="Editar atendimento"
                         >
@@ -1268,59 +1290,70 @@ function StatCard({ title, value, color }: { title: string, value: any, color: s
   const config = cardConfig[color as keyof typeof cardConfig] || cardConfig['text-gray-900'];
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border ${config.border} ${config.bg} ${config.shadow} shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`}>
-      {/* Gradiente de fundo sutil */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm"></div>
-      
-      {/* Barra lateral colorida */}
-      <div className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${config.gradient}`}></div>
-      
-        {/* Conteúdo principal */}
-        <div className="relative p-6">
-          {/* Layout horizontal para formato retangular */}
-          <div className="flex items-center justify-between">
-            {/* Lado esquerdo: título e valor */}
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wider mb-2">{title}</h3>
-              <div className="mb-1">
-                <span className={`text-3xl font-bold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>
-                  {value}
-                </span>
-              </div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Atendimentos</p>
+    <div className={`group relative overflow-hidden rounded-2xl border-2 ${config.border} bg-white shadow-md backdrop-blur-sm transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-opacity-80 animate-slide-up`}>
+      {/* Efeito de brilho no hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* Barra superior colorida animada */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${config.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+
+      {/* Círculo decorativo no canto */}
+      <div className={`absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br ${config.gradient} opacity-5 rounded-full group-hover:scale-150 transition-transform duration-500`}></div>
+
+      {/* Conteúdo principal */}
+      <div className="relative p-6">
+        {/* Layout horizontal para formato retangular */}
+        <div className="flex items-center justify-between">
+          {/* Lado esquerdo: título e valor */}
+          <div className="flex-1">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 group-hover:text-gray-600 transition-colors">{title}</h3>
+            <div className="mb-2">
+              <span className={`text-4xl font-extrabold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent transition-all duration-300 group-hover:scale-105 inline-block`}>
+                {value}
+              </span>
             </div>
-            
-            {/* Lado direito: ícone */}
-            <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${config.gradient} shadow-lg ml-4`}>
-              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-            </div>
+              Atendimentos
+            </p>
           </div>
-          
-          {/* Indicador de progresso decorativo */}
-          <div className="mt-4 h-1 w-full rounded-full bg-gray-200">
-            <div className={`h-1 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out`} 
-                 style={{ width: `${Math.min(100, (value / 100) * 10)}%` }}></div>
+
+          {/* Lado direito: ícone com animação */}
+          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg ml-4 transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-500`}>
+            <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+            </svg>
           </div>
         </div>
+
+        {/* Indicador de progresso decorativo com animação */}
+        <div className="mt-5 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+          <div className={`h-1.5 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out shadow-sm`}
+               style={{ width: `${Math.min(100, (value / 100) * 10 + 20)}%` }}></div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Card de ação rápida
+// Card de ação rápida - Design moderno
 function QuickAction({ href, color, icon, children }: any) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-3 rounded-xl shadow-sm border ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group`}
+      className={`flex items-center px-4 py-3.5 rounded-xl shadow-sm border-2 ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white hover:bg-gray-50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden`}
     >
-      <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300`}>
+      {/* Efeito de fundo gradiente no hover */}
+      <div className={`absolute inset-0 ${color.replace('text-', 'bg-').replace('-700', '-50')} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+      <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2.5 rounded-xl mr-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-sm relative z-10`}>
         {icon}
       </div>
-      <span className="font-medium">{children}</span>
-      <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors relative z-10">{children}</span>
+      <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:text-gray-600 group-hover:translate-x-2 transition-all duration-300 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>
     </Link>
   );
