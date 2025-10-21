@@ -73,15 +73,15 @@ export default function DashboardGuard({ children }: DashboardGuardProps) {
             </h3>
             <ul className="text-blue-800 text-sm space-y-2">
               <li className="flex items-start">
-                <span className="mr-2">👑</span>
+                <span className="mr-2">•</span>
                 <span><strong>Super Administrador</strong> - Acesso total ao sistema</span>
               </li>
               <li className="flex items-start">
-                <span className="mr-2">⚡</span>
+                <span className="mr-2">•</span>
                 <span><strong>Administrador</strong> - Gerenciar atendimentos e relatórios</span>
               </li>
               <li className="flex items-start">
-                <span className="mr-2">👨‍💼</span>
+                <span className="mr-2">•</span>
                 <span><strong>Atendente</strong> - Visualizar e processar atendimentos</span>
               </li>
             </ul>

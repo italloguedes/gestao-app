@@ -33,16 +33,16 @@ export default function UsersPage() {
               {/* Feature Pills */}
               <div className="flex flex-wrap gap-2 mt-4">
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  👑 Super Admin
+                  Super Admin
                 </span>
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                  ⚡ Administradores
+                  Administradores
                 </span>
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-                  👨‍💼 Atendentes
+                  Atendentes
                 </span>
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
-                  👤 Usuários
+                  Usuários
                 </span>
               </div>
             </div>

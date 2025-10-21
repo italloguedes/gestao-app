@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink } from 'react-icons/fi';
 
 interface UserFormProps {
   user?: User;
@@ -16,6 +16,17 @@ type UserFormData = {
   email: string;
   role: User['role'];
   status: User['status'];
+  auth_id?: string;
+};
+
+type AuthUser = {
+  id: string;
+  email: string;
+  created_at: string;
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+  };
 };
 
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
@@ -23,11 +34,57 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     name: user?.name || '',
     email: user?.email || '',
     role: user?.role || 'user',
-    status: user?.status || 'active'
+    status: user?.status || 'active',
+    auth_id: user?.auth_id || ''
   });
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authUsers, setAuthUsers] = useState<AuthUser[]>([]);
+  const [loadingAuthUsers, setLoadingAuthUsers] = useState(false);
+  const [selectedAuthUser, setSelectedAuthUser] = useState<string>('');
+  const [showAuthUsers, setShowAuthUsers] = useState(!user); // Mostra por padrão ao criar novo
+
+  // Buscar usuários do Supabase Auth
+  const fetchAuthUsers = async () => {
+    try {
+      setLoadingAuthUsers(true);
+
+      // Buscar usuários já cadastrados na tabela users para filtrar
+      const { data: existingUsers } = await supabase
+        .from('users')
+        .select('auth_id')
+        .not('auth_id', 'is', null);
+
+      const existingAuthIds = new Set(existingUsers?.map(u => u.auth_id) || []);
+
+      // Buscar usuários do Supabase Auth via Admin API
+      const { data, error } = await supabase.auth.admin.listUsers();
+
+      if (error) {
+        console.error('Erro ao buscar usuários do Auth:', error);
+        return;
+      }
+
+      // Filtrar apenas usuários que ainda não estão vinculados (exceto se estiver editando)
+      const availableUsers = data.users.filter(authUser =>
+        !existingAuthIds.has(authUser.id) || authUser.id === user?.auth_id
+      );
+
+      setAuthUsers(availableUsers as AuthUser[]);
+    } catch (err) {
+      console.error('Erro ao buscar usuários do Auth:', err);
+    } finally {
+      setLoadingAuthUsers(false);
+    }
+  };
+
+  // Carregar usuários do Auth ao montar o componente
+  useEffect(() => {
+    if (showAuthUsers) {
+      fetchAuthUsers();
+    }
+  }, [showAuthUsers]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -35,6 +92,24 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Quando selecionar um usuário do Auth, preencher os campos
+  const handleAuthUserSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const authUserId = e.target.value;
+    setSelectedAuthUser(authUserId);
+
+    if (authUserId) {
+      const authUser = authUsers.find(u => u.id === authUserId);
+      if (authUser) {
+        setFormData(prev => ({
+          ...prev,
+          email: authUser.email || prev.email,
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || prev.name,
+          auth_id: authUser.id
+        }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,28 +120,38 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     try {
       if (user?.id) {
         // Atualizando usuário existente
+        const updateData: any = {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          status: formData.status,
+          updated_at: new Date().toISOString()
+        };
+
+        // Atualiza auth_id se foi fornecido
+        if (formData.auth_id) {
+          updateData.auth_id = formData.auth_id;
+        }
+
         const { error: updateError } = await supabase
           .from('users')
-          .update({
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-            status: formData.status,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', user.id);
 
         if (updateError) throw updateError;
       } else {
         // Criando novo usuário
-        const generatedAuthId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        // Usa auth_id selecionado ou gera um temporário
+        const authId = formData.auth_id || (
+          (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+            ? crypto.randomUUID()
+            : `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`
+        );
 
         const { error: createError } = await supabase
           .from('users')
           .insert([{
-            auth_id: generatedAuthId,
+            auth_id: authId,
             name: formData.name,
             email: formData.email,
             role: formData.role,
@@ -104,7 +189,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       <div className="mb-8">
         <div className="h-1.5 w-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mb-4"></div>
         <h2 className="text-3xl font-bold text-gray-900">
-          {user ? '✏️ Editar Usuário' : '➕ Novo Usuário'}
+          {user ? 'Editar Usuário' : 'Novo Usuário'}
         </h2>
         <p className="text-gray-600 mt-2">
           {user ? 'Atualize as informações do usuário abaixo' : 'Preencha os dados para criar um novo usuário no sistema'}
@@ -127,6 +212,65 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Seletor de Usuários do Supabase Auth (apenas ao criar) */}
+        {!user && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 mb-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                  <FiLink className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Vincular Usuário do Supabase Auth</h3>
+                  <p className="text-sm text-gray-600 mt-0.5">Selecione um usuário autenticado para vincular (opcional)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={fetchAuthUsers}
+                disabled={loadingAuthUsers}
+                className="inline-flex items-center px-3 py-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition-colors"
+              >
+                <FiRefreshCw className={`h-4 w-4 mr-1 ${loadingAuthUsers ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
+
+            {loadingAuthUsers ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-200 border-t-blue-600"></div>
+                <p className="text-sm text-gray-600 mt-3">Carregando usuários do Supabase Auth...</p>
+              </div>
+            ) : (
+              <>
+                <select
+                  value={selectedAuthUser}
+                  onChange={handleAuthUserSelect}
+                  className="w-full px-5 py-3.5 rounded-xl border-2 border-blue-200 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all duration-300 bg-white text-gray-900 font-medium"
+                >
+                  <option value="">Criar manualmente (sem vincular)</option>
+                  {authUsers.length === 0 ? (
+                    <option value="" disabled>Nenhum usuário disponível</option>
+                  ) : (
+                    authUsers.map(authUser => (
+                      <option key={authUser.id} value={authUser.id}>
+                        {authUser.email} {authUser.user_metadata?.full_name ? `- ${authUser.user_metadata.full_name}` : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-xs text-gray-600 mt-3">
+                  {authUsers.length === 0 ? (
+                    'Todos os usuários do Supabase Auth já estão vinculados ou não há usuários cadastrados.'
+                  ) : (
+                    `${authUsers.length} usuário(s) disponível(is) para vincular. Ao selecionar, os campos abaixo serão preenchidos automaticamente.`
+                  )}
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -195,16 +339,16 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               onChange={handleChange}
               className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 bg-white text-gray-900 font-medium"
             >
-              <option value="user">👤 Usuário - Acesso apenas ao agendamento</option>
-              <option value="atendente">👨‍💼 Atendente - Acesso ao dashboard</option>
-              <option value="admin">⚡ Administrador - Acesso completo ao dashboard</option>
-              <option value="superadmin">👑 Super Administrador - Acesso total ao sistema</option>
+              <option value="user">Usuário - Acesso apenas ao agendamento</option>
+              <option value="atendente">Atendente - Acesso ao dashboard</option>
+              <option value="admin">Administrador - Acesso completo ao dashboard</option>
+              <option value="superadmin">Super Administrador - Acesso total ao sistema</option>
             </select>
             <p className="mt-2 text-xs text-gray-500 ml-10">
-              {formData.role === 'superadmin' && '🔐 Acesso completo: gerenciar usuários, configurações e todos os recursos'}
-              {formData.role === 'admin' && '📊 Acesso ao dashboard: visualizar e gerenciar atendimentos e relatórios'}
-              {formData.role === 'atendente' && '📋 Acesso limitado: gerenciar apenas atendimentos'}
-              {formData.role === 'user' && '🎫 Acesso público: criar e acompanhar agendamentos'}
+              {formData.role === 'superadmin' && 'Acesso completo: gerenciar usuários, configurações e todos os recursos'}
+              {formData.role === 'admin' && 'Acesso ao dashboard: visualizar e gerenciar atendimentos e relatórios'}
+              {formData.role === 'atendente' && 'Acesso limitado: gerenciar apenas atendimentos'}
+              {formData.role === 'user' && 'Acesso público: criar e acompanhar agendamentos'}
             </p>
           </div>
 
@@ -223,8 +367,8 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               onChange={handleChange}
               className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 bg-white text-gray-900 font-medium"
             >
-              <option value="active">✅ Ativo - Usuário pode acessar o sistema</option>
-              <option value="inactive">❌ Inativo - Acesso bloqueado</option>
+              <option value="active">Ativo - Usuário pode acessar o sistema</option>
+              <option value="inactive">Inativo - Acesso bloqueado</option>
             </select>
           </div>
         </div>
@@ -265,7 +409,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform duration-300 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="relative z-10">{user ? '💾 Atualizar Usuário' : '✨ Criar Usuário'}</span>
+                <span className="relative z-10">{user ? 'Atualizar Usuário' : 'Criar Usuário'}</span>
               </>
             )}
           </button>

@@ -59,7 +59,7 @@ export default function SuperAdminGuard({ children }: SuperAdminGuardProps) {
           </p>
           <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-6">
             <p className="text-yellow-800 text-sm">
-              🔐 Apenas usuários com privilégios de Super Administrador podem acessar o gerenciamento de usuários e configurações do sistema.
+              Apenas usuários com privilégios de Super Administrador podem acessar o gerenciamento de usuários e configurações do sistema.
             </p>
           </div>
           <button
