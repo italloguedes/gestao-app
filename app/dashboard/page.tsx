@@ -192,8 +192,6 @@ export default function DashboardPage() {
     }
   };
 
-  // A função formatDate foi movida para o escopo global
-
   // A função getStatusColor foi movida para o escopo global
 
   const handleGerarComprovante = async () => {
