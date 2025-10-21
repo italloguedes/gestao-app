@@ -71,7 +71,6 @@ export default function DashboardPage() {
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
-  // Removidas variáveis de estado do atendente
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -102,8 +101,6 @@ export default function DashboardPage() {
       setCpfRecebedor('');
     }
   }, [showEntregarCinModal]);
-
-  // Removido useEffect para buscar nome do atendente
 
   const fetchDashboardData = async () => {
     try {
@@ -353,7 +350,6 @@ export default function DashboardPage() {
       doc.setFont('helvetica', 'normal');
       doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 100, assinaturaY + 25, { align: 'center' });
 
-      // Removido QR Code
       // Rodapé moderno com fundo colorido
       const rodapeY = 285;
       doc.setFillColor(240, 253, 244); // emerald-50
@@ -389,8 +385,6 @@ export default function DashboardPage() {
     }
     setGerandoComprovante(false);
   };
-
-  // Removida função fetchNomeAtendente
 
   // Funções para edição de atendimento
   const validateCPF = (cpf: string) => {
@@ -1357,20 +1351,6 @@ function QuickAction({ href, color, icon, children }: any) {
       </svg>
     </Link>
   );
-}
-
-function gerarCpfAleatorio() {
-  // Gera um CPF válido (apenas para testes/demonstrativo)
-  function randomInt(n: number) { return Math.floor(Math.random() * n); }
-  let n = [];
-  for (let i = 0; i < 9; ++i) n.push(randomInt(10));
-  let d1 = 0, d2 = 0;
-  for (let i = 0; i < 9; ++i) d1 += n[i] * (10 - i);
-  d1 = 11 - (d1 % 11); if (d1 >= 10) d1 = 0;
-  for (let i = 0; i < 9; ++i) d2 += n[i] * (11 - i);
-  d2 += d1 * 2;
-  d2 = 11 - (d2 % 11); if (d2 >= 10) d2 = 0;
-  return `${n.join('')}${d1}${d2}`;
 }
 
 // Modal de edição de atendimento
