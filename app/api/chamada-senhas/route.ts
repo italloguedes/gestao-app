@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 // Interface para chamada de senha
 interface ChamadaSenha {
@@ -14,7 +15,18 @@ interface ChamadaSenha {
 }
 
 // GET - Buscar chamadas ativas
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem acessar chamadas');
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'chamada';
@@ -78,7 +90,18 @@ export async function GET(request: Request) {
 }
 
 // POST - Criar nova chamada de senha
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem criar chamadas');
+  }
+
   try {
     const { agendamento_id, atendente_id, observacoes } = await request.json();
 
@@ -203,7 +226,18 @@ export async function POST(request: Request) {
 }
 
 // PUT - Atualizar status da chamada
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem atualizar chamadas');
+  }
+
   try {
     const { id, status, observacoes } = await request.json();
 
@@ -252,7 +286,18 @@ export async function PUT(request: Request) {
 }
 
 // DELETE - Remover chamada
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  // Verificar autenticação e permissões (requer admin ou superadmin)
+  const authCheck = await checkAuth(request, 'admin');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas administradores podem excluir chamadas');
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
