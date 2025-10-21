@@ -389,154 +389,188 @@ export default function GerarRelatorioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header com gradiente e ícone */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
+      <div className="max-w-5xl mx-auto">
+        {/* Header Modernizado */}
+        <div className="mb-10 animate-fade-in">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-14 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                Relatórios de Atendimentos
+              </h1>
+              <p className="text-gray-500 mt-2 text-base font-medium flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Configure filtros personalizados e gere relatórios em PDF
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerar Relatório</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Utilize os filtros abaixo para personalizar seu relatório de atendimentos da Sala Sensorial
-          </p>
         </div>
 
-        {/* Card principal com sombra e bordas arredondadas */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Header do card */}
-          <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
+        {/* Card principal modernizado */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-gray-100 overflow-hidden animate-slide-up">
+          {/* Header do card com gradiente sofisticado */}
+          <div className="relative bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 px-8 py-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="relative flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Filtros Personalizados</h2>
+                  <p className="text-emerald-100 text-sm font-medium mt-0.5">Configure os parâmetros da sua consulta</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Filtros de Relatório</h2>
-                <p className="text-primary-100 text-sm">Configure os parâmetros para sua consulta</p>
+              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-white text-xs font-semibold">Todos os campos são opcionais</span>
               </div>
             </div>
           </div>
 
-          {/* Mensagens de feedback */}
+          {/* Mensagens de feedback modernizadas */}
           {message && (
-            <div className={`mx-6 mt-4 p-2.5 rounded-lg border-l-2 text-sm ${
-              message.type === 'success' 
-                ? 'bg-green-50/80 text-green-700 border-green-300' 
-                : 'bg-red-50/80 text-red-700 border-red-300'
+            <div className={`mx-8 mt-6 p-4 rounded-2xl border-2 text-sm animate-scale-in ${
+              message.type === 'success'
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200 shadow-lg shadow-green-100'
+                : 'bg-gradient-to-r from-red-50 to-orange-50 text-red-800 border-red-200 shadow-lg shadow-red-100'
             }`}>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${
-                  message.type === 'success' ? 'bg-green-400' : 'bg-red-400'
-                }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                } shadow-md`}>
                   {message.type === 'success' ? (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   )}
                 </div>
-                <span className="font-medium text-xs">{message.text}</span>
+                <div className="flex-1">
+                  <p className="font-bold text-sm">
+                    {message.type === 'success' ? 'Sucesso!' : 'Atenção!'}
+                  </p>
+                  <p className="font-medium text-sm mt-0.5">{message.text}</p>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="p-6">
+          {/* Formulário Modernizado */}
+          <form onSubmit={handleSubmit} className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Data Inicial */}
-              <div className="space-y-2">
-                <label htmlFor="dataInicio" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+              {/* Data Inicial - Design Moderno */}
+              <div className="group">
+                <label htmlFor="dataInicio" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mr-2 group-hover:bg-emerald-200 transition-colors">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                   {tipoRelatorio === 'assinatura' ? 'Data' : 'Data Inicial'}
+                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="date"
                   id="dataInicio"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-emerald-300 hover:shadow-md bg-white"
                 />
               </div>
 
               {/* Data Final - apenas para relatório completo */}
               {tipoRelatorio === 'completo' && (
-                <div className="space-y-2">
-                  <label htmlFor="dataFim" className="flex items-center text-sm font-semibold text-gray-700">
-                    <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                <div className="group">
+                  <label htmlFor="dataFim" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2 group-hover:bg-blue-200 transition-colors">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                     Data Final
+                    <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                   </label>
                   <input
                     type="date"
                     id="dataFim"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                    className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-blue-300 hover:shadow-md bg-white"
                   />
                 </div>
               )}
 
               {/* Nome do Cliente */}
-              <div className="space-y-2">
-                <label htmlFor="nome" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+              <div className="group">
+                <label htmlFor="nome" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mr-2 group-hover:bg-purple-200 transition-colors">
+                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
                   Nome do Cliente
+                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="text"
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Digite o nome do cliente"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  placeholder="Digite o nome do cliente..."
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-purple-300 hover:shadow-md bg-white"
                 />
               </div>
 
               {/* Solicitante */}
-              <div className="space-y-2">
-                <label htmlFor="solicitante" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+              <div className="group">
+                <label htmlFor="solicitante" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-2 group-hover:bg-orange-200 transition-colors">
+                    <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
                   Solicitante
+                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="text"
                   id="solicitante"
                   value={solicitante}
                   onChange={(e) => setSolicitante(e.target.value)}
-                  placeholder="Digite o nome do solicitante"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  placeholder="Digite o nome do solicitante..."
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-orange-300 hover:shadow-md bg-white"
                 />
               </div>
 
               {/* Status - Ocupa duas colunas */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="status" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              <div className="md:col-span-2 group">
+                <label htmlFor="status" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center mr-2 group-hover:bg-green-200 transition-colors">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
                   Status do Atendimento
+                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <select
                   id="status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-green-500 focus:ring-4 focus:ring-green-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-green-300 hover:shadow-md bg-white font-medium cursor-pointer"
                 >
-                  <option value="">Todos os status</option>
+                  <option value="">🔍 Todos os status</option>
                   <option value="confirmado">✅ Confirmado</option>
                   <option value="concluido">✅ Concluído</option>
                   <option value="cancelado">❌ Cancelado</option>
@@ -544,71 +578,136 @@ export default function GerarRelatorioPage() {
                   <option value="bloqueado">🚫 Bloqueado</option>
                 </select>
               </div>
+
               {/* Tipo de Relatório */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="tipoRelatorio" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+              <div className="md:col-span-2 group">
+                <label htmlFor="tipoRelatorio" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-2 group-hover:bg-indigo-200 transition-colors">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
                   Tipo de Relatório
+                  <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold">Importante</span>
                 </label>
                 <select
                   id="tipoRelatorio"
                   value={tipoRelatorio}
                   onChange={(e) => setTipoRelatorio(e.target.value as 'completo' | 'assinatura')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-indigo-300 hover:shadow-md bg-white font-medium cursor-pointer"
                 >
-                  <option value="completo">Relatório Completo (Tabela com todos os dados)</option>
-                  <option value="assinatura">Lista de Entrega (Nome, CPF e campo para assinatura)</option>
+                  <option value="completo">📊 Relatório Completo (Tabela com todos os dados)</option>
+                  <option value="assinatura">✍️ Lista de Entrega (Nome, CPF e campo para assinatura)</option>
                 </select>
               </div>
 
               {/* Ordenação */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="ordenacao" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h6" />
-                  </svg>
+              <div className="md:col-span-2 group">
+                <label htmlFor="ordenacao" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center mr-2 group-hover:bg-pink-200 transition-colors">
+                    <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10M4 18h6" />
+                    </svg>
+                  </div>
                   Ordenar por
+                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <select
                   id="ordenacao"
                   value={ordenacao}
                   onChange={(e) => setOrdenacao(e.target.value as 'padrao' | 'nome')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-pink-500 focus:ring-4 focus:ring-pink-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-pink-300 hover:shadow-md bg-white font-medium cursor-pointer"
                 >
-                  <option value="padrao">Padrão (Data e Horário)</option>
-                  <option value="nome">Nome (A-Z)</option>
+                  <option value="padrao">📅 Padrão (Data e Horário)</option>
+                  <option value="nome">🔤 Nome (A-Z)</option>
                 </select>
               </div>
             </div>
 
-            {/* Botão de ação */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full md:w-auto inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl shadow-lg text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                    <span>{tipoRelatorio === 'assinatura' ? 'Gerando lista de entrega...' : 'Gerando relatório...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            {/* Botão de ação modernizado */}
+            <div className="mt-10 pt-8 border-t-2 border-gray-100">
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  <p className="font-semibold flex items-center gap-2">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {tipoRelatorio === 'assinatura' ? 'Gerar Lista de Entrega PDF' : 'Gerar Relatório PDF'}
-                  </>
-                )}
-              </button>
+                    Dica: Deixe os campos vazios para buscar todos
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full md:w-auto inline-flex items-center justify-center px-10 py-4 border-2 border-transparent text-base font-bold rounded-2xl shadow-xl text-white bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 hover:shadow-2xl active:scale-95 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  {loading ? (
+                    <>
+                      <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                      <span className="relative z-10">
+                        {tipoRelatorio === 'assinatura' ? 'Gerando lista de entrega...' : 'Gerando relatório...'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="relative z-10">
+                        {tipoRelatorio === 'assinatura' ? '✍️ Gerar Lista de Entrega PDF' : '📊 Gerar Relatório PDF'}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>
 
-        
+        {/* Informações adicionais */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-blue-900 text-sm">Relatório Completo</h3>
+                <p className="text-xs text-blue-700 mt-1">Tabela detalhada com todas as informações dos atendimentos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 border-2 border-purple-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-purple-900 text-sm">Lista de Entrega</h3>
+                <p className="text-xs text-purple-700 mt-1">Formato otimizado para coletar assinaturas físicas</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-5 border-2 border-emerald-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-emerald-900 text-sm">Filtros Avançados</h3>
+                <p className="text-xs text-emerald-700 mt-1">Combine múltiplos filtros para resultados precisos</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
