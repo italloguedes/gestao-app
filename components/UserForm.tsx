@@ -45,35 +45,32 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const [selectedAuthUser, setSelectedAuthUser] = useState<string>('');
   const [showAuthUsers, setShowAuthUsers] = useState(!user); // Mostra por padrão ao criar novo
 
-  // Buscar usuários do Supabase Auth
+  // Buscar usuários do Supabase Auth via API Route
   const fetchAuthUsers = async () => {
     try {
       setLoadingAuthUsers(true);
 
-      // Buscar usuários já cadastrados na tabela users para filtrar
-      const { data: existingUsers } = await supabase
-        .from('users')
-        .select('auth_id')
-        .not('auth_id', 'is', null);
+      // Chamar rota API que tem acesso à service_role key
+      const response = await fetch('/api/auth/list-users');
 
-      const existingAuthIds = new Set(existingUsers?.map(u => u.auth_id) || []);
-
-      // Buscar usuários do Supabase Auth via Admin API
-      const { data, error } = await supabase.auth.admin.listUsers();
-
-      if (error) {
-        console.error('Erro ao buscar usuários do Auth:', error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro ao buscar usuários do Auth:', errorData);
+        setError('Erro ao carregar usuários do Supabase Auth. Verifique as configurações.');
         return;
       }
 
-      // Filtrar apenas usuários que ainda não estão vinculados (exceto se estiver editando)
-      const availableUsers = data.users.filter(authUser =>
-        !existingAuthIds.has(authUser.id) || authUser.id === user?.auth_id
+      const data = await response.json();
+
+      // Filtrar apenas usuários disponíveis (não vinculados) ou o usuário atual se estiver editando
+      const availableUsers = data.users.filter((authUser: any) =>
+        !authUser.is_linked || authUser.id === user?.auth_id
       );
 
-      setAuthUsers(availableUsers as AuthUser[]);
+      setAuthUsers(availableUsers);
     } catch (err) {
       console.error('Erro ao buscar usuários do Auth:', err);
+      setError('Erro de conexão ao buscar usuários.');
     } finally {
       setLoadingAuthUsers(false);
     }
