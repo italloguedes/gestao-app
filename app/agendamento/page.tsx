@@ -736,12 +736,30 @@ function AgendamentoContent() {
   return (
     <Fragment>
       <Header onOpenAgendamentos={() => setModalOpen(true)} />
-      <div className="pt-20">
-        <div className="flex flex-col md:flex-row gap-8 max-w-5xl mx-auto py-10 px-4">
+      <div className="pt-20 min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30">
+        {/* Page Title */}
+        <div className="max-w-5xl mx-auto px-4 pt-8 pb-6 animate-slide-up">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="h-12 w-1.5 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              Agendar Atendimento
+            </h1>
+          </div>
+          <p className="text-gray-600 ml-6 text-sm md:text-base">Escolha a melhor data e horário para seu atendimento na Sala Sensorial</p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-8 max-w-5xl mx-auto px-4 pb-10">
           {/* Calendário */}
-          <div className="bg-white rounded-lg shadow p-6 w-full md:w-[380px]">
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 p-6 w-full md:w-[380px] hover:shadow-2xl transition-shadow duration-300">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-emerald-700 mb-2">Selecione uma data</h2>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                  <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Selecione uma data</h2>
+              </div>
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
                 <div className="flex">
                   <div className="flex items-start bg-orange-100 p-4 rounded">
@@ -820,10 +838,21 @@ function AgendamentoContent() {
             </div>
           </div>
           {/* Horários */}
-          <div className="flex-1 bg-white rounded-lg shadow p-8">
-            <h2 className="text-2xl font-bold text-emerald-700 mb-2">Agendamento para emissão da CIN</h2>
-            <p className="text-lg text-gray-700 mb-1">Local: <span className="font-semibold text-emerald-700">{ENDERECO}</span></p>
-            <p className="text-sm text-gray-600 mb-1">Endereço: <span className="text-emerald-700">{ENDERECO_COMPLETO}</span></p>
+          <div className="flex-1 bg-white rounded-2xl shadow-xl border-2 border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex items-start space-x-3 mb-6">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Agendamento para emissão da CIN</h2>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-700"><span className="font-semibold">Local:</span> {ENDERECO}</p>
+                  <p className="text-xs text-gray-600"><span className="font-semibold">Endereço:</span> {ENDERECO_COMPLETO}</p>
+                </div>
+              </div>
+            </div>
             <div className="mt-4">
               <h3 className="text-lg font-semibold text-emerald-700 mb-2">
                 Horários disponíveis
@@ -967,10 +996,30 @@ function AgendamentoContent() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full mt-4 py-3 px-4 text-lg bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-bold disabled:opacity-50 shadow-md"
+                  className="group w-full mt-4 py-4 px-4 text-lg bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 text-white rounded-2xl hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 font-bold disabled:opacity-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 relative overflow-hidden"
                   disabled={loading}
                 >
-                  {loading ? "Agendando..." : "Confirmar Agendamento"}
+                  {!loading && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  )}
+                  <span className="relative z-10 flex items-center justify-center">
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Agendando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Confirmar Agendamento
+                      </>
+                    )}
+                  </span>
                 </button>
               </form>
             )}
