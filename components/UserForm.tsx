@@ -314,6 +314,33 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* User ID Info (apenas ao editar) */}
+        {user && (
+          <div className="bg-gradient-to-r from-gray-50 to-slate-50 border-2 border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-gray-600 flex items-center justify-center">
+                <FiShield className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Informações de Identificação</h3>
+                <p className="text-xs text-gray-600">IDs deste usuário no sistema</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">User ID (Tabela)</label>
+                <p className="text-base font-mono font-bold text-gray-900 mt-1">{user.id || 'N/A'}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Auth ID (Supabase)</label>
+                <p className="text-sm font-mono font-bold text-gray-900 mt-1 break-all">
+                  {user.auth_id || <span className="text-gray-400 font-normal">Não vinculado</span>}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-2xl bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 p-5 shadow-lg animate-shake">
             <div className="flex items-start">
