@@ -1,12 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 /**
  * API Route para listar usuários do Supabase Auth
+ * Requer autenticação e role: superadmin
  * Requer service_role key (admin) para acessar auth.admin.listUsers()
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Verificar autenticação e permissões
+    const authCheck = await checkAuth(request, 'superadmin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas super administradores podem listar usuários');
+    }
     // Verificar se as variáveis de ambiente estão configuradas
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

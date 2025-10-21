@@ -1,13 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 /**
  * API Route para atualizar usuários do Supabase Auth
+ * Requer autenticação e role: superadmin
  * Permite atualizar: email, password, user_metadata (nome, telefone, etc)
  * Requer service_role key (admin)
  */
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
+    // Verificar autenticação e permissões
+    const authCheck = await checkAuth(request, 'superadmin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas super administradores podem atualizar usuários');
+    }
+
     const body = await request.json();
     const { userId, email, password, user_metadata, phone } = body;
 

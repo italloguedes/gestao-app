@@ -1,13 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 /**
  * API Route para criar usuários no Supabase Auth
+ * Requer autenticação e role: superadmin
  * Permite criar usuários com email, senha e metadata
  * Requer service_role key (admin)
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticação e permissões
+    const authCheck = await checkAuth(request, 'superadmin');
+
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+    }
+
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Apenas super administradores podem criar usuários');
+    }
+
     const body = await request.json();
     const { email, password, user_metadata, phone, email_confirm = true } = body;
 

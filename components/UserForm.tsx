@@ -58,13 +58,32 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     try {
       setLoadingAuthUsers(true);
 
-      // Chamar rota API que tem acesso à service_role key
-      const response = await fetch('/api/auth/list-users');
+      // Pegar token de autenticação do usuário logado
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError('Você precisa estar logado para gerenciar usuários.');
+        return;
+      }
+
+      // Chamar rota API com token de autenticação
+      const response = await fetch('/api/auth/list-users', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Erro ao buscar usuários do Auth:', errorData);
-        setError('Erro ao carregar usuários do Supabase Auth. Verifique as configurações.');
+
+        if (response.status === 401) {
+          setError('Sessão expirada. Faça login novamente.');
+        } else if (response.status === 403) {
+          setError('Você não tem permissão para listar usuários. Apenas super administradores.');
+        } else {
+          setError('Erro ao carregar usuários do Supabase Auth.');
+        }
         return;
       }
 
