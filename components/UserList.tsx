@@ -19,13 +19,36 @@ export default function UserList() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
 
+      if (!session) {
+        setError('Você precisa estar logado para visualizar usuários.');
+        setLoading(false);
+        return;
+      }
+
+      // Chamar API protegida
+      const response = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Sessão expirada. Faça login novamente.');
+        } else if (response.status === 403) {
+          setError('Você não tem permissão para visualizar usuários. Apenas administradores.');
+        } else {
+          setError('Erro ao carregar usuários');
+        }
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -43,12 +66,33 @@ export default function UserList() {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId);
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (error) throw error;
+      if (!session) {
+        setError('Você precisa estar logado para excluir usuários.');
+        return;
+      }
+
+      // Chamar API protegida
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Sessão expirada. Faça login novamente.');
+        } else if (response.status === 403) {
+          setError('Você não tem permissão para excluir usuários. Apenas super administradores.');
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || 'Erro ao excluir usuário');
+        }
+        return;
+      }
 
       setUsers(users.filter(user => user.id !== userId));
     } catch (error) {

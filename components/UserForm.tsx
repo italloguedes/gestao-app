@@ -142,8 +142,53 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     setError(null);
 
     try {
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError('Você precisa estar logado para gerenciar usuários.');
+        setLoading(false);
+        return;
+      }
+
       if (user?.id) {
-        // Atualizando usuário existente
+        // === ATUALIZANDO USUÁRIO EXISTENTE ===
+
+        // 1. Se deve sincronizar com Auth e tem auth_id
+        if (formData.syncWithAuth && user.auth_id) {
+          const updateAuthData: any = {
+            auth_id: user.auth_id
+          };
+
+          if (formData.email !== user.email) {
+            updateAuthData.email = formData.email;
+          }
+
+          if (formData.phone) {
+            updateAuthData.phone = formData.phone;
+          }
+
+          if (formData.password) {
+            updateAuthData.password = formData.password;
+          }
+
+          // Chamar API para atualizar no Auth
+          const authResponse = await fetch('/api/auth/update-user', {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateAuthData)
+          });
+
+          if (!authResponse.ok) {
+            const errorData = await authResponse.json();
+            throw new Error(errorData.error || 'Erro ao atualizar dados no Supabase Auth');
+          }
+        }
+
+        // 2. Atualizar na tabela users
         const updateData: any = {
           name: formData.name,
           email: formData.email,
@@ -152,45 +197,93 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           updated_at: new Date().toISOString()
         };
 
-        // Atualiza auth_id se foi fornecido
-        if (formData.auth_id) {
-          updateData.auth_id = formData.auth_id;
+        const response = await fetch(`/api/users/${user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 401) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          } else if (response.status === 403) {
+            throw new Error('Você não tem permissão para atualizar usuários.');
+          }
+          throw new Error(errorData.error || 'Erro ao atualizar usuário');
         }
 
-        const { error: updateError } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', user.id);
-
-        if (updateError) throw updateError;
       } else {
-        // Criando novo usuário
-        // Usa auth_id selecionado ou gera um temporário
-        const authId = formData.auth_id || (
-          (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-            ? crypto.randomUUID()
-            : `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`
-        );
+        // === CRIANDO NOVO USUÁRIO ===
 
-        const { error: createError } = await supabase
-          .from('users')
-          .insert([{
-            auth_id: authId,
-            name: formData.name,
+        let authId = formData.auth_id;
+
+        // 1. Se deve criar no Auth (tem email e senha)
+        if (!authId && formData.email && formData.password) {
+          const createAuthData = {
             email: formData.email,
-            role: formData.role,
-            status: formData.status,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]);
+            password: formData.password,
+            phone: formData.phone,
+            user_metadata: {
+              full_name: formData.name,
+              name: formData.name
+            }
+          };
 
-        if (createError) throw createError;
+          const authResponse = await fetch('/api/auth/create-user', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(createAuthData)
+          });
+
+          if (!authResponse.ok) {
+            const errorData = await authResponse.json();
+            throw new Error(errorData.error || 'Erro ao criar usuário no Supabase Auth');
+          }
+
+          const authData = await authResponse.json();
+          authId = authData.user.id;
+        }
+
+        // 2. Criar na tabela users
+        const createData = {
+          auth_id: authId || `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          status: formData.status
+        };
+
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(createData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 401) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          } else if (response.status === 403) {
+            throw new Error('Você não tem permissão para criar usuários.');
+          }
+          throw new Error(errorData.error || 'Erro ao criar usuário');
+        }
       }
 
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      setError('Erro ao salvar usuário. Por favor, tente novamente.');
+      setError(error.message || 'Erro ao salvar usuário. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -347,6 +440,59 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
             {renderFieldError('email')}
           </div>
 
+          {/* Phone Field */}
+          <div className="group">
+            <label htmlFor="phone" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center mr-2 group-hover:bg-teal-200 transition-colors">
+                <FiPhone className="h-4 w-4 text-teal-600" />
+              </div>
+              Telefone
+              <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone || ''}
+              onChange={handleChange}
+              className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300"
+              placeholder="Ex: (85) 98765-4321"
+            />
+            <p className="mt-2 text-xs text-gray-500 ml-10">
+              Telefone para contato (será sincronizado com Supabase Auth se ativado)
+            </p>
+          </div>
+
+          {/* Password Field (apenas ao criar ou se quiser atualizar) */}
+          {(!user || formData.syncWithAuth) && (
+            <div className="group">
+              <label htmlFor="password" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-2 group-hover:bg-indigo-200 transition-colors">
+                  <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                Senha
+                <span className="ml-auto text-xs font-normal text-gray-400">
+                  {user ? '(Deixe em branco para manter a atual)' : '(Mínimo 6 caracteres)'}
+                </span>
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password || ''}
+                onChange={handleChange}
+                className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300"
+                placeholder={user ? "Deixe em branco para não alterar" : "Digite uma senha segura"}
+                minLength={6}
+              />
+              <p className="mt-2 text-xs text-gray-500 ml-10">
+                {user ? 'Preencha apenas se desejar alterar a senha no Supabase Auth' : 'Senha para login no sistema (mínimo 6 caracteres)'}
+              </p>
+            </div>
+          )}
+
           {/* Role Field */}
           <div className="group">
             <label htmlFor="role" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
@@ -375,6 +521,40 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               {formData.role === 'user' && 'Acesso público: criar e acompanhar agendamentos'}
             </p>
           </div>
+
+          {/* Sync with Auth Checkbox (apenas ao editar usuário com auth_id) */}
+          {user && user.auth_id && (
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-6">
+              <div className="flex items-start space-x-4">
+                <input
+                  type="checkbox"
+                  id="syncWithAuth"
+                  name="syncWithAuth"
+                  checked={formData.syncWithAuth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, syncWithAuth: e.target.checked }))}
+                  className="mt-1 h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-4 focus:ring-amber-100 transition-all cursor-pointer"
+                />
+                <div className="flex-1">
+                  <label htmlFor="syncWithAuth" className="text-sm font-bold text-gray-900 cursor-pointer">
+                    Sincronizar alterações com Supabase Auth
+                  </label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Ao ativar, as alterações de email, telefone e senha também serão aplicadas no Supabase Auth (sistema de autenticação).
+                    Isso mantém os dados sincronizados entre a tabela de usuários e o sistema de login.
+                  </p>
+                  {formData.syncWithAuth && (
+                    <div className="mt-3 flex items-start space-x-2 text-xs text-amber-800 bg-amber-100 p-3 rounded-xl">
+                      <FiAlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <p>
+                        <strong>Atenção:</strong> As alterações no email e senha afetarão o login deste usuário.
+                        {formData.password && ' A nova senha será aplicada imediatamente.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status Field */}
           <div className="group">
