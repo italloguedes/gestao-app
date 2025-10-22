@@ -45,8 +45,24 @@ export default function GerarRelatorioPage() {
   };
 
   const generatePDF = async (atendimentos: Atendimento[]) => {
+    // Buscar nome do atendente para o rodapé
+    let atendenteNome = 'Não identificado';
+    if (user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
+    }
+
     const doc = new jsPDF();
-    
+
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
     const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro para melhor legibilidade
@@ -148,17 +164,22 @@ export default function GerarRelatorioPage() {
       const footerFontSize = 7;
       doc.setFontSize(footerFontSize);
       doc.setTextColor(128, 128, 128);
-      
+
       // Linha separadora do rodapé centralizada
       doc.setDrawColor(230, 230, 230);
       doc.setLineWidth(0.3);
       doc.line(lineStartX, doc.internal.pageSize.height - 15, lineStartX + lineWidth, doc.internal.pageSize.height - 15);
-      
+
       // Data e hora de geração
       const now = new Date();
       const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
       doc.text(dataHoraGeracao, marginLeft, doc.internal.pageSize.height - 8);
-      
+
+      // Nome do atendente (centralizado)
+      const atendenteText = `Atendente: ${atendenteNome}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * footerFontSize / doc.internal.scaleFactor;
+      doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 8);
+
       // Número da página
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * footerFontSize / doc.internal.scaleFactor;
@@ -171,8 +192,24 @@ export default function GerarRelatorioPage() {
   };
 
   const generateSignaturePDF = async (atendimentos: Atendimento[]) => {
+    // Buscar nome do atendente para o rodapé
+    let atendenteNome = 'Não identificado';
+    if (user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
+    }
+
     const doc = new jsPDF();
-    
+
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
     
@@ -262,12 +299,17 @@ export default function GerarRelatorioPage() {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(128, 128, 128);
-      
+
       // Data e hora de geração
       const now = new Date();
       const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
       doc.text(dataHoraGeracao, 20, doc.internal.pageSize.height - 15);
-      
+
+      // Nome do atendente (centralizado)
+      const atendenteText = `Atendente: ${atendenteNome}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 8 / doc.internal.scaleFactor;
+      doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 15);
+
       // Número da página
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;

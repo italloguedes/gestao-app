@@ -203,6 +203,19 @@ export default function DashboardPage() {
 
     setGerandoComprovante(true);
     try {
+      // Buscar nome do atendente para o rodapé do PDF
+      let atendenteNome = 'Não identificado';
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
 
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];
@@ -371,10 +384,14 @@ export default function DashboardPage() {
       doc.setTextColor(80, 80, 80);
       doc.text(`Emitido em: ${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 105, rodapeY - 3, { align: 'center' });
 
+      // Nome do atendente
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Atendente: ${atendenteNome}`, 105, rodapeY + 3, { align: 'center' });
+
       // Número da página
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(120, 120, 120);
-      doc.text('Página 1/1', 105, rodapeY + 3, { align: 'center' });
+      doc.text('Página 1/1', 105, rodapeY + 9, { align: 'center' });
       // Gerar URL do PDF
       const pdfBlob = doc.output('blob');
       const url = URL.createObjectURL(pdfBlob);

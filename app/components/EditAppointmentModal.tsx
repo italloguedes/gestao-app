@@ -2,6 +2,7 @@ import React from 'react';
 import { FiX, FiUser, FiPhone, FiCalendar, FiClock, FiCheck, FiXCircle } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
 import Loading from './Loading';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EditAppointmentModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface EditAppointmentModalProps {
 }
 
 export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange, onDelete }: EditAppointmentModalProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
@@ -197,6 +199,22 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         const diaAtual = now.toISOString().split('T')[0];
         const horario = now.toTimeString().split(' ')[0];
 
+        // Buscar nome do atendente para salvar no registro
+        let atendenteNome = 'Não identificado';
+        if (user) {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('name')
+            .eq('auth_id', user.id)
+            .single();
+
+          if (userError) {
+            console.error('Erro ao buscar dados do atendente:', userError);
+          } else if (userData?.name) {
+            atendenteNome = userData.name;
+          }
+        }
+
         const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
             nome: formData.get('nome') || appointment.nome,
@@ -206,6 +224,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             horario,
             dia_atual: diaAtual,
             usuario_id: appointment.usuario_id || appointment.user_id,
+            atendente_nome: atendenteNome,
             protocolo,
             status: 'em_andamento',
           },
