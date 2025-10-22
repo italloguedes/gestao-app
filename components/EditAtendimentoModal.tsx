@@ -16,7 +16,7 @@ import {
   FiAlertCircle,
   FiLock,
   FiMessageSquare,
-  FiPlus,
+  FiSend,
   FiCreditCard,
 } from 'react-icons/fi';
 
@@ -154,7 +154,7 @@ export default function EditAtendimentoModal({
     }
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatChatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR', {
       day: '2-digit',
@@ -163,25 +163,25 @@ export default function EditAtendimentoModal({
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'America/Fortaleza'
-    });
+    }).replace(',', ' as');
   };
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'concluido':
-        return { color: 'from-emerald-500 to-green-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Concluído' };
+        return { color: 'bg-emerald-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Concluído' };
       case 'em_andamento':
-        return { color: 'from-amber-500 to-orange-500', icon: <FiClock className="w-4 h-4" />, label: 'Em andamento' };
+        return { color: 'bg-amber-500', icon: <FiClock className="w-4 h-4" />, label: 'Em andamento' };
       case 'correcao':
-        return { color: 'from-rose-500 to-red-500', icon: <FiAlertCircle className="w-4 h-4" />, label: 'Correção' };
+        return { color: 'bg-rose-500', icon: <FiAlertCircle className="w-4 h-4" />, label: 'Correção' };
       case 'cancelado':
-        return { color: 'from-slate-500 to-gray-600', icon: <FiXCircle className="w-4 h-4" />, label: 'Cancelado' };
+        return { color: 'bg-slate-500', icon: <FiXCircle className="w-4 h-4" />, label: 'Cancelado' };
       case 'bloqueado':
-        return { color: 'from-slate-500 to-gray-600', icon: <FiLock className="w-4 h-4" />, label: 'Bloqueado' };
+        return { color: 'bg-slate-600', icon: <FiLock className="w-4 h-4" />, label: 'Bloqueado' };
       case 'entregue':
-        return { color: 'from-blue-500 to-indigo-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Entregue' };
+        return { color: 'bg-blue-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Entregue' };
       default:
-        return { color: 'from-slate-500 to-gray-600', icon: <FiClock className="w-4 h-4" />, label: status };
+        return { color: 'bg-slate-500', icon: <FiClock className="w-4 h-4" />, label: status };
     }
   };
 
@@ -190,49 +190,48 @@ export default function EditAtendimentoModal({
   const statusConfig = getStatusConfig(editingAtendimento.status || atendimento.status);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-sm"></div>
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-                <FiFileText className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white drop-shadow-lg">Editar Atendimento</h2>
-                <p className="text-white/80 text-sm">Protocolo: {atendimento.protocolo}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header Moderno */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Editar Atendimento</h2>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-white/90 text-sm">Protocolo: <span className="font-bold">{atendimento.protocolo}</span></span>
+                {atendimento.atendente_nome && (
+                  <>
+                    <span className="text-white/50">•</span>
+                    <span className="text-white/90 text-sm">Atendente: <span className="font-bold">{atendimento.atendente_nome}</span></span>
+                  </>
+                )}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl flex items-center justify-center text-white transition-all duration-200"
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all"
             >
-              <FiX className="w-5 h-5" />
+              <FiX className="w-6 h-6" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Coluna Principal - Formulário */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Status e Atendente */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Status */}
-                <div className="bg-white rounded-xl shadow-md border-2 border-slate-200 p-4">
-                  <label className="block text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
-                    <div className={`w-8 h-8 bg-gradient-to-br ${statusConfig.color} rounded-lg flex items-center justify-center text-white`}>
-                      {statusConfig.icon}
-                    </div>
-                    Status
-                  </label>
+        <div className="flex-1 overflow-hidden flex">
+          {/* Formulário */}
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {/* Status */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
+                <label className="block text-sm font-bold text-slate-700 mb-3">Status do Atendimento</label>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 ${statusConfig.color} rounded-xl flex items-center justify-center text-white`}>
+                    {statusConfig.icon}
+                  </div>
                   <select
                     value={editingAtendimento.status || ''}
                     onChange={(e) => onInputChange('status', e.target.value)}
-                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-semibold text-sm"
+                    className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-semibold bg-white"
                   >
                     <option value="pendente">Pendente</option>
                     <option value="em_andamento">Em Andamento</option>
@@ -243,95 +242,70 @@ export default function EditAtendimentoModal({
                     <option value="entregue">Entregue</option>
                   </select>
                 </div>
-
-                {/* Atendente */}
-                {atendimento.atendente_nome && (
-                  <div className="bg-white rounded-xl shadow-md border-2 border-slate-200 p-4">
-                    <label className="block text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white">
-                        <FiUser className="w-4 h-4" />
-                      </div>
-                      Atendente
-                    </label>
-                    <p className="text-lg font-bold text-slate-800">{atendimento.atendente_nome}</p>
-                  </div>
-                )}
               </div>
 
-              {/* Dados Pessoais */}
-              <div className="bg-white rounded-xl shadow-md border-2 border-slate-200 p-6">
+              {/* Informações Pessoais */}
+              <div className="bg-white rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center text-white">
-                    <FiUser className="w-4 h-4" />
-                  </div>
+                  <FiUser className="w-5 h-5 text-blue-600" />
                   Informações Pessoais
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {/* Nome */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiUser className="w-4 h-4" />
-                      Nome Completo *
-                    </label>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nome Completo *</label>
                     <input
                       type="text"
                       value={editingAtendimento.nome || ''}
                       onChange={(e) => onInputChange('nome', e.target.value)}
-                      className={`w-full px-4 py-2.5 border-2 rounded-xl transition-all duration-200 font-semibold text-sm ${
-                        validationErrors.nome ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
+                      className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
+                        validationErrors.nome ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                       }`}
                       placeholder="Nome completo"
                     />
-                    {validationErrors.nome && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.nome}</p>}
+                    {validationErrors.nome && <p className="text-red-500 text-sm mt-1">{validationErrors.nome}</p>}
                   </div>
 
-                  {/* CPF */}
-                  <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiCreditCard className="w-4 h-4" />
-                      CPF *
-                    </label>
-                    <input
-                      type="text"
-                      value={editingAtendimento.cpf || ''}
-                      onChange={(e) => onInputChange('cpf', e.target.value)}
-                      className={`w-full px-4 py-2.5 border-2 rounded-xl transition-all duration-200 font-semibold text-sm ${
-                        validationErrors.cpf ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
-                      }`}
-                      placeholder="000.000.000-00"
-                    />
-                    {validationErrors.cpf && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.cpf}</p>}
-                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* CPF */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">CPF *</label>
+                      <input
+                        type="text"
+                        value={editingAtendimento.cpf || ''}
+                        onChange={(e) => onInputChange('cpf', e.target.value)}
+                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
+                          validationErrors.cpf ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
+                        placeholder="000.000.000-00"
+                      />
+                      {validationErrors.cpf && <p className="text-red-500 text-sm mt-1">{validationErrors.cpf}</p>}
+                    </div>
 
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiMail className="w-4 h-4" />
-                      E-mail *
-                    </label>
-                    <input
-                      type="email"
-                      value={editingAtendimento.email || ''}
-                      onChange={(e) => onInputChange('email', e.target.value)}
-                      className={`w-full px-4 py-2.5 border-2 rounded-xl transition-all duration-200 font-semibold text-sm ${
-                        validationErrors.email ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
-                      }`}
-                      placeholder="email@exemplo.com"
-                    />
-                    {validationErrors.email && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>}
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">E-mail *</label>
+                      <input
+                        type="email"
+                        value={editingAtendimento.email || ''}
+                        onChange={(e) => onInputChange('email', e.target.value)}
+                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
+                          validationErrors.email ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
+                        placeholder="email@exemplo.com"
+                      />
+                      {validationErrors.email && <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>}
+                    </div>
                   </div>
 
                   {/* Solicitante */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiUser className="w-4 h-4" />
-                      Solicitante *
-                    </label>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Solicitante *</label>
                     <input
                       type="text"
                       value={editingAtendimento.solicitante || ''}
                       onChange={(e) => onInputChange('solicitante', e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-semibold text-sm"
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                       placeholder="Nome do solicitante"
                     />
                   </div>
@@ -339,155 +313,141 @@ export default function EditAtendimentoModal({
               </div>
 
               {/* Dados do Atendimento */}
-              <div className="bg-white rounded-xl shadow-md border-2 border-slate-200 p-6">
+              <div className="bg-white rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center text-white">
-                    <FiCalendar className="w-4 h-4" />
-                  </div>
+                  <FiCalendar className="w-5 h-5 text-purple-600" />
                   Dados do Atendimento
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {/* Data */}
                   <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiCalendar className="w-4 h-4" />
-                      Data *
-                    </label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Data *</label>
                     <input
                       type="date"
                       value={editingAtendimento.dia_atual || ''}
                       onChange={(e) => onInputChange('dia_atual', e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-semibold text-sm"
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                     />
                   </div>
 
                   {/* Horário */}
                   <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiClock className="w-4 h-4" />
-                      Horário *
-                    </label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Horário *</label>
                     <input
                       type="time"
                       value={editingAtendimento.horario || ''}
                       onChange={(e) => onInputChange('horario', e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-semibold text-sm"
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                     />
                   </div>
 
                   {/* Protocolo */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
-                      <FiFileText className="w-4 h-4" />
-                      Protocolo *
-                    </label>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Protocolo *</label>
                     <input
                       type="text"
                       value={editingAtendimento.protocolo || ''}
                       onChange={(e) => onInputChange('protocolo', e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-semibold text-sm"
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                       placeholder="Número do protocolo"
                     />
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Coluna Lateral - Histórico de Observações */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-md border-2 border-slate-200 p-4 sticky top-0">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white">
-                    <FiMessageSquare className="w-4 h-4" />
-                  </div>
-                  Histórico
-                </h3>
-
-                {/* Timeline de Observações */}
-                {historicoObservacoes.length > 0 ? (
-                  <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2">
-                    {historicoObservacoes.map((obs, index) => (
-                      <div key={index} className="relative pl-6 pb-3 border-l-2 border-slate-200 last:border-0">
-                        <div className="absolute -left-1.5 top-0 w-3 h-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full border-2 border-white"></div>
-                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-md flex items-center justify-center text-white">
-                              <FiUser className="w-3 h-3" />
-                            </div>
-                            <span className="font-bold text-slate-800 text-xs">{obs.usuario}</span>
-                          </div>
-                          <p className="text-slate-700 text-xs mb-1 leading-relaxed">{obs.texto}</p>
-                          <span className="text-xs text-slate-500 font-medium">{formatDateTime(obs.data)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 bg-slate-50 rounded-lg mb-4">
-                    <FiMessageSquare className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-slate-500 text-xs font-medium">Nenhuma observação</p>
-                  </div>
-                )}
-
-                {/* Adicionar Nova Observação */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border-2 border-blue-200">
-                  <label className="block text-xs font-bold text-slate-700 mb-2 flex items-center gap-2">
-                    <FiPlus className="w-3 h-3" />
-                    Nova Observação
-                  </label>
-                  <textarea
-                    value={novaObservacao}
-                    onChange={(e) => setNovaObservacao(e.target.value)}
-                    placeholder="Digite aqui..."
-                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-xs font-medium"
-                    rows={3}
-                  />
-                  <button
-                    onClick={handleAddObservacao}
-                    disabled={!novaObservacao.trim() || addingObservacao}
-                    className="mt-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold text-xs shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {addingObservacao ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Adicionando...
-                      </>
-                    ) : (
-                      <>
-                        <FiPlus className="w-4 h-4" />
-                        Adicionar
-                      </>
-                    )}
-                  </button>
-                </div>
+          {/* Sidebar - Histórico de Observações estilo Chat */}
+          <div className="w-96 bg-gradient-to-b from-slate-50 to-slate-100 border-l-2 border-slate-200 flex flex-col">
+            {/* Header do Chat */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <FiMessageSquare className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <h3 className="text-white font-bold">Observações</h3>
+                <p className="text-white/80 text-xs">{historicoObservacoes.length} mensagem{historicoObservacoes.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+
+            {/* Mensagens */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {historicoObservacoes.length > 0 ? (
+                historicoObservacoes.map((obs, index) => (
+                  <div key={index} className="flex flex-col">
+                    <div className="bg-white rounded-2xl rounded-tl-sm p-4 shadow-sm border border-slate-200">
+                      <p className="text-slate-800 text-sm leading-relaxed mb-2">{obs.texto}</p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {obs.usuario} - {formatChatDate(obs.data)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <FiMessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-400 text-sm font-medium">Nenhuma observação ainda</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input de Nova Mensagem */}
+            <div className="p-4 bg-white border-t-2 border-slate-200">
+              <div className="mb-3">
+                <textarea
+                  value={novaObservacao}
+                  onChange={(e) => setNovaObservacao(e.target.value)}
+                  placeholder="Digite uma observação..."
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none text-sm"
+                  rows={3}
+                />
+              </div>
+              <button
+                onClick={handleAddObservacao}
+                disabled={!novaObservacao.trim() || addingObservacao}
+                className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {addingObservacao ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <FiSend className="w-5 h-5" />
+                    Enviar Observação
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t-2 border-slate-200 bg-slate-50 px-6 py-4 flex justify-end gap-3">
+        <div className="border-t-2 border-slate-200 bg-white px-8 py-4 flex justify-end gap-3">
           <button
             onClick={onCancel}
             disabled={saving}
-            className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all duration-200 text-sm flex items-center gap-2"
+            className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all flex items-center gap-2"
           >
-            <FiX className="w-4 h-4" />
+            <FiX className="w-5 h-5" />
             Cancelar
           </button>
           <button
             onClick={onSave}
             disabled={saving}
-            className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Salvando...
               </>
             ) : (
               <>
-                <FiSave className="w-4 h-4" />
+                <FiSave className="w-5 h-5" />
                 Salvar Alterações
               </>
             )}
