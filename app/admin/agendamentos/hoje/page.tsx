@@ -66,7 +66,7 @@ const HORARIOS = (() => {
 export default function AgendamentosHojePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -89,12 +89,12 @@ export default function AgendamentosHojePage() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (hasAccess) {
       loadAgendamentos();
       const interval = setInterval(loadAgendamentos, 300000);
       return () => clearInterval(interval);
     }
-  }, [isAdmin, selectedDate]);
+  }, [hasAccess, selectedDate]);
 
   const checkUser = async () => {
     try {
@@ -110,15 +110,20 @@ export default function AgendamentosHojePage() {
 
         if (userError) {
           console.error("Erro ao verificar permissões:", userError);
-          setIsAdmin(false);
+          setHasAccess(false);
           return;
         }
 
-        setIsAdmin(userData?.role === "admin" || userData?.role === "superadmin");
+        // Permitir acesso para atendente, admin e superadmin
+        setHasAccess(
+          userData?.role === "atendente" ||
+          userData?.role === "admin" ||
+          userData?.role === "superadmin"
+        );
       }
     } catch (err) {
       console.error("Erro ao verificar usuário:", err);
-      setIsAdmin(false);
+      setHasAccess(false);
     }
   };
 
@@ -474,7 +479,7 @@ export default function AgendamentosHojePage() {
     ) : null;
   };
 
-  if (!user || !isAdmin) {
+  if (!user || !hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
