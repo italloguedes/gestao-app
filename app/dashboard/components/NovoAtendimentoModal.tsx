@@ -155,9 +155,15 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
       }
 
       try {
+        // Obter token de autenticação
+        const { data: { session } } = await supabase.auth.getSession();
+
         const res = await fetch('/api/send-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': session ? `Bearer ${session.access_token}` : ''
+          },
           body: JSON.stringify({
             to: email,
             subject: `Atendimento Realizado, ${nome}! 🎉`,

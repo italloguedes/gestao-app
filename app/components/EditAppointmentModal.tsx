@@ -221,10 +221,16 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           const nomeEditado = formData.get('nome') || appointment.nome;
           const emailEditado = formData.get('email') || appointment.email;
           const cpfEditado = formData.get('cpf') || appointment.cpf;
-          
+
+          // Obter token de autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+
           const res = await fetch('/api/send-email', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': session ? `Bearer ${session.access_token}` : ''
+            },
             body: JSON.stringify({
               to: emailEditado,
               subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
