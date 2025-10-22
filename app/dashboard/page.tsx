@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
+import SignaturePad from '@/components/SignaturePad';
 import jsPDF from 'jspdf';
 
 interface DashboardStats {
@@ -72,6 +73,10 @@ export default function DashboardPage() {
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
+
+  // Estados para assinatura digital
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -201,6 +206,17 @@ export default function DashboardPage() {
     const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
     if (!confirmed) return;
 
+    // Abrir modal de assinatura ao invés de gerar PDF diretamente
+    setShowSignaturePad(true);
+  };
+
+  const handleSaveSignature = async (signatureDataUrl: string) => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
+      return;
+    }
+
+    setShowSignaturePad(false);
+    setAssinaturaDataUrl(signatureDataUrl);
     setGerandoComprovante(true);
     try {
       // Buscar nome do atendente para o rodapé do PDF
@@ -221,7 +237,7 @@ export default function DashboardPage() {
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
 
-      // Atualizar atendimento no Supabase
+      // Atualizar atendimento no Supabase (incluindo assinatura digital)
       const { error } = await supabase
         .from('atendimentos')
         .update({
@@ -231,6 +247,7 @@ export default function DashboardPage() {
           data_entrega: dataEntrega,
           status: 'entregue',
           data_hora_entrega: dataHoraEntrega,
+          assinatura_base64: signatureDataUrl,
         })
         .eq('id', selectedAtendimento.id);
 
@@ -347,22 +364,25 @@ export default function DashboardPage() {
       doc.text('identificado acima. A entrega foi registrada no sistema com data e hora especificadas.', 105, infoY + 18, { align: 'center' });
       doc.text('Em caso de dúvidas, entre em contato com a Sala Sensorial da ALECE.', 105, infoY + 26, { align: 'center' });
 
-      // Campo de assinatura destacado
+      // Campo de assinatura destacado com assinatura digital
       const assinaturaY = 240;
       doc.setDrawColor(16, 185, 129); // emerald-600
       doc.setLineWidth(0.5);
-      doc.roundedRect(18, assinaturaY, 174, 35, 3, 3, 'S');
+      doc.roundedRect(18, assinaturaY, 174, 40, 3, 3, 'S');
       doc.setFontSize(12);
       doc.setTextColor(16, 185, 129); // emerald-600
       doc.setFont('helvetica', 'bold');
-      doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 10, { align: 'center' });
-      doc.setTextColor(40, 40, 40);
-      doc.setLineWidth(0.3);
-      doc.line(45, assinaturaY + 20, 165, assinaturaY + 20);
+      doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
+
+      // Inserir assinatura digital capturada
+      if (signatureDataUrl) {
+        doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 10, 90, 20);
+      }
+
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 100, assinaturaY + 25, { align: 'center' });
+      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 105, assinaturaY + 35, { align: 'center' });
 
       // Rodapé moderno com fundo colorido
       const rodapeY = 285;
@@ -593,6 +613,14 @@ export default function DashboardPage() {
           }}
         />
       )}
+      {/* Modal de Assinatura Digital */}
+      <SignaturePad
+        isOpen={showSignaturePad}
+        onClose={() => setShowSignaturePad(false)}
+        onSave={handleSaveSignature}
+        title="Assinatura do Recebedor"
+        subtitle={`Coleta de assinatura para ${nomeRecebedor}`}
+      />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Cabeçalho do Dashboard - Design Moderno */}
