@@ -21,10 +21,9 @@ Este guia explica como configurar o login com Google usando Supabase para sua ap
    - **Name**: Nome da sua aplicação (ex: "CIADI App")
    - **Authorized JavaScript origins**:
      - `http://localhost:3000` (desenvolvimento)
-     - `https://seu-dominio.com` (produção)
+     - `https://seu-dominio.com` (produção, se houver)
    - **Authorized redirect URIs**:
-     - `https://seu-projeto.supabase.co/auth/v1/callback`
-     - Substitua `seu-projeto` pelo ID do seu projeto Supabase
+     - `https://jbyiypkivxnxjsvebhqk.supabase.co/auth/v1/callback`
 
 7. Clique em **Create**
 8. Copie o **Client ID** e **Client Secret**
@@ -46,7 +45,7 @@ Este guia explica como configurar o login com Google usando Supabase para sua ap
 Certifique-se de que seu arquivo `.env.local` contém:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://jbyiypkivxnxjsvebhqk.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon-aqui
 ```
 
@@ -82,7 +81,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon-aqui
 ### Erro: "redirect_uri_mismatch"
 
 Verifique se a URL de redirecionamento no Google Cloud Console está correta:
-- Deve ser: `https://seu-projeto.supabase.co/auth/v1/callback`
+- Deve ser exatamente: `https://jbyiypkivxnxjsvebhqk.supabase.co/auth/v1/callback`
 
 ### Erro: "Invalid provider"
 
