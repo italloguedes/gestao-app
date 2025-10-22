@@ -74,11 +74,15 @@ function AtualizarCINForm() {
 
       console.log('Status atualizado, enviando email...');
 
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+
       // Enviar email de conclusão
       const response = await fetch('/api/cin-pronta', {  // Ajustando para a rota correta /api/cin-pronta
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': session ? `Bearer ${session.access_token}` : ''
         },
         body: JSON.stringify({
           to: atendimento.email,
