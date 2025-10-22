@@ -238,10 +238,14 @@ export default function AgendamentosHojePage() {
   const handleCreateAppointment = async (appointmentData: any) => {
     setActionLoading(true);
     try {
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+
       const response = await fetch('/api/agendamentos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': session ? `Bearer ${session.access_token}` : ''
         },
         body: JSON.stringify(appointmentData),
       });

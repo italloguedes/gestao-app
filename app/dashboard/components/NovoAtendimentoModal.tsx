@@ -160,7 +160,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: email,
-            subject: `Atendimento Realizado, ${nome}! 🎉`,
+            subject: `Atendimento Realizado, ${nome}!`,
             html: `
 <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 24px;">

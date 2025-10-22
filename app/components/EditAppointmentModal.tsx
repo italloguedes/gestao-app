@@ -19,10 +19,62 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
   const [motivo, setMotivo] = React.useState('');
   const [protocolo, setProtocolo] = React.useState('');
+  const [observacoesHistorico, setObservacoesHistorico] = React.useState<Array<{autor: string, texto: string, data: string}>>([]);
+  const [novaObservacao, setNovaObservacao] = React.useState('');
+  const [atendenteNome, setAtendenteNome] = React.useState('');
 
   React.useEffect(() => {
     setAction(initialAction);
   }, [initialAction]);
+
+  // Buscar nome do atendente e carregar histórico de observações
+  React.useEffect(() => {
+    if (isOpen && user) {
+      // Buscar nome do atendente
+      const fetchAtendenteNome = async () => {
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('name')
+          .eq('auth_id', user.id)
+          .single();
+
+        if (!error && userData?.name) {
+          setAtendenteNome(userData.name);
+        }
+      };
+
+      fetchAtendenteNome();
+
+      // Carregar histórico de observações
+      if (appointment?.observacoes) {
+        try {
+          // Tentar parsear se for JSON
+          const historico = JSON.parse(appointment.observacoes);
+          if (Array.isArray(historico)) {
+            setObservacoesHistorico(historico);
+          } else {
+            // Se não for array, é uma observação antiga (string simples)
+            setObservacoesHistorico([{
+              autor: 'Sistema',
+              texto: appointment.observacoes,
+              data: new Date().toISOString()
+            }]);
+          }
+        } catch {
+          // Se não for JSON, é uma string simples
+          if (appointment.observacoes.trim()) {
+            setObservacoesHistorico([{
+              autor: 'Sistema',
+              texto: appointment.observacoes,
+              data: new Date().toISOString()
+            }]);
+          }
+        }
+      } else {
+        setObservacoesHistorico([]);
+      }
+    }
+  }, [isOpen, user, appointment]);
 
   // Função para copiar telefone (F7)
   const copyPhone = () => {
@@ -72,7 +124,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       // Tenta usar a API moderna primeiro
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
-        setMessage(`✅ Copiado: ${text}`);
+        setMessage(`Copiado: ${text}`);
         setTimeout(() => setMessage(''), 3000);
         
         // Mostra notificação se disponível
@@ -100,7 +152,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       document.body.removeChild(textArea);
       
       if (successful) {
-        setMessage(`✅ Copiado: ${text}`);
+        setMessage(`Copiado: ${text}`);
         setTimeout(() => setMessage(''), 3000);
         
         // Mostra notificação se disponível
@@ -116,7 +168,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       }
     } catch (err) {
       console.error('Erro ao copiar:', err);
-      setMessage(`❌ Erro ao copiar: ${text}`);
+      setMessage(`Erro ao copiar: ${text}`);
       setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -129,8 +181,20 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     setMessage('');
 
     try {
-      console.log('🔄 EditAppointmentModal: handleSubmit iniciado', { action, appointmentId: appointment?.id });
+      console.log('EditAppointmentModal: handleSubmit iniciado', { action, appointmentId: appointment?.id });
       const formData = new FormData(e.target as HTMLFormElement);
+
+      // Construir histórico de observações se houver nova observação
+      let observacoesAtualizadas = appointment.observacoes;
+      if (action === 'edit' && novaObservacao.trim()) {
+        const novoHistorico = [...observacoesHistorico, {
+          autor: atendenteNome || 'Usuário',
+          texto: novaObservacao.trim(),
+          data: new Date().toISOString()
+        }];
+        observacoesAtualizadas = JSON.stringify(novoHistorico);
+      }
+
       const updatedAppointment = {
         ...appointment,
         nome: formData.get('nome') || appointment.nome,
@@ -142,11 +206,11 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
         atendimento_preferencial: formData.get('atendimento_preferencial') === 'on',
         status: formData.get('status') || appointment.status,
-        observacoes: formData.get('observacoes') || appointment.observacoes,
+        observacoes: observacoesAtualizadas,
       };
 
       if (action === 'iniciar') {
-        console.log('🔄 EditAppointmentModal: Iniciando atendimento...');
+        console.log('EditAppointmentModal: Iniciando atendimento...');
         
         if (!protocolo.trim()) {
           setMessage('Por favor, informe o número de protocolo.');
@@ -188,7 +252,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
 
         if (updateError) {
-          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+          console.error('EditAppointmentModal: Erro ao atualizar status:', updateError);
           throw updateError;
         }
 
@@ -212,7 +276,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         ]);
 
         if (atendimentoError) {
-          console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
+          console.error('EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
           throw atendimentoError;
         }
 
@@ -227,7 +291,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               to: emailEditado,
-              subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
+              subject: `Atendimento Realizado, ${nomeEditado}!`,
               html: `
   <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
     <div style="text-align: center; margin-bottom: 24px;">
@@ -267,9 +331,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           setMessage('Atendimento concluído, mas houve erro ao enviar o e-mail.');
         }
 
-        console.log('✅ EditAppointmentModal: Atendimento criado e concluído');
+        console.log('EditAppointmentModal: Atendimento criado e concluído');
       } else if (action === 'ausente') {
-        console.log('🔄 EditAppointmentModal: Marcando como ausente...');
+        console.log('EditAppointmentModal: Marcando como ausente...');
         
         if (!motivo.trim()) {
           setMessage('Por favor, informe o motivo da ausência.');
@@ -289,18 +353,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             .eq('id', appointment.id);
 
           if (updateError) {
-            console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+            console.error('EditAppointmentModal: Erro ao atualizar status:', updateError);
             throw updateError;
           }
 
-          console.log('✅ EditAppointmentModal: Status atualizado para ausente');
+          console.log('EditAppointmentModal: Status atualizado para ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
-          console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
+          console.error('EditAppointmentModal: Erro ao marcar como ausente:', error);
           throw error;
         }
       } else if (action === 'concluido') {
-        console.log('🔄 EditAppointmentModal: Concluindo atendimento...');
+        console.log('EditAppointmentModal: Concluindo atendimento...');
         
         // Apenas atualizar o status do agendamento para 'concluido'
         const { error: updateError } = await supabase
@@ -309,14 +373,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
 
         if (updateError) {
-          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+          console.error('EditAppointmentModal: Erro ao atualizar status:', updateError);
           throw updateError;
         }
 
-        console.log('✅ EditAppointmentModal: Status atualizado para concluido');
+        console.log('EditAppointmentModal: Status atualizado para concluido');
         setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
-        console.log('🔄 EditAppointmentModal: Cancelando atendimento...');
+        console.log('EditAppointmentModal: Cancelando atendimento...');
         
         if (!motivo.trim()) {
           setMessage('Por favor, informe o motivo do cancelamento.');
@@ -336,18 +400,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
 
           if (updateError) {
-            console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
+            console.error('EditAppointmentModal: Erro ao atualizar status:', updateError);
             throw updateError;
           }
 
-          console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
+          console.log('EditAppointmentModal: Status atualizado para cancelado');
         setMessage('Atendimento cancelado com sucesso!');
         } catch (error) {
-          console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
+          console.error('EditAppointmentModal: Erro ao cancelar:', error);
           throw error;
         }
       } else if (action === 'edit') {
-        console.log('🔄 EditAppointmentModal: Editando agendamento...');
+        console.log('EditAppointmentModal: Editando agendamento...');
         // Apenas atualizar os dados do agendamento
         const { error } = await supabase
           .from('agendamentos')
@@ -355,9 +419,10 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
 
         if (error) throw error;
-        
+
         onSave(updatedAppointment);
         setMessage('Agendamento atualizado com sucesso!');
+        setNovaObservacao(''); // Limpar campo de nova observação
       } else if (action === 'delete') {
         if (onDelete) {
           await onDelete(appointment.id);
@@ -367,12 +432,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
       // Fechar modal após 2 segundos se não houver erro
       setTimeout(() => {
-        console.log('🔄 EditAppointmentModal: Fechando modal após sucesso');
+        console.log('EditAppointmentModal: Fechando modal após sucesso');
         onClose();
       }, 2000);
     } catch (err) {
-      console.error('❌ EditAppointmentModal: Erro no handleSubmit:', err);
-      console.error('❌ Stack trace:', err instanceof Error ? err.stack : 'No stack trace available');
+      console.error('EditAppointmentModal: Erro no handleSubmit:', err);
+      console.error('Stack trace:', err instanceof Error ? err.stack : 'No stack trace available');
       setMessage(`Erro ao ${action} atendimento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
@@ -511,7 +576,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           {action === 'iniciar' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <div className="text-blue-800 text-base font-semibold mb-3">
-                📋 Dados do Cliente (Editáveis)
+                Dados do Cliente (Editáveis)
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -532,7 +597,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2">
-                💡 Você pode editar os dados do cliente nos campos abaixo se necessário
+                Você pode editar os dados do cliente nos campos abaixo se necessário
               </p>
             </div>
           )}
@@ -588,7 +653,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
                       title="Copiar CPF (F8)"
                     >
-                      📋
+                      Copiar
                     </button>
                   </div>
                 </div>
@@ -613,7 +678,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
                       title="Copiar Telefone (F7)"
                     >
-                      📋
+                      Copiar
                     </button>
                   </div>
                 </div>
@@ -762,15 +827,51 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           )}
 
           {action === 'edit' && (
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
-              <textarea
-                name="observacoes"
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                placeholder="Observações sobre o atendimento"
-                defaultValue={appointment.observacoes}
-              />
+            <div className="md:col-span-2 lg:col-span-3 space-y-4">
+              {/* Histórico de Observações */}
+              {observacoesHistorico.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">Histórico de Observações</label>
+                  <div className="space-y-2 max-h-60 overflow-y-auto bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    {observacoesHistorico.map((obs, index) => (
+                      <div key={index} className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-blue-600">{obs.autor}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(obs.data).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700">{obs.texto}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Nova Observação */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {observacoesHistorico.length > 0 ? 'Adicionar Nova Observação' : 'Observações'}
+                </label>
+                <textarea
+                  value={novaObservacao}
+                  onChange={(e) => setNovaObservacao(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  placeholder="Digite sua observação aqui..."
+                />
+                {novaObservacao.trim() && (
+                  <p className="text-xs text-slate-600 mt-1">
+                    Será salvo como: <span className="font-semibold text-blue-600">{atendenteNome || 'Usuário'}</span> - {novaObservacao.substring(0, 50)}{novaObservacao.length > 50 ? '...' : ''}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
