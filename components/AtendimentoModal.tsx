@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
+import jsPDF from 'jspdf';
 import {
   FiX, FiUser, FiMail, FiCalendar, FiClock, FiFileText,
   FiAlertCircle, FiSave, FiTrash2, FiMessageSquare, FiSend,
-  FiCheckCircle, FiXCircle, FiLock, FiCreditCard
+  FiCheckCircle, FiXCircle, FiLock, FiCreditCard, FiDownload, FiEye
 } from 'react-icons/fi';
 
 interface ObservacaoHistorico {
@@ -30,6 +31,12 @@ export interface Atendimento {
   observacoes?: string;
   fotos_coletadas?: boolean;
   atendente_nome?: string;
+  assinatura_base64?: string;
+  nome_recebedor?: string;
+  cpf_recebedor?: string;
+  vinculo?: string;
+  data_entrega?: string;
+  data_hora_entrega?: string;
 }
 
 interface AtendimentoModalProps {
@@ -58,6 +65,10 @@ export default function AtendimentoModal({
   const [novaObservacao, setNovaObservacao] = useState('');
   const [addingObservacao, setAddingObservacao] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+
+  // Estados para visualização de comprovante
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [gerandoComprovante, setGerandoComprovante] = useState(false);
 
   const canDelete = isAdmin || isSuperAdmin;
 
@@ -282,11 +293,231 @@ export default function AtendimentoModal({
     }
   };
 
+  const handleVisualizarComprovante = async () => {
+    if (!atendimento.assinatura_base64 || atendimento.status !== 'entregue') {
+      alert('Este atendimento não possui comprovante de entrega.');
+      return;
+    }
+
+    setGerandoComprovante(true);
+    try {
+      // Buscar nome do atendente
+      let atendenteNome = 'Não identificado';
+      if (atendimento.atendente_nome) {
+        atendenteNome = atendimento.atendente_nome;
+      }
+
+      const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+      };
+
+      const dataEntrega = atendimento.data_entrega || new Date().toISOString().split('T')[0];
+      const dataHoraEntrega = atendimento.data_hora_entrega || new Date().toISOString();
+      const horaEntrega = new Date(dataHoraEntrega).toLocaleTimeString('pt-BR', { timeZone: 'America/Fortaleza' });
+
+      // Carregar logo
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      // Gerar PDF
+      const doc = new jsPDF();
+
+      // Cabeçalho
+      doc.setFillColor(16, 185, 129);
+      doc.rect(0, 0, 210, 35, 'F');
+
+      // Logo
+      doc.setFillColor(255, 255, 255);
+      doc.circle(30, 18, 12, 'F');
+      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
+
+      // Título
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text('COMPROVANTE DE ENTREGA', 105, 18, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Carteira de Identidade Nacional', 105, 28, { align: 'center' });
+
+      // Protocolo e Data
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(18, 40, 174, 16, 3, 3, 'F');
+      doc.setTextColor(16, 185, 129);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PROTOCOLO:', 24, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.text(atendimento.protocolo || 'N/A', 70, 50);
+      doc.text('DATA/HORA:', 120, 50);
+      doc.text(`${formatDate(dataEntrega)} às ${horaEntrega}`, 165, 50, { align: 'center' });
+
+      // Dados do Titular
+      const secaoY = 65;
+      doc.setFillColor(16, 185, 129);
+      doc.setTextColor(255, 255, 255);
+      doc.roundedRect(18, secaoY, 174, 10, 3, 3, 'F');
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO TITULAR', 105, secaoY + 7, { align: 'center' });
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(18, secaoY + 10, 174, 40, 3, 3, 'F');
+      doc.setFontSize(11);
+      doc.setTextColor(80, 80, 80);
+
+      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
+      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
+
+      let yData = secaoY + 22;
+      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(atendimento.nome, 60, yData);
+      yData += 10;
+      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(atendimento.cpf, 60, yData);
+      yData += 10;
+      labelStyle(); doc.text('Data do Atendimento:', 24, yData); valueStyle(); doc.text(formatDate(atendimento.dia_atual), 90, yData);
+
+      // Dados do Recebedor
+      const recebedorY = secaoY + 60;
+      doc.setFillColor(16, 185, 129);
+      doc.setTextColor(255, 255, 255);
+      doc.roundedRect(18, recebedorY, 174, 10, 3, 3, 'F');
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO RECEBEDOR', 105, recebedorY + 7, { align: 'center' });
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(18, recebedorY + 10, 174, 50, 3, 3, 'F');
+      doc.setFontSize(11);
+      doc.setTextColor(80, 80, 80);
+
+      yData = recebedorY + 22;
+      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(atendimento.nome_recebedor || 'N/A', 60, yData);
+      yData += 10;
+      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(atendimento.cpf_recebedor || 'N/A', 60, yData);
+      yData += 10;
+      labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(atendimento.vinculo || 'N/A', 60, yData);
+
+      // Informações adicionais
+      const infoY = recebedorY + 70;
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(18, infoY, 174, 30, 3, 3, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Este documento comprova a entrega da Carteira de Identidade Nacional (CIN) ao recebedor', 105, infoY + 10, { align: 'center' });
+      doc.text('identificado acima. A entrega foi registrada no sistema com data e hora especificadas.', 105, infoY + 18, { align: 'center' });
+      doc.text('Em caso de dúvidas, entre em contato com a Sala Sensorial da ALECE.', 105, infoY + 26, { align: 'center' });
+
+      // Assinatura Digital
+      const assinaturaY = 240;
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(18, assinaturaY, 174, 40, 3, 3, 'S');
+      doc.setFontSize(12);
+      doc.setTextColor(16, 185, 129);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
+
+      // Inserir assinatura
+      if (atendimento.assinatura_base64) {
+        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 10, 90, 20);
+      }
+
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${atendimento.nome_recebedor || 'N/A'} - CPF: ${atendimento.cpf_recebedor || 'N/A'}`, 105, assinaturaY + 35, { align: 'center' });
+
+      // Rodapé
+      const rodapeY = 285;
+      doc.setFillColor(240, 253, 244);
+      doc.rect(0, rodapeY - 15, 210, 20, 'F');
+
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(0.5);
+      doc.line(0, rodapeY - 15, 210, rodapeY - 15);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(16, 185, 129);
+      doc.text('SALA SENSORIAL / ALECE', 105, rodapeY - 10, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Emitido em: ${formatDate(dataEntrega)} às ${horaEntrega}`, 105, rodapeY - 3, { align: 'center' });
+
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Atendente: ${atendenteNome}`, 105, rodapeY + 3, { align: 'center' });
+
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text('Página 1/1', 105, rodapeY + 9, { align: 'center' });
+
+      // Gerar URL do PDF
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+    } catch (err) {
+      console.error('Erro ao gerar comprovante:', err);
+      alert('Erro ao gerar comprovante. Tente novamente.');
+    } finally {
+      setGerandoComprovante(false);
+    }
+  };
+
   const statusConfig = getStatusConfig(formData.status || '');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+    <>
+      {/* Modal de visualização do PDF */}
+      {pdfUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative">
+            <button
+              onClick={() => setPdfUrl(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-100 transition-all"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+            <h3 className="text-xl font-bold text-slate-800 mb-4">Comprovante de Entrega</h3>
+            <iframe
+              src={pdfUrl}
+              className="w-full h-[70vh] border-2 border-slate-200 rounded-xl"
+              title="Comprovante PDF"
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => setPdfUrl(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-all"
+              >
+                Fechar
+              </button>
+              <a
+                href={pdfUrl}
+                download={`comprovante-${atendimento.protocolo}.pdf`}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+              >
+                <FiDownload className="w-4 h-4" />
+                Baixar PDF
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6">
           <div className="flex items-center justify-between">
@@ -520,7 +751,27 @@ export default function AtendimentoModal({
 
         {/* Footer */}
         <div className="border-t-2 border-slate-200 bg-white px-8 py-4 flex justify-between items-center">
-          <div>
+          <div className="flex gap-3">
+            {/* Botão Visualizar Comprovante - Só aparece se tiver assinatura */}
+            {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
+              <button
+                onClick={handleVisualizarComprovante}
+                disabled={gerandoComprovante}
+                className="px-5 py-3 bg-emerald-50 border-2 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 text-emerald-700 font-bold rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {gerandoComprovante ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <FiEye className="w-5 h-5" />
+                    Ver Comprovante
+                  </>
+                )}
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={handleDelete}
@@ -562,5 +813,6 @@ export default function AtendimentoModal({
         </div>
       </div>
     </div>
+    </>
   );
 }
