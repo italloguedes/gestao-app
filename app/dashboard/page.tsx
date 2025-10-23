@@ -622,7 +622,7 @@ export default function DashboardPage() {
         onClose={() => setShowSignaturePad(false)}
         onSave={handleSaveSignature}
         licence={process.env.NEXT_PUBLIC_WACOM_LICENCE || ''}
-        useNpmPackage={true}
+        useNpmPackage={false}
         who={nomeRecebedor}
         why="Assinatura de recebimento de CIN"
         title="Assinatura do Recebedor"
