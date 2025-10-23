@@ -31,9 +31,11 @@ Este projeto implementa uma solução **Browser/Server (B/S)** para captura de a
    - Captura pontos em tempo real e faz broadcast para clientes
 
 2. **Frontend** (HTML/JS puro)
-   - Interface web com `<canvas>` para visualização
+   - Interface web com `<canvas>` para **visualização em tempo real**
    - Conecta ao bridge via WebSocket
-   - Desenha assinatura em tempo real
+   - Exibe a assinatura sendo feita no **pad físico** em tempo real
+   - Canvas com `pointer-events: none` (não aceita mouse)
+   - Overlay animado com instruções para assinar no dispositivo
    - Salva PNG (base64) + JSON biométrico com hashes SHA-256
 
 ### Funcionalidades
@@ -94,9 +96,10 @@ Este projeto implementa uma solução **Browser/Server (B/S)** para captura de a
 2. **Captura**
    - Cliente envia `{"command": "start"}`
    - Bridge chama `StartCapture()` na DLL
-   - Loop assíncrono lê pontos via `ReadPoints()`
+   - **Usuário assina no pad físico Hanvon ESP560 com a caneta EMR**
+   - Loop assíncrono lê pontos via `ReadPoints()` do dispositivo
    - Pontos são normalizados e enviados via WebSocket
-   - Frontend desenha no canvas em tempo real
+   - Frontend **visualiza** no canvas em tempo real (não aceita desenho com mouse)
 
 3. **Salvamento**
    - Cliente envia `{"command": "stop"}`
@@ -286,11 +289,17 @@ sc.exe delete HanvonBridge
 
 1. **Conectar**: A interface conecta automaticamente ao bridge
 2. **Iniciar Captura**: Clique em "Iniciar Captura"
-3. **Assinar**: Assine no dispositivo Hanvon
+3. **Assinar**: **ASSINE NO PAD FÍSICO HANVON ESP560**
+   - Use a caneta EMR no dispositivo físico
+   - ⚠️ **NÃO assine com o mouse na tela do computador**
+   - O canvas é apenas **visualização em tempo real** do que está sendo assinado no pad
+   - Um overlay amarelo animado aparecerá lembrando de assinar no dispositivo
 4. **Parar Captura**: Clique em "Parar Captura"
 5. **Salvar**: Clique em "Salvar Assinatura"
    - PNG e JSON são baixados automaticamente
    - Hashes SHA-256 são exibidos para auditoria
+
+> **NOTA IMPORTANTE**: O canvas no navegador tem `pointer-events: none`, ou seja, não responde a cliques ou movimentos do mouse. Ele serve **exclusivamente para visualização** do que está sendo capturado no dispositivo físico Hanvon ESP560.
 
 ---
 

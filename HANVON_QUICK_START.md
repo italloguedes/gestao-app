@@ -35,10 +35,14 @@ cd ../publish
 
 1. Abra `frontend/index.html` no navegador
 2. Clique em **"Iniciar Captura"**
-3. Assine no dispositivo
+3. **ASSINE NO PAD FÍSICO HANVON ESP560** (não no computador!)
+   - Use a caneta EMR no dispositivo físico
+   - O canvas mostra apenas a visualização em tempo real
 4. Clique em **"Parar Captura"**
 5. Clique em **"Salvar Assinatura"**
 6. PNG + JSON serão baixados automaticamente
+
+> ⚠️ **IMPORTANTE**: A assinatura deve ser feita no **dispositivo físico Hanvon ESP560**, não com o mouse na tela! O canvas do navegador é apenas para visualização em tempo real.
 
 ---
 

@@ -44,6 +44,29 @@
             font-size: 14px;
         }
 
+        .instruction-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .instruction-banner .icon {
+            font-size: 32px;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .instruction-banner .text {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -90,11 +113,68 @@
             margin-bottom: 20px;
         }
 
+        .canvas-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .canvas-overlay.active {
+            opacity: 1;
+        }
+
+        .canvas-instruction {
+            background: rgba(255, 193, 7, 0.95);
+            color: #333;
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: pulseInstruction 2s ease-in-out infinite;
+        }
+
+        .canvas-instruction-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        @keyframes pulseInstruction {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .preview-label {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 5;
+        }
+
         canvas {
             display: block;
             width: 100%;
             height: auto;
-            cursor: crosshair;
+            cursor: default;
+            pointer-events: none;
         }
 
         .controls {
@@ -236,6 +316,11 @@
         <h1>Hanvon ESP560</h1>
         <p class="subtitle">Sistema de Captura de Assinatura Digital</p>
 
+        <div class="instruction-banner">
+            <span class="icon">✍️</span>
+            <span class="text">ASSINE NO DISPOSITIVO HANVON ESP560 (PAD FÍSICO)</span>
+        </div>
+
         <div class="status-bar">
             <div class="status-item">
                 <div class="status-dot" id="connectionStatus"></div>
@@ -247,6 +332,13 @@
         </div>
 
         <div class="canvas-container">
+            <div class="preview-label">📺 VISUALIZAÇÃO EM TEMPO REAL</div>
+            <div class="canvas-overlay" id="canvasOverlay">
+                <div class="canvas-instruction">
+                    <span class="canvas-instruction-icon">✍️</span>
+                    ASSINE NO PAD<br>HANVON ESP560
+                </div>
+            </div>
             <canvas id="signatureCanvas" width="640" height="480"></canvas>
         </div>
 
@@ -303,6 +395,7 @@
         const pointCountEl = document.getElementById('pointCount');
         const logsEl = document.getElementById('logs');
         const infoPanel = document.getElementById('infoPanel');
+        const canvasOverlay = document.getElementById('canvasOverlay');
 
         // Inicializa canvas
         function initCanvas() {
@@ -420,10 +513,15 @@
             }
         }
 
-        // Desenha ponto no canvas
+        // Desenha ponto no canvas (VISUALIZAÇÃO do que está sendo assinado no pad)
         function handlePoint(point) {
             pointCount++;
             pointCountEl.textContent = `${pointCount} pontos`;
+
+            // Remove overlay após primeiro ponto
+            if (pointCount === 1) {
+                canvasOverlay.classList.remove('active');
+            }
 
             // Só desenha se a caneta está tocando (penStatus === 1)
             if (point.penStatus !== 1) {
@@ -457,11 +555,18 @@
                 pointCount = 0;
                 pointCountEl.textContent = '0 pontos';
                 lastPoint = null;
+
+                // Mostra overlay de instrução
+                canvasOverlay.classList.add('active');
+                log('⚠️ ASSINE NO DISPOSITIVO FÍSICO HANVON ESP560!', 'info');
             } else {
                 connectionStatus.classList.remove('capturing');
                 btnStart.disabled = false;
                 btnStop.disabled = true;
                 btnSave.disabled = pointCount === 0;
+
+                // Esconde overlay
+                canvasOverlay.classList.remove('active');
             }
         }
 
@@ -526,6 +631,8 @@
         connect();
 
         log('Interface iniciada', 'success');
+        log('⚠️ Este canvas é apenas VISUALIZAÇÃO em tempo real', 'info');
+        log('✍️ A assinatura deve ser feita no PAD FÍSICO Hanvon ESP560', 'info');
         log(`Conectando a ${WS_URL}...`, 'info');
     </script>
 </body>
