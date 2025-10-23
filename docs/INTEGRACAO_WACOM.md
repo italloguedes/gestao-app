@@ -86,26 +86,62 @@ Wacom STU-300 (USB)
 
 ## 🔽 Instalação do SDK
 
-### Passo 1: Baixar o SDK
+### ⭐ Método Recomendado: Pacote NPM
 
-1. Acesse: https://developer.wacom.com
-2. Faça login ou crie uma conta
-3. Vá para **Downloads** → **Signature SDK**
-4. Baixe: **Signature SDK for JavaScript**
+O Wacom SDK está disponível como pacote NPM privado. Este é o método **mais fácil e recomendado**.
 
-Você receberá um arquivo ZIP contendo:
-- `signature_sdk.wasm`
-- `signature_sdk.js`
+#### Passo 1: Configurar Registro Privado
 
-### Passo 2: Copiar para o Projeto
-
-Crie uma pasta `public/wacom-sdk` no seu projeto Next.js:
+Crie um arquivo `.npmrc` na raiz do projeto:
 
 ```bash
-mkdir -p public/wacom-sdk
+# Copiar template
+cp .npmrc.wacom.example .npmrc
+
+# Ou criar manualmente
+cat > .npmrc << 'EOF'
+@wacom:registry=https://npm.wacom.com/node-modules/
+//npm.wacom.com/node-modules/:_authToken=SEU_TOKEN_AQUI
+always-auth=true
+EOF
 ```
 
-Copie os arquivos do SDK:
+#### Passo 2: Obter Token de Autenticação
+
+1. Acesse: https://developer.wacom.com
+2. Faça login
+3. Vá para **Dashboard**
+4. Copie o **Auth Token**
+5. Substitua `SEU_TOKEN_AQUI` no `.npmrc`
+
+#### Passo 3: Instalar Pacote
+
+```bash
+npm install @wacom/signature-sdk
+```
+
+#### Passo 4: Adicionar ao .gitignore
+
+**⚠️ IMPORTANTE**: Nunca commite `.npmrc` (contém token privado)!
+
+```bash
+echo ".npmrc" >> .gitignore
+```
+
+**Pronto!** O SDK será carregado automaticamente.
+
+---
+
+### 📦 Método Alternativo: Download Manual (Legado)
+
+<details>
+<summary>Clique para ver instruções de download manual</summary>
+
+Se preferir não usar NPM:
+
+1. Acesse: https://developer.wacom.com
+2. Baixe: **Signature SDK for JavaScript**
+3. Copie os arquivos para `public/wacom-sdk/`:
 
 ```
 public/
@@ -114,11 +150,9 @@ public/
     └── signature_sdk.js
 ```
 
-### Passo 3: Verificar Instalação
+4. Use `useNpmPackage={false}` no componente
 
-Acesse: `http://localhost:3000/wacom-sdk/signature_sdk.js`
-
-Você deve ver o conteúdo do arquivo JavaScript.
+</details>
 
 ---
 
@@ -176,13 +210,15 @@ const [showSignaturePad, setShowSignaturePad] = useState(false);
   onClose={() => setShowSignaturePad(false)}
   onSave={handleSaveSignature}
   licence={process.env.NEXT_PUBLIC_WACOM_LICENCE!}
-  sdkPath="/wacom-sdk"
+  useNpmPackage={true}  // ⭐ Usa pacote NPM (padrão)
   who="João da Silva"  // Nome do signatário
   why="Aceite de termos"  // Razão da assinatura
   title="Assinatura do Requerente"
   subtitle="Por favor, assine no Wacom STU-300"
 />
 ```
+
+**Nota**: `useNpmPackage={true}` é o padrão. Se instalou via NPM, não precisa especificar.
 
 ### Passo 3: Handler de Salvamento
 
@@ -312,7 +348,7 @@ interface SignaturePadWacomProps {
   title?: string;                     // Título do modal
   subtitle?: string;                  // Subtítulo
   licence: string;                    // Licença Wacom (obrigatório)
-  sdkPath?: string;                   // Caminho do SDK (padrão: '/wacom-sdk')
+  useNpmPackage?: boolean;            // Se true (padrão), usa pacote NPM
   who?: string;                       // Nome do signatário
   why?: string;                       // Razão da assinatura
   documentHash?: Uint8Array;          // Hash do documento para binding
@@ -357,12 +393,17 @@ const {
 
 ### Problema: "SDK não carregado"
 
-**Causa**: Arquivos do SDK não estão acessíveis.
+**Causa**: Pacote NPM não instalado ou arquivos não encontrados.
 
-**Solução**:
+**Solução (usando NPM)**:
+1. Verifique se instalou: `npm list @wacom/signature-sdk`
+2. Se não instalado: `npm install @wacom/signature-sdk`
+3. Verifique `.npmrc` com token correto
+
+**Solução (usando download manual)**:
 1. Verifique se os arquivos estão em `public/wacom-sdk/`
 2. Acesse http://localhost:3000/wacom-sdk/signature_sdk.js
-3. Verifique o console do navegador para erros
+3. Use `useNpmPackage={false}` no componente
 
 ### Problema: "Invalid licence"
 

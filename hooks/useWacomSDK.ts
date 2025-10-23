@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import type { WacomModule, SigObj } from '@/lib/wacom-sdk';
 
 interface UseWacomSDKOptions {
-  sdkPath?: string;
   licence: string;
   autoLoad?: boolean;
+  useNpmPackage?: boolean; // Se true, usa pacote NPM em vez de script manual
 }
 
 interface UseWacomSDKReturn {
@@ -23,17 +23,25 @@ interface UseWacomSDKReturn {
  *
  * @example
  * ```tsx
+ * // Opção 1: Usando pacote NPM (recomendado)
  * const { isLoaded, sigObj, error } = useWacomSDK({
  *   licence: 'YOUR_LICENCE_KEY',
- *   sdkPath: '/wacom-sdk',
- *   autoLoad: true
+ *   autoLoad: true,
+ *   useNpmPackage: true
+ * });
+ *
+ * // Opção 2: Usando download manual (legado)
+ * const { isLoaded, sigObj, error } = useWacomSDK({
+ *   licence: 'YOUR_LICENCE_KEY',
+ *   autoLoad: true,
+ *   useNpmPackage: false
  * });
  * ```
  */
 export function useWacomSDK({
-  sdkPath = '/wacom-sdk',
   licence,
-  autoLoad = true
+  autoLoad = true,
+  useNpmPackage = true
 }: UseWacomSDKOptions): UseWacomSDKReturn {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLicenceValid, setIsLicenceValid] = useState(false);
@@ -51,34 +59,62 @@ export function useWacomSDK({
         return true;
       }
 
-      // Carrega o script do SDK
-      const script = document.createElement('script');
-      script.src = `${sdkPath}/signature_sdk.js`;
-      script.async = true;
+      if (useNpmPackage) {
+        // Carrega via pacote NPM @wacom/signature-sdk
+        try {
+          // O pacote NPM expõe window.sdkReady
+          await import('@wacom/signature-sdk');
 
-      const scriptLoadPromise = new Promise<boolean>((resolve, reject) => {
-        script.onload = () => resolve(true);
-        script.onerror = () => reject(new Error('Failed to load Wacom SDK script'));
-      });
+          // Aguarda SDK estar pronto
+          if ((window as any).sdkReady) {
+            await (window as any).sdkReady;
+          }
 
-      document.head.appendChild(script);
-      await scriptLoadPromise;
+          if (!window.Module) {
+            throw new Error('Wacom Module not available from NPM package');
+          }
 
-      // Aguarda o WebAssembly carregar
-      if (!window.Module) {
-        throw new Error('Wacom Module not found after script load');
-      }
-
-      await new Promise<void>((resolve) => {
-        if (window.Module.onRuntimeInitialized) {
-          // Já inicializado
-          resolve();
-        } else {
-          window.Module.onRuntimeInitialized = () => {
-            resolve();
-          };
+          console.log('✓ Wacom SDK loaded from NPM package');
+        } catch (npmError) {
+          throw new Error(
+            'Failed to load @wacom/signature-sdk NPM package. ' +
+            'Make sure you have installed it: npm install @wacom/signature-sdk'
+          );
         }
-      });
+      } else {
+        // Modo legado: carrega de /public/wacom-sdk/ (download manual)
+        const script = document.createElement('script');
+        script.src = '/wacom-sdk/signature_sdk.js';
+        script.async = true;
+
+        const scriptLoadPromise = new Promise<boolean>((resolve, reject) => {
+          script.onload = () => resolve(true);
+          script.onerror = () => reject(new Error(
+            'Failed to load Wacom SDK script from /wacom-sdk/. ' +
+            'Make sure the files are in public/wacom-sdk/ or use useNpmPackage: true'
+          ));
+        });
+
+        document.head.appendChild(script);
+        await scriptLoadPromise;
+
+        // Aguarda o WebAssembly carregar
+        if (!window.Module) {
+          throw new Error('Wacom Module not found after script load');
+        }
+
+        await new Promise<void>((resolve) => {
+          if (window.Module.onRuntimeInitialized) {
+            resolve();
+          } else {
+            window.Module.onRuntimeInitialized = () => {
+              resolve();
+            };
+          }
+        });
+
+        console.log('✓ Wacom SDK loaded from public/wacom-sdk/');
+      }
 
       setModule(window.Module);
       setIsLoaded(true);
@@ -97,7 +133,7 @@ export function useWacomSDK({
           return false;
         }
 
-        console.log('✓ Wacom SDK loaded successfully');
+        console.log('✓ Wacom SDK licence validated');
         return true;
       } catch (licenceError: any) {
         setError(`Licence error: ${licenceError.name}`);
@@ -109,7 +145,7 @@ export function useWacomSDK({
       console.error('Wacom SDK load error:', err);
       return false;
     }
-  }, [sdkPath, licence]);
+  }, [licence, useNpmPackage]);
 
   // Auto-load se solicitado
   useEffect(() => {

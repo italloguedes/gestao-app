@@ -11,7 +11,7 @@ interface SignaturePadWacomProps {
   title?: string;
   subtitle?: string;
   licence: string;
-  sdkPath?: string;
+  useNpmPackage?: boolean; // Se true, usa @wacom/signature-sdk do NPM (recomendado)
   who?: string; // Nome do signatário
   why?: string; // Razão da assinatura
   documentHash?: Uint8Array; // Hash do documento para binding
@@ -35,7 +35,7 @@ export default function SignaturePadWacom({
   title = 'Assinatura Digital - Wacom STU-300',
   subtitle = 'Assine no dispositivo Wacom STU-300',
   licence,
-  sdkPath = '/wacom-sdk',
+  useNpmPackage = true,
   who,
   why,
   documentHash
@@ -46,7 +46,7 @@ export default function SignaturePadWacom({
   // SDK Wacom
   const { isLoaded, isLicenceValid, error: sdkError, sigObj, module } = useWacomSDK({
     licence,
-    sdkPath,
+    useNpmPackage,
     autoLoad: true
   });
 
