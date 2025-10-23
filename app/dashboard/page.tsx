@@ -8,7 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
-import SignaturePad from '@/components/SignaturePad';
+import SignaturePadWacom from '@/components/SignaturePadWacom';
+import type { WacomSignatureResult } from '@/components/SignaturePadWacom';
 import jsPDF from 'jspdf';
 
 interface DashboardStats {
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   // Estados para assinatura digital
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
+  const [assinaturaIsoData, setAssinaturaIsoData] = useState<Uint8Array | null>(null);
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -210,13 +212,14 @@ export default function DashboardPage() {
     setShowSignaturePad(true);
   };
 
-  const handleSaveSignature = async (signatureDataUrl: string) => {
+  const handleSaveSignature = async (result: WacomSignatureResult) => {
     if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
       return;
     }
 
     setShowSignaturePad(false);
-    setAssinaturaDataUrl(signatureDataUrl);
+    setAssinaturaDataUrl(result.png);
+    setAssinaturaIsoData(result.iso);
     setGerandoComprovante(true);
     try {
       // Buscar nome do atendente para o rodapé do PDF
@@ -613,13 +616,17 @@ export default function DashboardPage() {
           }}
         />
       )}
-      {/* Modal de Assinatura Digital */}
-      <SignaturePad
+      {/* Modal de Assinatura Digital - Wacom STU-300 */}
+      <SignaturePadWacom
         isOpen={showSignaturePad}
         onClose={() => setShowSignaturePad(false)}
         onSave={handleSaveSignature}
+        licence={process.env.NEXT_PUBLIC_WACOM_LICENCE || ''}
+        useNpmPackage={true}
+        who={nomeRecebedor}
+        why="Assinatura de recebimento de CIN"
         title="Assinatura do Recebedor"
-        subtitle={`Coleta de assinatura para ${nomeRecebedor}`}
+        subtitle={`Por favor, assine no Wacom STU-300`}
       />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
         <div className="max-w-7xl mx-auto space-y-8">
