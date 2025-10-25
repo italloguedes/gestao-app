@@ -260,7 +260,7 @@ export default function AtendimentosPage() {
     // Validar campos obrigatórios
     const requiredFields: (keyof Atendimento)[] = ['nome', 'cpf', 'email', 'solicitante', 'protocolo', 'dia_atual', 'horario', 'status'];
     const newValidationErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!editingAtendimento[field]) {
         newValidationErrors[field] = 'Este campo é obrigatório';
@@ -274,7 +274,9 @@ export default function AtendimentosPage() {
 
     try {
       setSaving(true);
-      
+
+      // Verificar se a observação foi modificada
+      const observacaoModificada = editingAtendimento.observacoes !== selectedAtendimento.observacoes;
 
       const { error } = await supabase
         .from('atendimentos')
@@ -282,12 +284,32 @@ export default function AtendimentosPage() {
         .eq('id', selectedAtendimento.id);
 
       if (error) throw error;
-      
+
+      // Se a observação foi modificada e não está vazia, salvar no histórico
+      if (observacaoModificada && editingAtendimento.observacoes?.trim() && user) {
+        // Buscar dados do usuário
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('email', user.email)
+          .single();
+
+        // Salvar no histórico
+        await supabase
+          .from('atendimento_observacoes_historico')
+          .insert({
+            atendimento_id: selectedAtendimento.id,
+            observacao: editingAtendimento.observacoes.trim(),
+            usuario_email: user.email,
+            usuario_nome: userData?.name || 'Usuário desconhecido'
+          });
+      }
+
       // Atualizar a lista de atendimentos
-      setAtendimentos((prev: Atendimento[]) => 
-        prev.map((a: Atendimento) => 
-          a.id === selectedAtendimento.id 
-            ? { ...a, ...editingAtendimento } 
+      setAtendimentos((prev: Atendimento[]) =>
+        prev.map((a: Atendimento) =>
+          a.id === selectedAtendimento.id
+            ? { ...a, ...editingAtendimento }
             : a
         )
       );

@@ -19,6 +19,14 @@ interface Atendimento {
   observacoes: string;
 }
 
+interface ObservacaoHistorico {
+  id: number;
+  observacao: string;
+  usuario_email: string | null;
+  usuario_nome: string | null;
+  created_at: string;
+}
+
 interface Props {
   id: string;
 }
@@ -31,6 +39,9 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [editedAtendimento, setEditedAtendimento] = useState<Partial<Atendimento>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([]);
+  const [novaObservacao, setNovaObservacao] = useState('');
+  const [salvandoObservacao, setSalvandoObservacao] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -56,10 +67,28 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
       setAtendimento(data);
       setEditedAtendimento(data);
+
+      // Buscar histórico de observações
+      await fetchHistoricoObservacoes();
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistoricoObservacoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('atendimento_observacoes_historico')
+        .select('*')
+        .eq('atendimento_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setHistoricoObservacoes(data || []);
+    } catch (err: any) {
+      console.error('Erro ao buscar histórico de observações:', err);
     }
   };
 
@@ -168,6 +197,49 @@ export default function AtendimentoDetalhes({ id }: Props) {
     );
   };
 
+  const handleAdicionarObservacao = async () => {
+    if (!novaObservacao.trim() || !user) return;
+
+    try {
+      setSalvandoObservacao(true);
+
+      // Buscar dados do usuário
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('email', user.email)
+        .single();
+
+      // Salvar observação no histórico
+      const { error } = await supabase
+        .from('atendimento_observacoes_historico')
+        .insert({
+          atendimento_id: parseInt(id),
+          observacao: novaObservacao.trim(),
+          usuario_email: user.email,
+          usuario_nome: userData?.name || 'Usuário desconhecido'
+        });
+
+      if (error) throw error;
+
+      // Atualizar campo observacoes do atendimento com a última observação
+      await supabase
+        .from('atendimentos')
+        .update({ observacoes: novaObservacao.trim() })
+        .eq('id', id);
+
+      // Limpar campo e recarregar histórico
+      setNovaObservacao('');
+      await fetchHistoricoObservacoes();
+      await fetchAtendimento();
+    } catch (err: any) {
+      console.error('Erro ao adicionar observação:', err);
+      setError('Erro ao adicionar observação. Tente novamente.');
+    } finally {
+      setSalvandoObservacao(false);
+    }
+  };
+
   const handleDelete = async () => {
     try {
       setLoading(true);
@@ -177,7 +249,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       router.push('/dashboard/atendimentos');
     } catch (err: any) {
       setError(err.message);
@@ -196,6 +268,18 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
   const formatTime = (timeString: string) => {
     return timeString.substring(0, 5);
+  };
+
+  const formatDateTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Fortaleza'
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -335,20 +419,85 @@ export default function AtendimentoDetalhes({ id }: Props) {
             </svg>
             Observações
           </h2>
-          {isEditing ? (
-            <div>
-              <textarea
-                value={editedAtendimento.observacoes || ''}
-                onChange={(e) => handleInputChange('observacoes', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 h-32 resize-none"
-                placeholder="Digite suas observações aqui..."
-              />
-            </div>
-          ) : (
+
+          {/* Formulário para nova observação */}
+          <div className="mb-6">
             <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="whitespace-pre-wrap text-gray-700">{atendimento.observacoes || 'Nenhuma observação registrada.'}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Adicionar nova observação
+              </label>
+              <textarea
+                value={novaObservacao}
+                onChange={(e) => setNovaObservacao(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 h-24 resize-none"
+                placeholder="Digite sua observação aqui..."
+              />
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={handleAdicionarObservacao}
+                  disabled={!novaObservacao.trim() || salvandoObservacao}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 font-medium flex items-center gap-2"
+                >
+                  {salvandoObservacao ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Adicionar Observação
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Histórico de observações */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              Histórico de Observações
+            </h3>
+
+            {historicoObservacoes.length === 0 ? (
+              <div className="bg-white p-6 rounded-lg border border-gray-200 text-center text-gray-500">
+                Nenhuma observação registrada ainda.
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {historicoObservacoes.map((obs) => (
+                  <div key={obs.id} className="bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors duration-200">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{obs.usuario_nome || 'Usuário desconhecido'}</p>
+                          <p className="text-xs text-gray-500">{obs.usuario_email}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {formatDateTime(obs.created_at)}
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-gray-700 mt-3 pl-10">{obs.observacao}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-center">
