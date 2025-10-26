@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { FiX, FiUser, FiMail, FiCreditCard, FiFileText, FiCheck, FiAlertCircle } from 'react-icons/fi';
 
 interface NovoAtendimentoModalProps {
   show: boolean;
@@ -18,7 +19,9 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
   const [protocolo, setProtocolo] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [hasSavedData, setHasSavedData] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const { user } = useAuth();
 
   // Chave para localStorage
@@ -66,9 +69,51 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
     setHasSavedData(false);
   };
 
+  // Máscara de CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    return value;
+  };
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setCpf(formatted);
+
+    // Validação em tempo real
+    const numbers = formatted.replace(/\D/g, '');
+    if (numbers.length > 0 && numbers.length < 11) {
+      setValidationErrors(prev => ({ ...prev, cpf: 'CPF incompleto' }));
+    } else {
+      setValidationErrors(prev => {
+        const { cpf, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  // Validação de email em tempo real
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+
+    if (value && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setValidationErrors(prev => ({ ...prev, email: 'Email inválido' }));
+    } else {
+      setValidationErrors(prev => {
+        const { email, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
   // Função para lidar com o fechamento do modal
   const handleClose = () => {
-    // Não limpa os dados salvos ao fechar, apenas ao cancelar explicitamente ou após sucesso
     onClose();
   };
 
@@ -82,6 +127,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
         setEmail('');
         setSolicitante('');
         setProtocolo('');
+        setValidationErrors({});
         clearSavedData();
         onClose();
       }
@@ -90,20 +136,26 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
     }
   };
 
-  const isValidCpf = (cpf: string) => /^[0-9]{11}$/.test(cpf);
+  const isValidCpf = (cpf: string) => {
+    const numbers = cpf.replace(/\D/g, '');
+    return numbers.length === 11;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       setMessage('Usuário não autenticado.');
+      setMessageType('error');
       return;
     }
     if (!isValidCpf(cpf)) {
-      setMessage('CPF inválido. Use apenas números, sem pontos ou traços.');
+      setMessage('CPF inválido. Verifique o número digitado.');
+      setMessageType('error');
       return;
     }
     if (!protocolo) {
       setMessage('Informe o número de protocolo.');
+      setMessageType('error');
       return;
     }
 
@@ -112,20 +164,23 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
 
     try {
       // Verificar se o CPF já existe no banco de dados
+      const cpfNumbers = cpf.replace(/\D/g, '');
       const { data: existingCpf, error: cpfCheckError } = await supabase
         .from('atendimentos')
         .select('cpf')
-        .eq('cpf', cpf)
+        .eq('cpf', cpfNumbers)
         .single();
 
       if (cpfCheckError && cpfCheckError.code !== 'PGRST116') {
         setMessage('Erro ao verificar CPF: ' + cpfCheckError.message);
+        setMessageType('error');
         setLoading(false);
         return;
       }
 
       if (existingCpf) {
         setMessage('CPF já cadastrado no sistema. Verifique se o atendimento já foi realizado.');
+        setMessageType('error');
         setLoading(false);
         return;
       }
@@ -148,7 +203,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
       const { error } = await supabase.from('atendimentos').insert([
         {
           nome,
-          cpf,
+          cpf: cpfNumbers,
           email,
           solicitante,
           horario,
@@ -162,6 +217,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
 
       if (error) {
         setMessage('Erro ao cadastrar atendimento: ' + error.message);
+        setMessageType('error');
         setLoading(false);
         return;
       }
@@ -211,6 +267,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
         const result = await res.json();
         if (res.ok) {
           setMessage('Atendimento cadastrado com sucesso! E-mail enviado.');
+          setMessageType('success');
           setTimeout(() => {
             // Reset form
             setNome('');
@@ -219,174 +276,297 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
             setSolicitante('');
             setProtocolo('');
             setMessage('');
+            setValidationErrors({});
             // Limpar dados salvos após sucesso
             clearSavedData();
             onSuccess();
           }, 2000);
         } else {
           setMessage('Atendimento cadastrado, mas erro ao enviar e-mail: ' + result.error);
+          setMessageType('error');
         }
       } catch (err) {
         setMessage('Atendimento cadastrado, mas houve erro ao enviar o e-mail.');
+        setMessageType('error');
       }
     } catch (error) {
       setMessage('Erro inesperado: ' + (error as Error).message);
+      setMessageType('error');
     }
 
     setLoading(false);
   };
 
+  // ESC para fechar
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && show) {
+        handleClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [show]);
+
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-emerald-100 max-h-[90vh] overflow-y-auto">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-          onClick={handleClose}
-          aria-label="Fechar"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <div className="flex items-center mb-6">
-          <div className="bg-emerald-100 p-3 rounded-xl mr-4">
-            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-emerald-700">Novo Atendimento</h2>
-            <p className="text-sm text-gray-500">Preencha os dados do atendimento</p>
-            {hasSavedData && (
-              <p className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Dados recuperados automaticamente
-              </p>
-            )}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in max-h-[95vh] overflow-y-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <FiUser className="w-5 h-5" />
+                </div>
+                Novo Atendimento
+              </h2>
+              <p className="text-white/80 text-sm mt-1">Preencha os dados para cadastrar um novo atendimento</p>
+              {hasSavedData && (
+                <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-300 font-medium">
+                  <FiCheck className="w-3 h-3" />
+                  Dados recuperados automaticamente
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all"
+              aria-label="Fechar"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
+        {/* Message */}
         {message && (
-          <div className={`mb-6 flex items-center gap-3 p-4 rounded-lg border text-sm font-medium transition-all duration-300 ${message.includes('sucesso')
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-            : 'bg-red-50 border-red-200 text-red-700'
+          <div className={`m-6 flex items-start gap-3 p-4 rounded-xl border-2 transition-all duration-300 ${
+            messageType === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-red-50 border-red-200 text-red-800'
           }`}>
-            {message.includes('sucesso') ? (
-              <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            {messageType === 'success' ? (
+              <FiCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             ) : (
-              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             )}
-            <span>{message}</span>
+            <span className="text-sm font-medium">{message}</span>
           </div>
         )}
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        {/* Form */}
+        <form className="p-6 space-y-5" onSubmit={handleSubmit}>
+          {/* Nome */}
           <div>
-            <label htmlFor="nome" className="block text-sm font-semibold text-gray-700 mb-1">Nome do Cliente</label>
-            <input
-              type="text"
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-              placeholder="Nome completo do cliente"
-              required
-              minLength={3}
-              autoFocus
-            />
+            <label htmlFor="nome" className="block text-sm font-semibold text-slate-700 mb-2">
+              Nome Completo
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiUser className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                placeholder="Digite o nome completo"
+                required
+                minLength={3}
+                autoFocus
+              />
+            </div>
           </div>
 
+          {/* CPF */}
           <div>
-            <label htmlFor="cpf" className="block text-sm font-semibold text-gray-700 mb-1">CPF</label>
-            <input
-              type="text"
-              id="cpf"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-              placeholder="Apenas números"
-              required
-            />
+            <label htmlFor="cpf" className="block text-sm font-semibold text-slate-700 mb-2">
+              CPF
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiCreditCard className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                id="cpf"
+                value={cpf}
+                onChange={handleCPFChange}
+                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${
+                  validationErrors.cpf
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-slate-500 focus:border-slate-500'
+                }`}
+                placeholder="000.000.000-00"
+                required
+                maxLength={14}
+              />
+            </div>
+            {validationErrors.cpf && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <FiAlertCircle className="w-3 h-3" />
+                {validationErrors.cpf}
+              </p>
+            )}
           </div>
 
+          {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">E-mail</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-              placeholder="email@exemplo.com"
-              required
-            />
+            <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+              E-mail
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiMail className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={handleEmailChange}
+                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${
+                  validationErrors.email
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-slate-500 focus:border-slate-500'
+                }`}
+                placeholder="email@exemplo.com"
+                required
+              />
+            </div>
+            {validationErrors.email && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <FiAlertCircle className="w-3 h-3" />
+                {validationErrors.email}
+              </p>
+            )}
           </div>
 
+          {/* Solicitante */}
           <div>
-            <label htmlFor="solicitante" className="block text-sm font-semibold text-gray-700 mb-1">Solicitante</label>
-            <input
-              type="text"
-              id="solicitante"
-              value={solicitante}
-              onChange={(e) => setSolicitante(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-              placeholder="Nome do solicitante"
-              required
-              minLength={3}
-            />
+            <label htmlFor="solicitante" className="block text-sm font-semibold text-slate-700 mb-2">
+              Solicitante
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiUser className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                id="solicitante"
+                value={solicitante}
+                onChange={(e) => setSolicitante(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                placeholder="Nome do solicitante"
+                required
+                minLength={3}
+              />
+            </div>
           </div>
 
+          {/* Protocolo */}
           <div>
-            <label htmlFor="protocolo" className="block text-sm font-semibold text-gray-700 mb-1">Protocolo</label>
-            <input
-              type="text"
-              id="protocolo"
-              value={protocolo}
-              onChange={e => setProtocolo(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-              placeholder="Digite o número de protocolo"
-              required
-              minLength={3}
-            />
+            <label htmlFor="protocolo" className="block text-sm font-semibold text-slate-700 mb-2">
+              Número de Protocolo
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiFileText className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                id="protocolo"
+                value={protocolo}
+                onChange={e => setProtocolo(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                placeholder="Digite o número de protocolo"
+                required
+                minLength={3}
+              />
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          {/* Botões */}
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              className="px-6 py-3 text-sm font-semibold text-slate-700 bg-white border-2 border-slate-300 rounded-xl hover:bg-slate-50 transition-all"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-60"
-              disabled={loading}
+              className="px-6 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-black text-white transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl disabled:hover:from-slate-700 disabled:hover:to-slate-900"
+              disabled={loading || Object.keys(validationErrors).length > 0}
             >
               {loading ? (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                  Cadastrando...
+                </>
               ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+                <>
+                  <FiCheck className="h-5 w-5" />
+                  Cadastrar Atendimento
+                </>
               )}
-              {loading ? 'Cadastrando...' : 'Cadastrar Atendimento'}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Estilos de animação */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
