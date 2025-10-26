@@ -8,9 +8,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
-// import SignaturePadWacom from '@/components/SignaturePadWacom'; // DESABILITADO - Usando impressão em papel
+// import SignaturePadWacom from '@/components/SignaturePadWacom'; // DESABILITADO - Wacom físico
 // import type { WacomSignatureResult } from '@/components/SignaturePadWacom'; // DESABILITADO
+import SignaturePadCanvas from '@/components/SignaturePadCanvas';
+import ModoEntregaModal from '@/components/ModoEntregaModal';
 import jsPDF from 'jspdf';
+
+type ModoEntrega = 'impressao' | 'digital';
 
 interface DashboardStats {
   total: number;
@@ -75,10 +79,11 @@ export default function DashboardPage() {
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
 
-  // Estados para assinatura digital - DESABILITADO (agora usando impressão em papel)
-  // const [showSignaturePad, setShowSignaturePad] = useState(false);
-  // const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
-  // const [assinaturaIsoData, setAssinaturaIsoData] = useState<Uint8Array | null>(null);
+  // Estados para sistema híbrido de assinatura
+  const [showModoEntregaModal, setShowModoEntregaModal] = useState(false);
+  const [modoEntregaSelecionado, setModoEntregaSelecionado] = useState<ModoEntrega | null>(null);
+  const [showSignaturePadCanvas, setShowSignaturePadCanvas] = useState(false);
+  const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -204,12 +209,29 @@ export default function DashboardPage() {
       return;
     }
 
-    // Substituir o confirm padrão por um toast com confirmação
-    const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
-    if (!confirmed) return;
+    // Abrir modal de seleção de modo
+    setShowModoEntregaModal(true);
+  };
 
-    // Gerar PDF diretamente para impressão (sem assinatura digital Wacom)
-    await handleGerarPDFImpressao();
+  const handleSelectModoEntrega = (mode: ModoEntrega) => {
+    setShowModoEntregaModal(false);
+    setModoEntregaSelecionado(mode);
+
+    if (mode === 'impressao') {
+      // Modo impressão - gerar PDF sem assinatura
+      handleGerarPDFImpressao();
+    } else if (mode === 'digital') {
+      // Modo digital - abrir canvas de assinatura
+      setShowSignaturePadCanvas(true);
+    }
+  };
+
+  const handleSaveSignatureCanvas = async (signatureDataUrl: string) => {
+    setAssinaturaDataUrl(signatureDataUrl);
+    setShowSignaturePadCanvas(false);
+
+    // Gerar PDF com assinatura digital
+    await handleGerarPDFComAssinatura(signatureDataUrl);
   };
 
   const handleGerarPDFImpressao = async () => {
@@ -523,6 +545,254 @@ export default function DashboardPage() {
     setGerandoComprovante(false);
   };
 
+  // Gerar PDF com assinatura digital capturada
+  const handleGerarPDFComAssinatura = async (signatureDataUrl: string) => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
+      return;
+    }
+
+    setGerandoComprovante(true);
+    try {
+      // Buscar nome do atendente
+      let atendenteNome = 'Não identificado';
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
+
+      const now = new Date();
+      const dataEntrega = now.toISOString().split('T')[0];
+      const dataHoraEntrega = now.toISOString();
+
+      // Atualizar atendimento no Supabase (COM assinatura digital)
+      const { error } = await supabase
+        .from('atendimentos')
+        .update({
+          nome_recebedor: nomeRecebedor,
+          cpf_recebedor: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+          data_entrega: dataEntrega,
+          status: 'entregue',
+          data_hora_entrega: dataHoraEntrega,
+          assinatura_base64: signatureDataUrl, // Salva assinatura digital
+        })
+        .eq('id', selectedAtendimento.id);
+
+      if (error) throw error;
+
+      // Carregar logo
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      // Gerar PDF com assinatura digital incluída
+      const doc = new jsPDF();
+
+      // ===== CABEÇALHO (mesmo que impressão) =====
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, 40, 195, 40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
+
+      // Protocolo e data
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.rect(15, 65, 85, 18);
+      doc.rect(110, 65, 85, 18);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('PROTOCOLO Nº', 18, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('DATA E HORA DA ENTREGA', 113, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
+
+      // Seções de dados (mesmo código)
+      const secaoY = 93;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, secaoY + 2, 195, secaoY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, secaoY + 5, 180, 38, 'FD');
+
+      const labelStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+      };
+      const valueStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+      };
+
+      let yData = secaoY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.nome, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.cpf, 18, yData + 5);
+      labelStyle();
+      doc.text('Data do Atendimento:', 110, yData);
+      valueStyle();
+      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
+
+      // Recebedor
+      const recebedorY = secaoY + 50;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
+      yData = recebedorY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(nomeRecebedor, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(cpfRecebedor, 18, yData + 5);
+      labelStyle();
+      doc.text('Vínculo com o Titular:', 110, yData);
+      valueStyle();
+      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
+
+      // Declaração
+      const infoY = recebedorY + 50;
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      const declaracao = [
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
+      ];
+      declaracao.forEach((linha, index) => {
+        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      });
+
+      // ===== ASSINATURA DIGITAL =====
+      const assinaturaY = 210;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
+
+      // INSERIR ASSINATURA DIGITAL
+      doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 20, 90, 22);
+
+      // Nome e CPF
+      doc.setFontSize(9);
+      doc.text(nomeRecebedor, 105, assinaturaY + 47, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 51, { align: 'center' });
+
+      // Rodapé
+      const rodapeY = 270;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, rodapeY, 195, rodapeY);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Documento emitido por:', 15, rodapeY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendenteNome, 15, rodapeY + 9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
+      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
+
+      // Gerar PDF
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+
+    } catch (err) {
+      console.error('Erro ao gerar comprovante:', err);
+      alert('Erro ao gerar comprovante. Tente novamente.');
+    }
+    setGerandoComprovante(false);
+  };
+
   // Funções para edição de atendimento
   const validateCPF = (cpf: string) => {
     const cpfLimpo = cpf.replace(/\D/g, '');
@@ -712,18 +982,21 @@ export default function DashboardPage() {
           }}
         />
       )}
-      {/* Modal de Assinatura Digital - DESABILITADO (agora usa impressão em papel) */}
-      {/* <SignaturePadWacom
-        isOpen={showSignaturePad}
-        onClose={() => setShowSignaturePad(false)}
-        onSave={handleSaveSignature}
-        licence={process.env.NEXT_PUBLIC_WACOM_LICENCE || ''}
-        useNpmPackage={false}
-        who={nomeRecebedor}
-        why="Assinatura de recebimento de CIN"
+      {/* Modal de Seleção de Modo de Entrega */}
+      <ModoEntregaModal
+        isOpen={showModoEntregaModal}
+        onClose={() => setShowModoEntregaModal(false)}
+        onSelectMode={handleSelectModoEntrega}
+      />
+
+      {/* Modal de Assinatura Digital via Canvas */}
+      <SignaturePadCanvas
+        isOpen={showSignaturePadCanvas}
+        onClose={() => setShowSignaturePadCanvas(false)}
+        onSave={handleSaveSignatureCanvas}
         title="Assinatura do Recebedor"
-        subtitle={`Por favor, assine no Wacom STU-300`}
-      /> */}
+        recipientName={nomeRecebedor}
+      />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Cabeçalho do Dashboard - Design Moderno */}
