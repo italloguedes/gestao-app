@@ -267,158 +267,250 @@ export default function DashboardPage() {
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
 
-      // Gerar PDF moderno e profissional
+      // Gerar PDF profissional e elegante
       const doc = new jsPDF();
 
-      // Cabeçalho com fundo colorido
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.rect(0, 0, 210, 35, 'F');
+      // ===== CABEÇALHO INSTITUCIONAL =====
+      // Brasão/Logo à esquerda
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
 
-      // Logo centralizada com fundo branco circular
-      doc.setFillColor(255, 255, 255);
-      doc.circle(30, 18, 12, 'F');
-      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
-
-      // Título e subtítulo no cabeçalho
+      // Informações institucionais
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(255, 255, 255);
-      doc.text('COMPROVANTE DE ENTREGA', 105, 18, { align: 'center' });
       doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Carteira de Identidade Nacional', 105, 28, { align: 'center' });
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
 
-      // Número de protocolo destacado
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, 40, 174, 16, 3, 3, 'F');
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
+
+      // Linha divisória superior
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.5);
+      doc.line(15, 40, 195, 40);
+
+      // TÍTULO DO DOCUMENTO
       doc.setFont('helvetica', 'bold');
-      doc.text('PROTOCOLO:', 24, 50);
-      doc.setFont('helvetica', 'normal');
-      doc.text(selectedAtendimento.protocolo || 'N/A', 70, 50);
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42); // Slate-900
+      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
 
-      // Data e hora da entrega
-      doc.text('DATA/HORA:', 120, 50);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 165, 50, { align: 'center' });
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
 
-      // Seção de dados do titular
-      const secaoY = 65;
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.setTextColor(255, 255, 255);
-      doc.roundedRect(18, secaoY, 174, 10, 3, 3, 'F');
+      // ===== INFORMAÇÕES DO DOCUMENTO =====
+      // Box com bordas para protocolo e data
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.rect(15, 65, 85, 18);
+      doc.rect(110, 65, 85, 18);
+
+      // Protocolo
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+      doc.text('PROTOCOLO Nº', 18, 70);
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.setFont('helvetica', 'bold');
+      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
+
+      // Data e Hora de Emissão
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+      doc.text('DATA E HORA DA ENTREGA', 113, 70);
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
+
+      // ===== SEÇÃO 1: DADOS DO TITULAR =====
+      const secaoY = 93;
+
+      // Título da seção
       doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.text('DADOS DO TITULAR', 105, secaoY + 7, { align: 'center' });
+      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
 
-      // Bloco de dados do titular
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, secaoY + 10, 174, 40, 3, 3, 'F');
-      doc.setFontSize(11);
-      doc.setTextColor(80, 80, 80);
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, secaoY + 2, 195, secaoY + 2);
+
+      // Box de dados
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(248, 250, 252); // Slate-50
+      doc.rect(15, secaoY + 5, 180, 38, 'FD');
 
       // Estilo para labels e valores
-      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
-      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
+      const labelStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139); // Slate-500
+      };
+      const valueStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42); // Slate-900
+      };
 
       // Dados do titular
-      let yData = secaoY + 22;
-      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(selectedAtendimento.cpf, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('Data do Atendimento:', 24, yData); valueStyle(); doc.text(formatDate(selectedAtendimento.dia_atual), 90, yData);
+      let yData = secaoY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.nome, 18, yData + 5);
 
-      // Seção de dados do recebedor
-      const recebedorY = secaoY + 60;
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.setTextColor(255, 255, 255);
-      doc.roundedRect(18, recebedorY, 174, 10, 3, 3, 'F');
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.cpf, 18, yData + 5);
+
+      labelStyle();
+      doc.text('Data do Atendimento:', 110, yData);
+      valueStyle();
+      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
+
+      // ===== SEÇÃO 2: DADOS DO RECEBEDOR =====
+      const recebedorY = secaoY + 50;
+
+      // Título da seção
       doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.text('DADOS DO RECEBEDOR', 105, recebedorY + 7, { align: 'center' });
+      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
 
-      // Bloco de dados do recebedor
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, recebedorY + 10, 174, 50, 3, 3, 'F');
-      doc.setFontSize(11);
-      doc.setTextColor(80, 80, 80);
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
+
+      // Box de dados
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(248, 250, 252); // Slate-50
+      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
 
       // Dados do recebedor
-      yData = recebedorY + 22;
-      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(nomeRecebedor, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(cpfRecebedor, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 60, yData);
+      yData = recebedorY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(nomeRecebedor, 18, yData + 5);
 
-      // Informações adicionais
-      const infoY = recebedorY + 70;
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, infoY, 174, 30, 3, 3, 'F');
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Este documento comprova a entrega da Carteira de Identidade Nacional (CIN) ao recebedor', 105, infoY + 10, { align: 'center' });
-      doc.text('identificado acima. A entrega foi registrada no sistema com data e hora especificadas.', 105, infoY + 18, { align: 'center' });
-      doc.text('Em caso de dúvidas, entre em contato com a Sala Sensorial da ALECE.', 105, infoY + 26, { align: 'center' });
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(cpfRecebedor, 18, yData + 5);
 
-      // Campo de assinatura destacado com assinatura digital
-      const assinaturaY = 240;
-      doc.setDrawColor(16, 185, 129); // emerald-600
-      doc.setLineWidth(0.5);
-      doc.roundedRect(18, assinaturaY, 174, 40, 3, 3, 'S');
-      doc.setFontSize(12);
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.setFont('helvetica', 'bold');
-      doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
+      labelStyle();
+      doc.text('Vínculo com o Titular:', 110, yData);
+      valueStyle();
+      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
 
-      // Espaço em branco para assinatura manual no papel impresso
-      // Linha para assinatura
-      doc.setDrawColor(100, 100, 100); // Cinza
-      doc.setLineWidth(0.3);
-      doc.line(50, assinaturaY + 25, 160, assinaturaY + 25); // Linha horizontal para assinar
-
-      // Texto de instrução
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.setFont('helvetica', 'italic');
-      doc.text('(Assine acima)', 105, assinaturaY + 30, { align: 'center' });
+      // ===== DECLARAÇÃO =====
+      const infoY = recebedorY + 50;
 
       doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
+      doc.setTextColor(71, 85, 105); // Slate-600
       doc.setFont('helvetica', 'normal');
-      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 105, assinaturaY + 35, { align: 'center' });
 
-      // Rodapé moderno com fundo colorido
-      const rodapeY = 285;
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.rect(0, rodapeY - 15, 210, 20, 'F');
+      const declaracao = [
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
+      ];
 
-      // Linha decorativa superior do rodapé
-      doc.setDrawColor(16, 185, 129); // emerald-600
-      doc.setLineWidth(0.5);
-      doc.line(0, rodapeY - 15, 210, rodapeY - 15);
+      declaracao.forEach((linha, index) => {
+        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      });
 
-      // Informações do rodapé
-      doc.setFontSize(8);
+      // ===== SEÇÃO 3: ASSINATURA =====
+      const assinaturaY = 210;
+
+      // Título da seção
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.text('SALA SENSORIAL / ALECE', 105, rodapeY - 10, { align: 'center' });
+      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
 
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
+
+      // Box para assinatura
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(255, 255, 255); // Branco
+      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
+
+      // Cidade e data
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105); // Slate-600
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Emitido em: ${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 105, rodapeY - 3, { align: 'center' });
+      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
 
-      // Nome do atendente
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Atendente: ${atendenteNome}`, 105, rodapeY + 3, { align: 'center' });
+      // Linha para assinatura
+      doc.setDrawColor(100, 116, 139); // Slate-500
+      doc.setLineWidth(0.4);
+      doc.line(45, assinaturaY + 35, 165, assinaturaY + 35);
 
-      // Número da página
+      // Nome e CPF do recebedor
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.setFont('helvetica', 'normal');
+      doc.text(nomeRecebedor, 105, assinaturaY + 42, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 47, { align: 'center' });
+
+      // ===== RODAPÉ INSTITUCIONAL =====
+      const rodapeY = 270;
+
+      // Linha divisória superior
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.5);
+      doc.line(15, rodapeY, 195, rodapeY);
+
+      // Informações de controle
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+
+      // Lado esquerdo - Emissor
+      doc.text('Documento emitido por:', 15, rodapeY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendenteNome, 15, rodapeY + 9);
+
+      // Centro - Data/Hora
+      doc.setFont('helvetica', 'normal');
+      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
+
+      // Lado direito - Página
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
+
+      // Linha final
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
+
+      // Aviso final
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'italic');
-      doc.setTextColor(120, 120, 120);
-      doc.text('Página 1/1', 105, rodapeY + 9, { align: 'center' });
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
+      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
       // Gerar URL do PDF
       const pdfBlob = doc.output('blob');
       const url = URL.createObjectURL(pdfBlob);
