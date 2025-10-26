@@ -8,8 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
-import SignaturePadWacom from '@/components/SignaturePadWacom';
-import type { WacomSignatureResult } from '@/components/SignaturePadWacom';
+// import SignaturePadWacom from '@/components/SignaturePadWacom'; // DESABILITADO - Usando impressão em papel
+// import type { WacomSignatureResult } from '@/components/SignaturePadWacom'; // DESABILITADO
 import jsPDF from 'jspdf';
 
 interface DashboardStats {
@@ -75,10 +75,10 @@ export default function DashboardPage() {
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
 
-  // Estados para assinatura digital
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
-  const [assinaturaIsoData, setAssinaturaIsoData] = useState<Uint8Array | null>(null);
+  // Estados para assinatura digital - DESABILITADO (agora usando impressão em papel)
+  // const [showSignaturePad, setShowSignaturePad] = useState(false);
+  // const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
+  // const [assinaturaIsoData, setAssinaturaIsoData] = useState<Uint8Array | null>(null);
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -208,18 +208,15 @@ export default function DashboardPage() {
     const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
     if (!confirmed) return;
 
-    // Abrir modal de assinatura ao invés de gerar PDF diretamente
-    setShowSignaturePad(true);
+    // Gerar PDF diretamente para impressão (sem assinatura digital Wacom)
+    await handleGerarPDFImpressao();
   };
 
-  const handleSaveSignature = async (result: WacomSignatureResult) => {
+  const handleGerarPDFImpressao = async () => {
     if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
       return;
     }
 
-    setShowSignaturePad(false);
-    setAssinaturaDataUrl(result.png);
-    setAssinaturaIsoData(result.iso);
     setGerandoComprovante(true);
     try {
       // Buscar nome do atendente para o rodapé do PDF
@@ -240,7 +237,7 @@ export default function DashboardPage() {
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
 
-      // Atualizar atendimento no Supabase (incluindo assinatura digital)
+      // Atualizar atendimento no Supabase (SEM assinatura digital - agora usa impressão em papel)
       const { error } = await supabase
         .from('atendimentos')
         .update({
@@ -250,7 +247,7 @@ export default function DashboardPage() {
           data_entrega: dataEntrega,
           status: 'entregue',
           data_hora_entrega: dataHoraEntrega,
-          assinatura_base64: signatureDataUrl,
+          // assinatura_base64: null, // Não salva assinatura digital - assinatura será manual no papel
         })
         .eq('id', selectedAtendimento.id);
 
@@ -377,10 +374,17 @@ export default function DashboardPage() {
       doc.setFont('helvetica', 'bold');
       doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
 
-      // Inserir assinatura digital capturada
-      if (signatureDataUrl) {
-        doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 10, 90, 20);
-      }
+      // Espaço em branco para assinatura manual no papel impresso
+      // Linha para assinatura
+      doc.setDrawColor(100, 100, 100); // Cinza
+      doc.setLineWidth(0.3);
+      doc.line(50, assinaturaY + 25, 160, assinaturaY + 25); // Linha horizontal para assinar
+
+      // Texto de instrução
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'italic');
+      doc.text('(Assine acima)', 105, assinaturaY + 30, { align: 'center' });
 
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
@@ -616,8 +620,8 @@ export default function DashboardPage() {
           }}
         />
       )}
-      {/* Modal de Assinatura Digital - Wacom STU-300 */}
-      <SignaturePadWacom
+      {/* Modal de Assinatura Digital - DESABILITADO (agora usa impressão em papel) */}
+      {/* <SignaturePadWacom
         isOpen={showSignaturePad}
         onClose={() => setShowSignaturePad(false)}
         onSave={handleSaveSignature}
@@ -627,7 +631,7 @@ export default function DashboardPage() {
         why="Assinatura de recebimento de CIN"
         title="Assinatura do Recebedor"
         subtitle={`Por favor, assine no Wacom STU-300`}
-      />
+      /> */}
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Cabeçalho do Dashboard - Design Moderno */}
@@ -1206,9 +1210,9 @@ function EntregarCinModal({
                 ) : (
                   <>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
-                    Gerar Comprovante
+                    Gerar e Imprimir
                   </>
                 )}
               </button>

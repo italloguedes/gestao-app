@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { supabaseServer } from '@/lib/supabase-server';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 // GET - Listar observações de um atendimento
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar observações do atendimento
-    const { data: observacoes, error } = await supabase
+    const { data: observacoes, error } = await supabaseServer
       .from('atendimento_observacoes_historico')
       .select('*')
       .eq('atendimento_id', atendimentoId)
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o atendimento existe
-    const { data: atendimento, error: fetchError } = await supabase
+    const { data: atendimento, error: fetchError } = await supabaseServer
       .from('atendimentos')
       .select('id')
       .eq('id', atendimento_id)
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar a observação
-    const { data: novaObservacao, error } = await supabase
+    const { data: novaObservacao, error } = await supabaseServer
       .from('atendimento_observacoes_historico')
       .insert({
         atendimento_id,
