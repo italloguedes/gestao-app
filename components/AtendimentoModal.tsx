@@ -4,19 +4,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
+import { AtendimentoObservacao } from '@/types/supabase';
 import jsPDF from 'jspdf';
 import {
   FiX, FiUser, FiMail, FiCalendar, FiClock, FiFileText,
   FiAlertCircle, FiSave, FiTrash2, FiMessageSquare, FiSend,
   FiCheckCircle, FiXCircle, FiLock, FiCreditCard, FiDownload, FiEye
 } from 'react-icons/fi';
-
-interface ObservacaoHistorico {
-  texto: string;
-  data: string;
-  usuario: string;
-  usuario_id?: string;
-}
 
 export interface Atendimento {
   id: number;
@@ -61,10 +55,11 @@ export default function AtendimentoModal({
   const { user } = useAuth();
 
   // Estados para histórico de observações
-  const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([]);
+  const [historicoObservacoes, setHistoricoObservacoes] = useState<AtendimentoObservacao[]>([]);
   const [novaObservacao, setNovaObservacao] = useState('');
   const [addingObservacao, setAddingObservacao] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
 
   // Estados para visualização de comprovante
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -77,7 +72,7 @@ export default function AtendimentoModal({
       setFormData(atendimento);
       setValidationErrors({});
       fetchCurrentUserName();
-      parseObservacoes();
+      fetchObservacoes();
     }
   }, [isOpen, atendimento]);
 
@@ -87,45 +82,38 @@ export default function AtendimentoModal({
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('name')
+        .select('name, email')
         .eq('auth_id', user.id)
         .single();
 
       if (!error && data) {
         setCurrentUserName(data.name);
+        setCurrentUserEmail(data.email);
       }
     } catch (err) {
       console.error('Erro ao buscar nome do usuário:', err);
     }
   };
 
-  const parseObservacoes = () => {
-    if (!atendimento.observacoes) {
-      setHistoricoObservacoes([]);
-      return;
-    }
-
+  const fetchObservacoes = async () => {
     try {
-      const parsed = JSON.parse(atendimento.observacoes);
-      if (Array.isArray(parsed)) {
-        setHistoricoObservacoes(parsed);
-      } else {
-        // Migrar observação antiga (string) para novo formato
-        setHistoricoObservacoes([{
-          texto: atendimento.observacoes,
-          data: new Date().toISOString(),
-          usuario: atendimento.atendente_nome || 'Sistema'
-        }]);
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+
+      if (!token || !atendimento.id) return;
+
+      const response = await fetch(`/api/atendimentos-observacoes?atendimento_id=${atendimento.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistoricoObservacoes(data);
       }
-    } catch {
-      // Se não for JSON, é uma observação antiga no formato string
-      if (atendimento.observacoes.trim()) {
-        setHistoricoObservacoes([{
-          texto: atendimento.observacoes,
-          data: new Date().toISOString(),
-          usuario: atendimento.atendente_nome || 'Sistema'
-        }]);
-      }
+    } catch (err) {
+      console.error('Erro ao buscar observações:', err);
     }
   };
 
@@ -134,24 +122,34 @@ export default function AtendimentoModal({
 
     setAddingObservacao(true);
     try {
-      const novaEntrada: ObservacaoHistorico = {
-        texto: novaObservacao,
-        data: new Date().toISOString(),
-        usuario: currentUserName || 'Usuário',
-        usuario_id: user?.id
-      };
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
 
-      const novoHistorico = [...historicoObservacoes, novaEntrada];
+      if (!token) {
+        throw new Error('Não autenticado');
+      }
 
-      const { error } = await supabase
-        .from('atendimentos')
-        .update({ observacoes: JSON.stringify(novoHistorico) })
-        .eq('id', atendimento.id);
+      const response = await fetch('/api/atendimentos-observacoes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          atendimento_id: atendimento.id,
+          observacao: novaObservacao.trim(),
+          usuario_email: currentUserEmail,
+          usuario_nome: currentUserName
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao adicionar observação');
+      }
 
-      setHistoricoObservacoes(novoHistorico);
-      setFormData(prev => ({ ...prev, observacoes: JSON.stringify(novoHistorico) }));
+      // Recarregar observações
+      await fetchObservacoes();
       setNovaObservacao('');
     } catch (err: any) {
       console.error('Erro ao adicionar observação:', err);
@@ -697,12 +695,12 @@ export default function AtendimentoModal({
             {/* Mensagens */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {historicoObservacoes.length > 0 ? (
-                historicoObservacoes.map((obs, index) => (
-                  <div key={index} className="flex flex-col">
+                historicoObservacoes.map((obs) => (
+                  <div key={obs.id} className="flex flex-col">
                     <div className="bg-white rounded-2xl rounded-tl-sm p-4 shadow-sm border border-slate-200">
-                      <p className="text-slate-800 text-sm leading-relaxed mb-2">{obs.texto}</p>
+                      <p className="text-slate-800 text-sm leading-relaxed mb-2">{obs.observacao}</p>
                       <p className="text-xs text-slate-500 font-medium">
-                        {obs.usuario} - {formatChatDate(obs.data)}
+                        {obs.usuario_nome || 'Usuário'} - {formatChatDate(obs.created_at)}
                       </p>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { AtendimentoObservacao } from '@/types/supabase';
 import Loading from '@/components/Loading';
 import {
   FiUser,
@@ -26,13 +27,6 @@ import {
   FiArrowLeft,
   FiCreditCard,
 } from 'react-icons/fi';
-
-interface ObservacaoHistorico {
-  texto: string;
-  data: string;
-  usuario: string;
-  usuario_id?: string;
-}
 
 interface Atendimento {
   id: number;
@@ -63,8 +57,9 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [novaObservacao, setNovaObservacao] = useState('');
   const [addingObservacao, setAddingObservacao] = useState(false);
-  const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([]);
+  const [historicoObservacoes, setHistoricoObservacoes] = useState<AtendimentoObservacao[]>([]);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
   const router = useRouter();
   const { user } = useAuth();
 
@@ -75,6 +70,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
     fetchCurrentUserName();
     fetchAtendimento();
+    fetchObservacoes();
   }, [user, router, id]);
 
   const fetchCurrentUserName = async () => {
@@ -83,15 +79,38 @@ export default function AtendimentoDetalhes({ id }: Props) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('name')
+        .select('name, email')
         .eq('auth_id', user.id)
         .single();
 
       if (!error && data) {
         setCurrentUserName(data.name);
+        setCurrentUserEmail(data.email);
       }
     } catch (err) {
       console.error('Erro ao buscar nome do usuário:', err);
+    }
+  };
+
+  const fetchObservacoes = async () => {
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+
+      if (!token) return;
+
+      const response = await fetch(`/api/atendimentos-observacoes?atendimento_id=${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistoricoObservacoes(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar observações:', err);
     }
   };
 
@@ -109,32 +128,6 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
       setAtendimento(data);
       setEditedAtendimento(data);
-
-      // Parse observacoes - pode ser string ou JSON array
-      if (data.observacoes) {
-        try {
-          const parsed = JSON.parse(data.observacoes);
-          if (Array.isArray(parsed)) {
-            setHistoricoObservacoes(parsed);
-          } else {
-            // Se for string antiga, converter para novo formato
-            setHistoricoObservacoes([{
-              texto: data.observacoes,
-              data: data.created_at || new Date().toISOString(),
-              usuario: data.atendente_nome || 'Sistema'
-            }]);
-          }
-        } catch {
-          // Se não for JSON, é uma string antiga
-          if (data.observacoes.trim()) {
-            setHistoricoObservacoes([{
-              texto: data.observacoes,
-              data: data.created_at || new Date().toISOString(),
-              usuario: data.atendente_nome || 'Sistema'
-            }]);
-          }
-        }
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -147,23 +140,34 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
     setAddingObservacao(true);
     try {
-      const novaEntrada: ObservacaoHistorico = {
-        texto: novaObservacao,
-        data: new Date().toISOString(),
-        usuario: currentUserName || 'Usuário',
-        usuario_id: user?.id
-      };
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
 
-      const novoHistorico = [...historicoObservacoes, novaEntrada];
+      if (!token) {
+        throw new Error('Não autenticado');
+      }
 
-      const { error } = await supabase
-        .from('atendimentos')
-        .update({ observacoes: JSON.stringify(novoHistorico) })
-        .eq('id', id);
+      const response = await fetch('/api/atendimentos-observacoes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          atendimento_id: parseInt(id),
+          observacao: novaObservacao.trim(),
+          usuario_email: currentUserEmail,
+          usuario_nome: currentUserName
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao adicionar observação');
+      }
 
-      setHistoricoObservacoes(novoHistorico);
+      // Recarregar observações
+      await fetchObservacoes();
       setNovaObservacao('');
     } catch (err: any) {
       setError(err.message);
@@ -606,8 +610,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
           {/* Timeline de Observações */}
           {historicoObservacoes.length > 0 ? (
             <div className="space-y-4 mb-6">
-              {historicoObservacoes.map((obs, index) => (
-                <div key={index} className="relative pl-8 pb-4 border-l-2 border-slate-200 last:border-0">
+              {historicoObservacoes.map((obs) => (
+                <div key={obs.id} className="relative pl-8 pb-4 border-l-2 border-slate-200 last:border-0">
                   <div className="absolute -left-2 top-0 w-4 h-4 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full border-2 border-white"></div>
                   <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
@@ -615,11 +619,11 @@ export default function AtendimentoDetalhes({ id }: Props) {
                         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white">
                           <FiUser className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-slate-800">{obs.usuario}</span>
+                        <span className="font-bold text-slate-800">{obs.usuario_nome || 'Usuário'}</span>
                       </div>
-                      <span className="text-sm text-slate-500 font-medium">{formatDateTime(obs.data)}</span>
+                      <span className="text-sm text-slate-500 font-medium">{formatDateTime(obs.created_at)}</span>
                     </div>
-                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{obs.texto}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{obs.observacao}</p>
                   </div>
                 </div>
               ))}

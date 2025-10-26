@@ -26,4 +26,13 @@ export interface AuthResponse {
     session: any | null;
   } | null;
   error: AuthError | null;
-} 
+}
+
+export interface AtendimentoObservacao {
+  id: number;
+  atendimento_id: number;
+  observacao: string;
+  usuario_email: string | null;
+  usuario_nome: string | null;
+  created_at: string;
+}
