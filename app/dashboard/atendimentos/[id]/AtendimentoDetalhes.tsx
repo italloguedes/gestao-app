@@ -26,7 +26,9 @@ import {
   FiPlus,
   FiArrowLeft,
   FiCreditCard,
+  FiPrinter,
 } from 'react-icons/fi';
+import jsPDF from 'jspdf';
 
 interface Atendimento {
   id: number;
@@ -41,6 +43,12 @@ interface Atendimento {
   observacoes: string;
   atendente_nome?: string;
   usuario_id?: string;
+  data_entrega?: string;
+  data_hora_entrega?: string;
+  nome_recebedor?: string;
+  cpf_recebedor?: string;
+  vinculo?: string;
+  assinatura_base64?: string;
 }
 
 interface Props {
@@ -270,6 +278,230 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
   };
 
+  const handleGerarComprovante = async () => {
+    if (!atendimento || atendimento.status !== 'entregue') {
+      alert('Este atendimento não está marcado como entregue.');
+      return;
+    }
+
+    if (!atendimento.nome_recebedor || !atendimento.cpf_recebedor) {
+      alert('Este atendimento não possui dados do recebedor.');
+      return;
+    }
+
+    try {
+      // Carregar logo
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      const doc = new jsPDF();
+      const dataEntrega = atendimento.data_entrega || new Date().toISOString().split('T')[0];
+      const horaEntrega = atendimento.data_hora_entrega
+        ? new Date(atendimento.data_hora_entrega).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      // ===== CABEÇALHO =====
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, 40, 195, 40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
+
+      // Protocolo e data
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.rect(15, 65, 85, 18);
+      doc.rect(110, 65, 85, 18);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('PROTOCOLO Nº', 18, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendimento.protocolo || 'N/A', 18, 78);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('DATA E HORA DA ENTREGA', 113, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} - ${horaEntrega}`, 113, 78);
+
+      // Titular
+      const secaoY = 93;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, secaoY + 2, 195, secaoY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, secaoY + 5, 180, 38, 'FD');
+
+      const labelStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+      };
+      const valueStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+      };
+
+      let yData = secaoY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(atendimento.nome, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(atendimento.cpf, 18, yData + 5);
+      labelStyle();
+      doc.text('Data do Atendimento:', 110, yData);
+      valueStyle();
+      doc.text(formatDate(atendimento.dia_atual), 110, yData + 5);
+
+      // Recebedor
+      const recebedorY = secaoY + 50;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
+      yData = recebedorY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(atendimento.nome_recebedor, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(atendimento.cpf_recebedor, 18, yData + 5);
+      labelStyle();
+      doc.text('Vínculo com o Titular:', 110, yData);
+      valueStyle();
+      doc.text(atendimento.vinculo || 'N/A', 110, yData + 5);
+
+      // Declaração
+      const infoY = recebedorY + 50;
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      const declaracao = [
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
+      ];
+      declaracao.forEach((linha, index) => {
+        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      });
+
+      // Assinatura
+      const assinaturaY = 210;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
+
+      // VERIFICAR SE TEM ASSINATURA SALVA
+      if (atendimento.assinatura_base64) {
+        // Tem assinatura digital salva - incluir no PDF
+        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 20, 90, 22);
+      } else {
+        // Não tem assinatura - deixar espaço para assinatura manual
+        doc.setDrawColor(100, 116, 139);
+        doc.setLineWidth(0.4);
+        doc.line(45, assinaturaY + 35, 165, assinaturaY + 35);
+      }
+
+      doc.setFontSize(9);
+      doc.text(atendimento.nome_recebedor, 105, assinaturaY + 47, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`CPF: ${atendimento.cpf_recebedor}`, 105, assinaturaY + 51, { align: 'center' });
+
+      // Rodapé
+      const rodapeY = 270;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, rodapeY, 195, rodapeY);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Documento emitido por:', 15, rodapeY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendimento.atendente_nome || 'Sistema', 15, rodapeY + 9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} às ${horaEntrega}`, 105, rodapeY + 9, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
+      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
+
+      // Abrir PDF
+      doc.save(`comprovante-${atendimento.protocolo}.pdf`);
+    } catch (err) {
+      console.error('Erro ao gerar comprovante:', err);
+      alert('Erro ao gerar comprovante. Tente novamente.');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -379,7 +611,19 @@ export default function AtendimentoDetalhes({ id }: Props) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Botão Gerar Comprovante - só aparece se entregue */}
+                {atendimento.status === 'entregue' && atendimento.nome_recebedor && (
+                  <button
+                    onClick={handleGerarComprovante}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl border-2 border-white/30 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
+                    title={atendimento.assinatura_base64 ? 'Gerar comprovante com assinatura digital' : 'Gerar comprovante para impressão'}
+                  >
+                    <FiPrinter className="w-5 h-5" />
+                    Gerar Comprovante
+                  </button>
+                )}
+
                 {!isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
