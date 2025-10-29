@@ -20,6 +20,15 @@ interface Atendimento {
   solicitante: string;
 }
 
+const statusOptions = [
+  { value: '', label: 'Todos', count: 0 },
+  { value: 'confirmado', label: 'Confirmado', count: 0 },
+  { value: 'concluido', label: 'Concluído', count: 0 },
+  { value: 'cancelado', label: 'Cancelado', count: 0 },
+  { value: 'ausente', label: 'Ausente', count: 0 },
+  { value: 'bloqueado', label: 'Bloqueado', count: 0 },
+];
+
 export default function GerarRelatorioPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -32,6 +41,8 @@ export default function GerarRelatorioPage() {
   const [ordenacao, setOrdenacao] = useState<'padrao' | 'nome'>('padrao');
   const [tipoRelatorio, setTipoRelatorio] = useState<'completo' | 'assinatura'>('completo');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [atendimentosFiltrados, setAtendimentosFiltrados] = useState<Atendimento[]>([]);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
@@ -66,11 +77,11 @@ export default function GerarRelatorioPage() {
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
     const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro para melhor legibilidade
-    
+
     // Calcula a largura total da tabela
     const tableWidth = 150; // Soma das larguras das colunas
     const marginLeft = (doc.internal.pageSize.width - tableWidth) / 2;
-    
+
     // Cabeçalho mais compacto e centralizado
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
@@ -80,20 +91,20 @@ export default function GerarRelatorioPage() {
     const title = 'Relatório de Atendimentos - Sala Sensorial / ALECE';
     const titleWidth = doc.getStringUnitWidth(title) * titleFontSize / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
-    
+
     // Informações do período mais compactas e centralizadas
     doc.setTextColor(90, 90, 90);
     const infoFontSize = 9;
     doc.setFontSize(infoFontSize);
     const periodo = `Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`;
     const total = `Total de Atendimentos: ${atendimentos.length}`;
-    
+
     // Centraliza as informações do período
     const periodoWidth = doc.getStringUnitWidth(periodo) * infoFontSize / doc.internal.scaleFactor;
     const totalWidth = doc.getStringUnitWidth(total) * infoFontSize / doc.internal.scaleFactor;
     const infosWidth = periodoWidth + 20 + totalWidth; // 20 é o espaço entre os textos
     const infosStartX = (doc.internal.pageSize.width - infosWidth) / 2;
-    
+
     doc.text(periodo, infosStartX, 30);
     doc.text(total, infosStartX + periodoWidth + 20, 30);
 
@@ -103,7 +114,7 @@ export default function GerarRelatorioPage() {
     doc.setDrawColor(230, 230, 230);
     doc.setLineWidth(0.3);
     doc.line(lineStartX, 33, lineStartX + lineWidth, 33);
-    
+
     // Configuração da tabela otimizada
     const tableColumn = ['Data', 'Nome', 'CPF', 'Solicitante', 'Status'];
     const tableRows = atendimentos.map(atendimento => [
@@ -212,7 +223,7 @@ export default function GerarRelatorioPage() {
 
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
-    
+
     // Cabeçalho
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
@@ -222,7 +233,7 @@ export default function GerarRelatorioPage() {
     const title = 'Lista de Entrega - Sala Sensorial / ALECE';
     const titleWidth = doc.getStringUnitWidth(title) * 18 / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 20);
-    
+
     // Informações do período
     doc.setTextColor(90, 90, 90);
     doc.setFontSize(12);
@@ -230,69 +241,69 @@ export default function GerarRelatorioPage() {
     const periodo = `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataInicio)}`;
     const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
     doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
-    
+
     // Linha separadora
     doc.setDrawColor(230, 230, 230);
     doc.setLineWidth(0.5);
     doc.line(20, 40, doc.internal.pageSize.width - 20, 40);
-    
+
     // Cabeçalho da tabela
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(50, 50, 50);
-    
+
     // Posições das colunas
     const col1 = 25; // Número
     const col2 = 40; // Nome
     const col3 = 100; // CPF
     const col4 = 140; // Assinatura
-    
+
     // Cabeçalhos
     doc.text('Nº', col1, 50);
     doc.text('Nome Completo', col2, 50);
     doc.text('CPF', col3, 50);
     doc.text('Assinatura', col4, 50);
-    
+
     // Linha do cabeçalho
     doc.setDrawColor(0, 135, 81);
     doc.setLineWidth(1);
     doc.line(20, 52, doc.internal.pageSize.width - 20, 52);
-    
+
     // Linhas para os dados
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.3);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    
+
     let currentY = 60;
     const lineHeight = 8;
-    
+
     atendimentos.forEach((atendimento, index) => {
       // Verificar se precisa de nova página
       if (currentY > doc.internal.pageSize.height - 40) {
         doc.addPage();
         currentY = 30;
       }
-      
+
       // Número
       doc.text((index + 1).toString(), col1, currentY);
-      
+
       // Nome (truncado se muito longo)
       const nome = atendimento.nome.length > 30 ? atendimento.nome.substring(0, 27) + '...' : atendimento.nome;
       doc.text(nome, col2, currentY);
-      
+
       // CPF formatado
       const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       doc.text(cpfFormatado, col3, currentY);
-      
+
       // Linha horizontal separadora
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.3);
       doc.line(20, currentY + 2, doc.internal.pageSize.width - 20, currentY + 2);
-      
+
       currentY += lineHeight;
     });
-    
+
     // Rodapé
     const pageCount = (doc as any).getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -403,17 +414,25 @@ export default function GerarRelatorioPage() {
         return;
       }
 
+      // Calcular contadores de status
+      const counts: Record<string, number> = { total: atendimentos.length };
+      atendimentos.forEach((atendimento) => {
+        counts[atendimento.status] = (counts[atendimento.status] || 0) + 1;
+      });
+      setStatusCounts(counts);
+      setAtendimentosFiltrados(atendimentos);
+
       console.log('Gerando PDF para', atendimentos.length, 'atendimentos');
-      
+
       if (tipoRelatorio === 'assinatura') {
         await generateSignaturePDF(atendimentos);
-        setMessage({ 
+        setMessage({
           text: `Lista de entrega gerada com sucesso! Total de registros: ${atendimentos.length}`,
           type: 'success'
         });
       } else {
         await generatePDF(atendimentos);
-        setMessage({ 
+        setMessage({
           text: `Relatório gerado com sucesso! Total de registros: ${atendimentos.length}`,
           type: 'success'
         });
@@ -421,7 +440,7 @@ export default function GerarRelatorioPage() {
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
-      setMessage({ 
+      setMessage({
         text: 'Erro ao gerar relatório: ' + (error as Error).message,
         type: 'error'
       });
@@ -431,325 +450,310 @@ export default function GerarRelatorioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
-      <div className="max-w-5xl mx-auto">
-        {/* Header Modernizado */}
-        <div className="mb-10 animate-fade-in">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-14 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
-            <div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                Relatórios de Atendimentos
-              </h1>
-              <p className="text-gray-500 mt-2 text-base font-medium flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Configure filtros personalizados e gere relatórios em PDF
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 pt-24">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Técnico */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Relatórios de Atendimentos
+          </h1>
+          <p className="text-sm text-gray-600">
+            Configure os filtros e gere relatórios em PDF
+          </p>
         </div>
 
-        {/* Card principal modernizado */}
-        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-gray-100 overflow-hidden animate-slide-up">
-          {/* Header do card com gradiente sofisticado */}
-          <div className="relative bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 px-8 py-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-            <div className="relative flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Filtros Personalizados</h2>
-                  <p className="text-emerald-100 text-sm font-medium mt-0.5">Configure os parâmetros da sua consulta</p>
-                </div>
-              </div>
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-white text-xs font-semibold">Todos os campos são opcionais</span>
-              </div>
-            </div>
+        {/* Formulário de Filtros */}
+        <div className="bg-white border border-gray-200 rounded-lg mb-6">
+          <div className="border-b border-gray-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
           </div>
 
-          {/* Mensagens de feedback modernizadas */}
+          {/* Mensagens de feedback */}
           {message && (
-            <div className={`mx-8 mt-6 p-4 rounded-2xl border-2 text-sm animate-scale-in ${
+            <div className={`mx-6 mt-4 p-4 border rounded-lg ${
               message.type === 'success'
-                ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200 shadow-lg shadow-green-100'
-                : 'bg-gradient-to-r from-red-50 to-orange-50 text-red-800 border-red-200 shadow-lg shadow-red-100'
+                ? 'bg-green-50 text-green-800 border-green-200'
+                : 'bg-red-50 text-red-800 border-red-200'
             }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-                } shadow-md`}>
-                  {message.type === 'success' ? (
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-sm">
-                    {message.type === 'success' ? 'Sucesso!' : 'Atenção!'}
-                  </p>
-                  <p className="font-medium text-sm mt-0.5">{message.text}</p>
-                </div>
-              </div>
+              <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
 
-          {/* Formulário Modernizado */}
-          <form onSubmit={handleSubmit} className="p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Data Inicial - Design Moderno */}
-              <div className="group">
-                <label htmlFor="dataInicio" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mr-2 group-hover:bg-emerald-200 transition-colors">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Data Inicial */}
+              <div>
+                <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-700 mb-2">
                   {tipoRelatorio === 'assinatura' ? 'Data' : 'Data Inicial'}
-                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="date"
                   id="dataInicio"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-emerald-300 hover:shadow-md bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
                 />
               </div>
 
-              {/* Data Final - apenas para relatório completo */}
+              {/* Data Final */}
               {tipoRelatorio === 'completo' && (
-                <div className="group">
-                  <label htmlFor="dataFim" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2 group-hover:bg-blue-200 transition-colors">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
+                <div>
+                  <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700 mb-2">
                     Data Final
-                    <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                   </label>
                   <input
                     type="date"
                     id="dataFim"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-blue-300 hover:shadow-md bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
                   />
                 </div>
               )}
 
               {/* Nome do Cliente */}
-              <div className="group">
-                <label htmlFor="nome" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mr-2 group-hover:bg-purple-200 transition-colors">
-                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
+              <div>
+                <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-2">
                   Nome do Cliente
-                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="text"
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Digite o nome do cliente..."
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-purple-300 hover:shadow-md bg-white"
+                  placeholder="Digite o nome..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 />
               </div>
 
               {/* Solicitante */}
-              <div className="group">
-                <label htmlFor="solicitante" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-2 group-hover:bg-orange-200 transition-colors">
-                    <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
+              <div>
+                <label htmlFor="solicitante" className="block text-sm font-medium text-gray-700 mb-2">
                   Solicitante
-                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <input
                   type="text"
                   id="solicitante"
                   value={solicitante}
                   onChange={(e) => setSolicitante(e.target.value)}
-                  placeholder="Digite o nome do solicitante..."
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-100 focus:outline-none transition-all duration-300 text-gray-700 placeholder-gray-400 hover:border-orange-300 hover:shadow-md bg-white"
+                  placeholder="Digite o solicitante..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 />
               </div>
 
-              {/* Status - Ocupa duas colunas */}
-              <div className="md:col-span-2 group">
-                <label htmlFor="status" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center mr-2 group-hover:bg-green-200 transition-colors">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  Status do Atendimento
-                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
-                </label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-green-500 focus:ring-4 focus:ring-green-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-green-300 hover:shadow-md bg-white font-medium cursor-pointer"
-                >
-                  <option value="">🔍 Todos os status</option>
-                  <option value="confirmado">✅ Confirmado</option>
-                  <option value="concluido">✅ Concluído</option>
-                  <option value="cancelado">❌ Cancelado</option>
-                  <option value="ausente">⏰ Ausente</option>
-                  <option value="bloqueado">🚫 Bloqueado</option>
-                </select>
-              </div>
-
               {/* Tipo de Relatório */}
-              <div className="md:col-span-2 group">
-                <label htmlFor="tipoRelatorio" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-2 group-hover:bg-indigo-200 transition-colors">
-                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
+              <div>
+                <label htmlFor="tipoRelatorio" className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo de Relatório
-                  <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold">Importante</span>
                 </label>
                 <select
                   id="tipoRelatorio"
                   value={tipoRelatorio}
                   onChange={(e) => setTipoRelatorio(e.target.value as 'completo' | 'assinatura')}
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-indigo-300 hover:shadow-md bg-white font-medium cursor-pointer"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 >
-                  <option value="completo">📊 Relatório Completo (Tabela com todos os dados)</option>
-                  <option value="assinatura">✍️ Lista de Entrega (Nome, CPF e campo para assinatura)</option>
+                  <option value="completo">Relatório Completo</option>
+                  <option value="assinatura">Lista de Entrega</option>
                 </select>
               </div>
 
               {/* Ordenação */}
-              <div className="md:col-span-2 group">
-                <label htmlFor="ordenacao" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center mr-2 group-hover:bg-pink-200 transition-colors">
-                    <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10M4 18h6" />
-                    </svg>
-                  </div>
+              <div>
+                <label htmlFor="ordenacao" className="block text-sm font-medium text-gray-700 mb-2">
                   Ordenar por
-                  <span className="ml-auto text-xs font-normal text-gray-400">(Opcional)</span>
                 </label>
                 <select
                   id="ordenacao"
                   value={ordenacao}
                   onChange={(e) => setOrdenacao(e.target.value as 'padrao' | 'nome')}
-                  className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-pink-500 focus:ring-4 focus:ring-pink-100 focus:outline-none transition-all duration-300 text-gray-700 hover:border-pink-300 hover:shadow-md bg-white font-medium cursor-pointer"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 >
-                  <option value="padrao">📅 Padrão (Data e Horário)</option>
-                  <option value="nome">🔤 Nome (A-Z)</option>
+                  <option value="padrao">Data e Horário</option>
+                  <option value="nome">Nome (A-Z)</option>
                 </select>
               </div>
             </div>
 
-            {/* Botão de ação modernizado */}
-            <div className="mt-10 pt-8 border-t-2 border-gray-100">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  <p className="font-semibold flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            {/* Botão de ação */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full md:w-auto px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Dica: Deixe os campos vazios para buscar todos
-                  </p>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="group relative w-full md:w-auto inline-flex items-center justify-center px-10 py-4 border-2 border-transparent text-base font-bold rounded-2xl shadow-xl text-white bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 hover:shadow-2xl active:scale-95 overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  {loading ? (
-                    <>
-                      <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                      <span className="relative z-10">
-                        {tipoRelatorio === 'assinatura' ? 'Gerando lista de entrega...' : 'Gerando relatório...'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="relative z-10">
-                        {tipoRelatorio === 'assinatura' ? '✍️ Gerar Lista de Entrega PDF' : '📊 Gerar Relatório PDF'}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
+                    {tipoRelatorio === 'assinatura' ? 'Gerando lista...' : 'Gerando relatório...'}
+                  </span>
+                ) : (
+                  <span>{tipoRelatorio === 'assinatura' ? 'Gerar Lista de Entrega' : 'Gerar Relatório'}</span>
+                )}
+              </button>
             </div>
           </form>
         </div>
 
-        {/* Informações adicionais */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-bold text-blue-900 text-sm">Relatório Completo</h3>
-                <p className="text-xs text-blue-700 mt-1">Tabela detalhada com todas as informações dos atendimentos</p>
+        {/* Filtros de Status (Chips) */}
+        {atendimentosFiltrados.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg mb-6">
+            <div className="px-6 py-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Filtrar por Status</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setStatus('')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === ''
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Todos
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.total || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('confirmado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === 'confirmado'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Confirmado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.confirmado || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('concluido')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === 'concluido'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Concluído
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.concluido || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('cancelado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === 'cancelado'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Cancelado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.cancelado || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('ausente')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === 'ausente'
+                      ? 'bg-yellow-600 text-white border-yellow-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Ausente
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.ausente || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('bloqueado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                    status === 'bloqueado'
+                      ? 'bg-gray-600 text-white border-gray-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Bloqueado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.bloqueado || 0}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 border-2 border-purple-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-bold text-purple-900 text-sm">Lista de Entrega</h3>
-                <p className="text-xs text-purple-700 mt-1">Formato otimizado para coletar assinaturas físicas</p>
-              </div>
+        {/* Tabela de Atendimentos */}
+        {atendimentosFiltrados.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Atendimentos
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({atendimentosFiltrados.filter(a => !status || a.status === status).length} registros)
+                </span>
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Protocolo
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      CPF
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data/Hora
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {atendimentosFiltrados
+                    .filter(atendimento => !status || atendimento.status === status)
+                    .map((atendimento) => (
+                      <tr key={atendimento.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {atendimento.protocolo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {atendimento.nome}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {formatDate(atendimento.dia_atual)} {formatTime(atendimento.horario)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
+                            atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
+                            atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
+                            atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                            atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
+                            atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </div>
           </div>
-
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-5 border-2 border-emerald-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-bold text-emerald-900 text-sm">Filtros Avançados</h3>
-                <p className="text-xs text-emerald-700 mt-1">Combine múltiplos filtros para resultados precisos</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
