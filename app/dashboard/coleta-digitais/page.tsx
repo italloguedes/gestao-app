@@ -110,13 +110,23 @@ export default function ColetaDigitaisPage() {
         `)
         .eq('dia_atual', hoje)
         .eq('fotos_coletadas', false)
+        .eq('status', 'em_atendimento')
         .order('horario', { ascending: true });
 
       if (error) throw error;
 
+      // Excluir atendimentos que já foram chamados (mas não coletados ou ausentes)
+      const { data: chamadas } = await supabase
+        .from('chamada_digitais')
+        .select('atendimento_id')
+        .in('status', ['chamado', 'coletando']);
+
+      const idsJaChamados = new Set(chamadas?.map(c => c.atendimento_id) || []);
+      const atendimentosDisponiveis = (data || []).filter(a => !idsJaChamados.has(a.id));
+
       // Buscar informação de preferencial dos agendamentos
       const atendimentosComPreferencial = await Promise.all(
-        (data || []).map(async (atendimento) => {
+        atendimentosDisponiveis.map(async (atendimento) => {
           const { data: agendamento } = await supabase
             .from('agendamentos')
             .select('atendimento_preferencial')
@@ -175,13 +185,63 @@ export default function ColetaDigitaisPage() {
   };
 
   const chamarProximo = async () => {
-    if (fila.length === 0) {
-      alert('Não há pessoas na fila para coleta de digitais');
-      return;
-    }
+    try {
+      setProcessando(true);
 
-    const proximo = fila[0];
-    await chamarPessoa(proximo);
+      // Buscar dados do atendente
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (!userData) {
+        alert('Erro ao identificar atendente');
+        return;
+      }
+
+      // Chamar RPC function que atomicamente seleciona próximo e cria registro
+      const { data, error } = await supabase.rpc('get_proximo_atendimento_digitais', {
+        p_atendente_id: user.id,
+        p_atendente_nome: userData.name
+      });
+
+      if (error) {
+        console.error('Erro ao chamar RPC:', error);
+        throw error;
+      }
+
+      // Se não há ninguém na fila
+      if (!data || data.length === 0) {
+        alert('Não há pessoas na fila para coleta de digitais');
+        return;
+      }
+
+      const resultado = data[0];
+
+      // Criar objeto de chamada para o modal
+      const chamada: ChamadaDigital = {
+        id: resultado.chamada_id,
+        atendimento_id: resultado.atendimento_id,
+        nome: resultado.nome,
+        cpf: resultado.cpf,
+        status: 'chamado',
+        data_hora_chamada: new Date().toISOString(),
+        preferencial: resultado.preferencial
+      };
+
+      setChamadaAtual(chamada);
+      setShowModal(true);
+
+      // Recarregar fila para remover pessoa chamada
+      await loadFila();
+
+    } catch (error) {
+      console.error('Erro ao chamar próxima pessoa:', error);
+      alert('Erro ao chamar próxima pessoa. Tente novamente.');
+    } finally {
+      setProcessando(false);
+    }
   };
 
   const chamarPessoa = async (atendimento: AtendimentoFila) => {
@@ -195,25 +255,47 @@ export default function ColetaDigitaisPage() {
         .eq('auth_id', user.id)
         .single();
 
-      // Criar chamada
-      const { data: chamada, error } = await supabase
-        .from('chamada_digitais')
-        .insert({
-          atendimento_id: atendimento.id,
-          nome: atendimento.nome,
-          cpf: atendimento.cpf,
-          status: 'chamado',
-          atendente_id: user.id,
-          atendente_nome: userData?.name || 'Não identificado',
-          preferencial: atendimento.atendimento_preferencial || false
-        })
-        .select()
-        .single();
+      if (!userData) {
+        alert('Erro ao identificar atendente');
+        return;
+      }
 
-      if (error) throw error;
+      // Usar RPC function para garantir atomicidade
+      const { data, error } = await supabase.rpc('get_proximo_atendimento_digitais', {
+        p_atendente_id: user.id,
+        p_atendente_nome: userData.name
+      });
+
+      if (error) {
+        console.error('Erro ao chamar RPC:', error);
+        throw error;
+      }
+
+      // Verificar se a pessoa ainda está disponível
+      if (!data || data.length === 0) {
+        alert('Esta pessoa já foi chamada por outro atendente. Por favor, chame a próxima.');
+        await loadFila();
+        return;
+      }
+
+      const resultado = data[0];
+
+      // Criar objeto de chamada para o modal
+      const chamada: ChamadaDigital = {
+        id: resultado.chamada_id,
+        atendimento_id: resultado.atendimento_id,
+        nome: resultado.nome,
+        cpf: resultado.cpf,
+        status: 'chamado',
+        data_hora_chamada: new Date().toISOString(),
+        preferencial: resultado.preferencial
+      };
 
       setChamadaAtual(chamada);
       setShowModal(true);
+
+      // Recarregar fila
+      await loadFila();
 
     } catch (error) {
       console.error('Erro ao chamar pessoa:', error);
