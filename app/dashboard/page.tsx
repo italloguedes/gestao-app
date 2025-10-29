@@ -1100,13 +1100,6 @@ export default function DashboardPage() {
                 }>
                   Gestão de Agendamentos
                 </QuickAction>
-                <QuickAction href="/admin/chamadas" color="border-orange-500 text-orange-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
-                  </svg>
-                }>
-                  Gerenciar Chamadas
-                </QuickAction>
                 <button
                   ref={entregarCinButtonRef}
                   onClick={() => setShowEntregarCinModal(true)}
