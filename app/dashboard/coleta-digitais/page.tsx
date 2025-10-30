@@ -137,6 +137,7 @@ export default function ColetaDigitaisPage() {
           nome,
           cpf,
           email,
+          protocolo,
           dia_atual,
           horario,
           status,
@@ -156,7 +157,7 @@ export default function ColetaDigitaisPage() {
         cpf: atendimento.cpf,
         email: atendimento.email || '',
         telefone: '',  // Tabela atendimentos não tem telefone
-        protocolo: `ATD-${atendimento.id}`,
+        protocolo: atendimento.protocolo || '',
         dia_atual: atendimento.dia_atual,
         horario: atendimento.horario,
         status: atendimento.status,
@@ -241,7 +242,7 @@ export default function ColetaDigitaisPage() {
         agendamento_id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
-        protocolo: atendimento.protocolo || `ATD-${atendimento.id}`,
+        protocolo: atendimento.protocolo || '',
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
         preferencial: false,  // Tabela atendimentos não tem preferencial

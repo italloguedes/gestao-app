@@ -41,7 +41,6 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
           setProtocolo(parsedData.protocolo || '');
           setHasSavedData(true);
         } catch (error) {
-          console.error('Erro ao carregar dados salvos:', error);
         }
       } else {
         setHasSavedData(false);
@@ -196,10 +195,6 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
         .eq('auth_id', user.id)
         .single();
 
-      if (userError) {
-        console.error('Erro ao buscar dados do atendente:', userError);
-      }
-
       // Dados que serão inseridos
       const atendimentoData = {
         nome,
@@ -214,26 +209,14 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
         status: 'em_andamento',
       };
 
-      console.log('🔵 NovoAtendimentoModal - Tentando inserir atendimento:', atendimentoData);
-      console.log('🔵 Formato da data dia_atual:', typeof diaAtual, diaAtual);
-
       const { error } = await supabase.from('atendimentos').insert([atendimentoData]);
 
       if (error) {
-        console.error('❌ ERRO DETALHADO ao inserir atendimento:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          data_inserted: atendimentoData
-        });
         setMessage('Erro ao cadastrar atendimento: ' + error.message);
         setMessageType('error');
         setLoading(false);
         return;
       }
-
-      console.log('✅ Atendimento inserido com sucesso!');
 
       try {
         // Obter token de autenticação
