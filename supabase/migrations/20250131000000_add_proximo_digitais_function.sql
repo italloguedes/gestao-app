@@ -28,11 +28,11 @@ BEGIN
     a.id,
     a.nome,
     a.cpf,
-    a.preferencial,
+    a.email,
     a.fotos_coletadas
   INTO v_atendimento
   FROM atendimentos a
-  WHERE a.dia_atual = CURRENT_DATE
+  WHERE a.dia_atual = to_char(CURRENT_DATE, 'DD/MM/YYYY')  -- Formato brasileiro
     AND a.status = 'em_andamento'
     AND a.fotos_coletadas = false
     AND NOT EXISTS (
@@ -43,8 +43,7 @@ BEGIN
         AND cd.status IN ('chamado', 'coletando')
     )
   ORDER BY
-    a.preferencial DESC NULLS LAST,  -- Preferential first
-    a.horario ASC                     -- Then by service time
+    a.horario ASC  -- Order by service time
   LIMIT 1
   FOR UPDATE SKIP LOCKED;  -- Critical: atomic lock to prevent race conditions
 
@@ -72,7 +71,7 @@ BEGIN
     'chamado',
     p_atendente_id,
     p_atendente_nome,
-    COALESCE(v_atendimento.preferencial, false),
+    false,  -- Tabela atendimentos não tem preferencial
     NOW()
   )
   RETURNING

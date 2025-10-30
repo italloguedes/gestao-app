@@ -150,16 +150,15 @@ export default function ColetaDigitaisPage() {
           id,
           nome,
           cpf,
+          email,
           dia_atual,
           horario,
           status,
-          fotos_coletadas,
-          preferencial
+          fotos_coletadas
         `)
         .eq('dia_atual', hoje)
         .eq('status', 'em_andamento')  // Status correto quando atendimento é criado
         .eq('fotos_coletadas', false)
-        .order('preferencial', { ascending: false, nullsFirst: false })
         .order('horario', { ascending: true });
 
       console.log('📊 LoadFila - Resultado da query:', {
@@ -175,14 +174,14 @@ export default function ColetaDigitaisPage() {
         id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
-        email: '',  // Tabela atendimentos não tem email
+        email: atendimento.email || '',
         telefone: '',  // Tabela atendimentos não tem telefone
         protocolo: `ATD-${atendimento.id}`,
         dia_atual: atendimento.dia_atual,
         horario: atendimento.horario,
         status: atendimento.status,
         fotos_coletadas: atendimento.fotos_coletadas || false,
-        atendimento_preferencial: atendimento.preferencial || false
+        atendimento_preferencial: false  // Tabela atendimentos não tem preferencial
       }));
 
       console.log('✅ LoadFila - Fila mapeada:', atendimentosMapeados.length, 'pessoas');
@@ -279,7 +278,7 @@ export default function ColetaDigitaisPage() {
         cpf: atendimento.cpf,
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
-        preferencial: atendimento.atendimento_preferencial || false,
+        preferencial: false,  // Tabela atendimentos não tem preferencial
         atendente_id: user?.id || '',
         atendente_nome: 'Atendente'
       };
