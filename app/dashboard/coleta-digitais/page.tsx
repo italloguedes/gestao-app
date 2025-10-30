@@ -26,6 +26,7 @@ interface ChamadaDigital {
   agendamento_id: number;
   nome: string;
   cpf: string;
+  protocolo: string;
   status: string;
   data_hora_chamada: string;
   preferencial: boolean;
@@ -50,9 +51,6 @@ export default function ColetaDigitaisPage() {
     preferenciaisPendentes: 0,
     coletadosHoje: 0
   });
-
-  // Debug info
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -82,7 +80,6 @@ export default function ColetaDigitaisPage() {
           filter: 'fotos_coletadas=eq.false' // Apenas atendimentos pendentes
         },
         (payload) => {
-          console.log('Mudança detectada em atendimentos:', payload);
           // Recarregar fila quando houver mudanças
           loadFila();
           loadStats();
@@ -122,7 +119,6 @@ export default function ColetaDigitaisPage() {
       await loadFila();
       await loadStats();
     } catch (error) {
-      console.error('Erro ao verificar autenticação:', error);
       router.push('/');
     }
   };
@@ -131,16 +127,6 @@ export default function ColetaDigitaisPage() {
     try {
       // Formato ISO para match com o banco: YYYY-MM-DD
       const hoje = new Date().toISOString().split('T')[0];
-
-      console.log('🔍 LoadFila - Buscando atendimentos para hoje:', hoje);
-
-      // DEBUG: Buscar TODOS atendimentos de hoje (sem filtros)
-      const { data: todosAtendimentos } = await supabase
-        .from('atendimentos')
-        .select('id, nome, status, fotos_coletadas, dia_atual')
-        .eq('dia_atual', hoje);
-
-      console.log('🔎 DEBUG - TODOS os atendimentos de hoje:', todosAtendimentos);
 
       // Buscar atendimentos pendentes de coleta
       // Exclui quem está com status 'chamando' (já sendo atendido por outro atendente)
@@ -161,12 +147,6 @@ export default function ColetaDigitaisPage() {
         .eq('fotos_coletadas', false)
         .order('horario', { ascending: true });
 
-      console.log('📊 LoadFila - Resultado da query:', {
-        total: data?.length || 0,
-        error: error?.message,
-        data: data
-      });
-
       if (error) throw error;
 
       // Mapear para o formato esperado pela interface
@@ -184,21 +164,8 @@ export default function ColetaDigitaisPage() {
         atendimento_preferencial: false  // Tabela atendimentos não tem preferencial
       }));
 
-      console.log('✅ LoadFila - Fila mapeada:', atendimentosMapeados.length, 'pessoas');
-
-      // Salvar info de debug
-      setDebugInfo({
-        hoje,
-        totalTodos: todosAtendimentos?.length || 0,
-        todosAtendimentos: todosAtendimentos,
-        totalFiltrados: data?.length || 0,
-        atendimentosFiltrados: data,
-        filaFinal: atendimentosMapeados.length
-      });
-
       setFila(atendimentosMapeados);
     } catch (error) {
-      console.error('❌ Erro ao carregar fila:', error);
     } finally {
       setLoading(false);
     }
@@ -230,7 +197,6 @@ export default function ColetaDigitaisPage() {
         coletadosHoje: coletados || 0
       });
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
     }
   };
 
@@ -247,7 +213,6 @@ export default function ColetaDigitaisPage() {
       await chamarPessoa(proximo);
 
     } catch (error: any) {
-      console.error('Erro ao chamar pessoa:', error);
       alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
@@ -276,6 +241,7 @@ export default function ColetaDigitaisPage() {
         agendamento_id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
+        protocolo: atendimento.protocolo || `ATD-${atendimento.id}`,
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
         preferencial: false,  // Tabela atendimentos não tem preferencial
@@ -291,7 +257,6 @@ export default function ColetaDigitaisPage() {
       await loadStats();
 
     } catch (error: any) {
-      console.error('Erro ao chamar pessoa:', error);
       alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
@@ -314,7 +279,6 @@ export default function ColetaDigitaisPage() {
         .eq('id', chamadaAtual.atendimento_id);
 
       if (atendimentoError) {
-        console.error('Erro ao atualizar atendimento:', atendimentoError);
         throw atendimentoError;
       }
 
@@ -326,7 +290,6 @@ export default function ColetaDigitaisPage() {
       await loadStats();
 
     } catch (error: any) {
-      console.error('Erro ao marcar como coletado:', error);
       alert('Erro ao marcar como coletado: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
@@ -349,7 +312,6 @@ export default function ColetaDigitaisPage() {
         .eq('id', chamadaAtual.atendimento_id);
 
       if (atendimentoError) {
-        console.error('Erro ao atualizar atendimento:', atendimentoError);
         throw atendimentoError;
       }
 
@@ -360,7 +322,6 @@ export default function ColetaDigitaisPage() {
       await loadStats();
 
     } catch (error: any) {
-      console.error('Erro ao marcar como ausente:', error);
       alert('Erro ao marcar como ausente: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
@@ -385,66 +346,6 @@ export default function ColetaDigitaisPage() {
             Gerencie a fila de coleta com prioridade para atendimentos preferenciais
           </p>
         </div>
-
-        {/* Painel de Debug */}
-        {debugInfo && (
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-6">
-            <h3 className="font-bold text-yellow-900 mb-2">🔍 DEBUG - Informações da Fila</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="font-semibold text-yellow-800">Data:</span>
-                <p className="text-yellow-900">{debugInfo.hoje}</p>
-              </div>
-              <div>
-                <span className="font-semibold text-yellow-800">Total Atendimentos Hoje:</span>
-                <p className="text-yellow-900 font-mono text-lg">{debugInfo.totalTodos}</p>
-              </div>
-              <div>
-                <span className="font-semibold text-yellow-800">Após Filtros:</span>
-                <p className="text-yellow-900 font-mono text-lg">{debugInfo.totalFiltrados}</p>
-              </div>
-              <div>
-                <span className="font-semibold text-yellow-800">Fila Final:</span>
-                <p className="text-yellow-900 font-mono text-lg">{debugInfo.filaFinal}</p>
-              </div>
-            </div>
-            {debugInfo.todosAtendimentos && debugInfo.todosAtendimentos.length > 0 && (
-              <details className="mt-3">
-                <summary className="cursor-pointer font-semibold text-yellow-800">Ver Detalhes dos Atendimentos</summary>
-                <div className="mt-2 max-h-40 overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left">
-                        <th className="p-1">ID</th>
-                        <th className="p-1">Nome</th>
-                        <th className="p-1">Status</th>
-                        <th className="p-1">Fotos Coletadas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {debugInfo.todosAtendimentos.map((at: any) => (
-                        <tr key={at.id} className="border-t border-yellow-200">
-                          <td className="p-1">{at.id}</td>
-                          <td className="p-1">{at.nome}</td>
-                          <td className="p-1">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              at.status === 'em_andamento' ? 'bg-green-200 text-green-800' :
-                              at.status === 'chamando' ? 'bg-blue-200 text-blue-800' :
-                              'bg-gray-200 text-gray-800'
-                            }`}>
-                              {at.status}
-                            </span>
-                          </td>
-                          <td className="p-1">{at.fotos_coletadas ? '✅ Sim' : '❌ Não'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
-          </div>
-        )}
 
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -632,6 +533,12 @@ export default function ColetaDigitaisPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                   </svg>
                   <span className="text-sm font-mono text-gray-700">{chamadaAtual.cpf}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                  </svg>
+                  <span className="text-sm font-mono text-gray-700">{chamadaAtual.protocolo}</span>
                 </div>
               </div>
             </div>

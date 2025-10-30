@@ -1,6 +1,9 @@
 -- Fix date format in get_proximo_atendimento_digitais function
 -- Change from DD/MM/YYYY to YYYY-MM-DD to match how dates are stored in dia_atual column
 
+-- Drop existing function first (required when changing return type)
+DROP FUNCTION IF EXISTS get_proximo_atendimento_digitais(uuid, character varying);
+
 CREATE OR REPLACE FUNCTION get_proximo_atendimento_digitais(
   p_atendente_id UUID,
   p_atendente_nome VARCHAR(255)

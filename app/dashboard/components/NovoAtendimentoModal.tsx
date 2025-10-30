@@ -200,27 +200,40 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
         console.error('Erro ao buscar dados do atendente:', userError);
       }
 
-      const { error } = await supabase.from('atendimentos').insert([
-        {
-          nome,
-          cpf: cpfNumbers,
-          email,
-          solicitante,
-          horario,
-          dia_atual: diaAtual,
-          usuario_id: user.id,
-          atendente_nome: userData?.name || 'Não identificado',
-          protocolo,
-          status: 'em_andamento',
-        },
-      ]);
+      // Dados que serão inseridos
+      const atendimentoData = {
+        nome,
+        cpf: cpfNumbers,
+        email,
+        solicitante,
+        horario,
+        dia_atual: diaAtual,
+        usuario_id: user.id,
+        atendente_nome: userData?.name || 'Não identificado',
+        protocolo,
+        status: 'em_andamento',
+      };
+
+      console.log('🔵 NovoAtendimentoModal - Tentando inserir atendimento:', atendimentoData);
+      console.log('🔵 Formato da data dia_atual:', typeof diaAtual, diaAtual);
+
+      const { error } = await supabase.from('atendimentos').insert([atendimentoData]);
 
       if (error) {
+        console.error('❌ ERRO DETALHADO ao inserir atendimento:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          data_inserted: atendimentoData
+        });
         setMessage('Erro ao cadastrar atendimento: ' + error.message);
         setMessageType('error');
         setLoading(false);
         return;
       }
+
+      console.log('✅ Atendimento inserido com sucesso!');
 
       try {
         // Obter token de autenticação
