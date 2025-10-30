@@ -194,6 +194,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           throw updateError;
         }
 
+        // Atualizar estado local no componente pai para mudança instantânea de cor
+        onStatusChange(appointment.id, 'concluido');
+
         // Criar registro na tabela de atendimentos
         const now = new Date();
         const diaAtual = now.toISOString().split('T')[0];
@@ -318,6 +321,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             throw updateError;
           }
 
+          // Atualizar estado local no componente pai para mudança instantânea de cor
+          onStatusChange(appointment.id, 'ausente');
+
           console.log('✅ EditAppointmentModal: Status atualizado para ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
@@ -337,6 +343,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
           throw updateError;
         }
+
+        // Atualizar estado local no componente pai para mudança instantânea de cor
+        onStatusChange(appointment.id, 'concluido');
 
         console.log('✅ EditAppointmentModal: Status atualizado para concluido');
         setMessage('Atendimento concluído com sucesso!');
@@ -364,6 +373,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
             throw updateError;
           }
+
+          // Atualizar estado local no componente pai para mudança instantânea de cor
+          onStatusChange(appointment.id, 'cancelado');
 
           console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
         setMessage('Atendimento cancelado com sucesso!');
