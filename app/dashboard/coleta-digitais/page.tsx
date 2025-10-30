@@ -145,7 +145,7 @@ export default function ColetaDigitaisPage() {
           preferencial
         `)
         .eq('dia_atual', hoje)
-        .eq('status', 'em_atendimento')  // Apenas quem está esperando
+        .eq('status', 'em_andamento')  // Status correto quando atendimento é criado
         .eq('fotos_coletadas', false)
         .order('preferencial', { ascending: false, nullsFirst: false })
         .order('horario', { ascending: true });
@@ -184,7 +184,7 @@ export default function ColetaDigitaisPage() {
         .from('atendimentos')
         .select('*', { count: 'exact', head: true })
         .eq('dia_atual', hoje)
-        .eq('status', 'em_atendimento')
+        .eq('status', 'em_andamento')
         .eq('fotos_coletadas', false);
 
       // Coletados hoje
@@ -233,7 +233,7 @@ export default function ColetaDigitaisPage() {
         .from('atendimentos')
         .update({ status: 'chamando' })
         .eq('id', atendimento.id)
-        .eq('status', 'em_atendimento'); // Só atualiza se ainda estiver esperando
+        .eq('status', 'em_andamento'); // Só atualiza se ainda estiver esperando
 
       if (updateError) {
         throw updateError;
@@ -279,7 +279,7 @@ export default function ColetaDigitaisPage() {
         .from('atendimentos')
         .update({
           fotos_coletadas: true,
-          status: 'em_atendimento'  // Volta para status normal (coleta concluída)
+          status: 'em_andamento'  // Volta para status normal (coleta concluída)
         })
         .eq('id', chamadaAtual.atendimento_id);
 
@@ -309,12 +309,12 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Voltar status para 'em_atendimento' para pessoa poder ser chamada novamente
+      // Voltar status para 'em_andamento' para pessoa poder ser chamada novamente
       // Fotos ainda não foram coletadas (fotos_coletadas permanece false)
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
-          status: 'em_atendimento'  // Volta para fila
+          status: 'em_andamento'  // Volta para fila
         })
         .eq('id', chamadaAtual.atendimento_id);
 

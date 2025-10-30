@@ -33,7 +33,7 @@ BEGIN
   INTO v_atendimento
   FROM atendimentos a
   WHERE a.dia_atual = CURRENT_DATE
-    AND a.status = 'em_atendimento'
+    AND a.status = 'em_andamento'
     AND a.fotos_coletadas = false
     AND NOT EXISTS (
       -- Exclude people already called and not yet completed
