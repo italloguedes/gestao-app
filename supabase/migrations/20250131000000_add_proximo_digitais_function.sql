@@ -18,7 +18,7 @@ RETURNS TABLE (
   data_hora_chamada TIMESTAMPTZ
 ) AS $$
 DECLARE
-  v_agendamento RECORD;
+  v_atendimento RECORD;
   v_chamada_id BIGINT;
 BEGIN
   -- Select next person in queue with row-level lock
@@ -26,37 +26,37 @@ BEGIN
   -- This prevents two attendants from getting the same person
   SELECT
     a.id,
-    a.nome_completo,
+    a.nome,
     a.cpf,
-    a.atendimento_preferencial,
+    a.preferencial,
     a.fotos_coletadas
-  INTO v_agendamento
-  FROM agendamentos a
-  WHERE a.data_agendamento = CURRENT_DATE
-    AND a.status = 'confirmado'
+  INTO v_atendimento
+  FROM atendimentos a
+  WHERE a.dia_atual = CURRENT_DATE
+    AND a.status = 'em_atendimento'
     AND a.fotos_coletadas = false
     AND NOT EXISTS (
       -- Exclude people already called and not yet completed
       SELECT 1
       FROM chamada_digitais cd
-      WHERE cd.agendamento_id = a.id
+      WHERE cd.atendimento_id = a.id
         AND cd.status IN ('chamado', 'coletando')
     )
   ORDER BY
-    a.atendimento_preferencial DESC NULLS LAST,  -- Preferential first
-    a.horario ASC                                 -- Then by scheduled time
+    a.preferencial DESC NULLS LAST,  -- Preferential first
+    a.horario ASC                     -- Then by service time
   LIMIT 1
   FOR UPDATE SKIP LOCKED;  -- Critical: atomic lock to prevent race conditions
 
   -- If no one found in queue, return empty
-  IF v_agendamento IS NULL THEN
+  IF v_atendimento IS NULL THEN
     RETURN;
   END IF;
 
   -- Insert call record atomically in same transaction
   INSERT INTO chamada_digitais (
-    agendamento_id,
     atendimento_id,
+    agendamento_id,
     nome,
     cpf,
     status,
@@ -65,20 +65,20 @@ BEGIN
     preferencial,
     data_hora_chamada
   ) VALUES (
-    v_agendamento.id,
-    v_agendamento.id,  -- Using agendamento_id as atendimento_id for now
-    v_agendamento.nome_completo,
-    v_agendamento.cpf,
+    v_atendimento.id,
+    v_atendimento.id,  -- Using atendimento_id as both (agendamento link can be added later if needed)
+    v_atendimento.nome,
+    v_atendimento.cpf,
     'chamado',
     p_atendente_id,
     p_atendente_nome,
-    COALESCE(v_agendamento.atendimento_preferencial, false),
+    COALESCE(v_atendimento.preferencial, false),
     NOW()
   )
   RETURNING
     id,
-    agendamento_id,
     atendimento_id,
+    agendamento_id,
     nome,
     cpf,
     status,
@@ -88,8 +88,8 @@ BEGIN
     data_hora_chamada
   INTO
     v_chamada_id,
-    agendamento_id,
     atendimento_id,
+    agendamento_id,
     nome,
     cpf,
     status,

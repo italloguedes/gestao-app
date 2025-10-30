@@ -127,23 +127,23 @@ export default function ColetaDigitaisPage() {
     try {
       const hoje = new Date().toISOString().split('T')[0];
 
-      // Buscar agendamentos confirmados de hoje que ainda não tiveram fotos coletadas
+      // Buscar ATENDIMENTOS (não agendamentos!) de hoje que ainda não tiveram fotos coletadas
       const { data, error } = await supabase
-        .from('agendamentos')
+        .from('atendimentos')
         .select(`
           id,
           nome,
           cpf,
           email,
           telefone,
-          data_agendamento,
+          dia_atual,
           horario,
           status,
           fotos_coletadas,
-          atendimento_preferencial
+          preferencial
         `)
-        .eq('data_agendamento', hoje)
-        .eq('status', 'confirmado')
+        .eq('dia_atual', hoje)
+        .eq('status', 'em_atendimento')
         .eq('fotos_coletadas', false)
         .order('horario', { ascending: true });
 
@@ -152,40 +152,40 @@ export default function ColetaDigitaisPage() {
       // Buscar chamadas ativas (pessoas já sendo atendidas)
       const { data: chamadasAtivas, error: chamadasError } = await supabase
         .from('chamada_digitais')
-        .select('agendamento_id, status')
+        .select('atendimento_id, status')
         .in('status', ['chamado', 'coletando']);
 
       if (chamadasError) {
         console.error('Erro ao buscar chamadas ativas:', chamadasError);
       }
 
-      // IDs de agendamentos que já estão sendo atendidos
+      // IDs de atendimentos que já estão sendo chamados
       const idsAtendidos = new Set(
-        (chamadasAtivas || []).map((c: any) => c.agendamento_id)
+        (chamadasAtivas || []).map((c: any) => c.atendimento_id)
       );
 
-      // Filtrar agendamentos que NÃO estão sendo atendidos
-      const agendamentosDisponiveis = (data || []).filter(
-        (agendamento) => !idsAtendidos.has(agendamento.id)
+      // Filtrar atendimentos que NÃO estão sendo chamados
+      const atendimentosDisponiveis = (data || []).filter(
+        (atendimento) => !idsAtendidos.has(atendimento.id)
       );
 
       // Mapear para o formato esperado pela interface
-      const agendamentosMapeados = agendamentosDisponiveis.map((agendamento) => ({
-        id: agendamento.id,
-        nome: agendamento.nome,
-        cpf: agendamento.cpf,
-        email: agendamento.email,
-        telefone: agendamento.telefone,
-        protocolo: `AGD-${agendamento.id}`,
-        dia_atual: agendamento.data_agendamento,
-        horario: agendamento.horario,
-        status: agendamento.status,
-        fotos_coletadas: agendamento.fotos_coletadas || false,
-        atendimento_preferencial: agendamento.atendimento_preferencial || false
+      const atendimentosMapeados = atendimentosDisponiveis.map((atendimento) => ({
+        id: atendimento.id,
+        nome: atendimento.nome,
+        cpf: atendimento.cpf,
+        email: atendimento.email,
+        telefone: atendimento.telefone,
+        protocolo: `ATD-${atendimento.id}`,
+        dia_atual: atendimento.dia_atual,
+        horario: atendimento.horario,
+        status: atendimento.status,
+        fotos_coletadas: atendimento.fotos_coletadas || false,
+        atendimento_preferencial: atendimento.preferencial || false
       }));
 
       // Ordenar: preferenciais primeiro, depois por horário
-      const filaOrdenada = agendamentosMapeados.sort((a, b) => {
+      const filaOrdenada = atendimentosMapeados.sort((a, b) => {
         if (a.atendimento_preferencial && !b.atendimento_preferencial) return -1;
         if (!a.atendimento_preferencial && b.atendimento_preferencial) return 1;
         return a.horario.localeCompare(b.horario);
@@ -203,19 +203,19 @@ export default function ColetaDigitaisPage() {
     try {
       const hoje = new Date().toISOString().split('T')[0];
 
-      // Total pendente
+      // Total pendente (atendimentos em andamento sem fotos)
       const { count: pendente } = await supabase
-        .from('agendamentos')
+        .from('atendimentos')
         .select('*', { count: 'exact', head: true })
-        .eq('data_agendamento', hoje)
-        .eq('status', 'confirmado')
+        .eq('dia_atual', hoje)
+        .eq('status', 'em_atendimento')
         .eq('fotos_coletadas', false);
 
       // Coletados hoje
       const { count: coletados } = await supabase
-        .from('agendamentos')
+        .from('atendimentos')
         .select('*', { count: 'exact', head: true })
-        .eq('data_agendamento', hoje)
+        .eq('dia_atual', hoje)
         .eq('fotos_coletadas', true);
 
       setStats({
@@ -298,7 +298,7 @@ export default function ColetaDigitaisPage() {
       const { data: chamadaExistente, error: checkError } = await supabase
         .from('chamada_digitais')
         .select('id, status, atendente_nome')
-        .eq('agendamento_id', atendimento.id)
+        .eq('atendimento_id', atendimento.id)
         .in('status', ['chamado', 'coletando'])
         .maybeSingle();
 
@@ -400,18 +400,17 @@ export default function ColetaDigitaisPage() {
         throw chamadaError;
       }
 
-      // Atualizar agendamento marcando fotos como coletadas
-      const { error: agendamentoError } = await supabase
-        .from('agendamentos')
+      // Atualizar atendimento marcando fotos como coletadas
+      const { error: atendimentoError } = await supabase
+        .from('atendimentos')
         .update({
-          fotos_coletadas: true,
-          status: 'concluido'
+          fotos_coletadas: true
         })
-        .eq('id', chamadaAtual.agendamento_id);
+        .eq('id', chamadaAtual.atendimento_id);
 
-      if (agendamentoError) {
-        console.error('Erro ao atualizar agendamento:', agendamentoError);
-        throw agendamentoError;
+      if (atendimentoError) {
+        console.error('Erro ao atualizar atendimento:', atendimentoError);
+        throw atendimentoError;
       }
 
       // Fechar modal e recarregar
@@ -449,18 +448,8 @@ export default function ColetaDigitaisPage() {
         throw chamadaError;
       }
 
-      // Marcar agendamento como ausente
-      const { error: agendamentoError } = await supabase
-        .from('agendamentos')
-        .update({
-          status: 'ausente'
-        })
-        .eq('id', chamadaAtual.agendamento_id);
-
-      if (agendamentoError) {
-        console.error('Erro ao atualizar agendamento:', agendamentoError);
-        throw agendamentoError;
-      }
+      // Nota: Não atualizamos o atendimento aqui, apenas a chamada
+      // O atendimento permanece com fotos_coletadas=false para nova tentativa
 
       setShowModal(false);
       setChamadaAtual(null);
