@@ -1,5 +1,5 @@
--- Create function to get next person in digital collection queue with row-level locking
--- This prevents race conditions when multiple attendants call at the same time
+-- Fix date format in get_proximo_atendimento_digitais function
+-- Change from DD/MM/YYYY to YYYY-MM-DD to match how dates are stored in dia_atual column
 
 CREATE OR REPLACE FUNCTION get_proximo_atendimento_digitais(
   p_atendente_id UUID,
@@ -106,4 +106,4 @@ $$ LANGUAGE plpgsql;
 
 -- Add comment for documentation
 COMMENT ON FUNCTION get_proximo_atendimento_digitais IS
-'Atomically gets the next person from the digital collection queue and creates a call record. Uses FOR UPDATE SKIP LOCKED to prevent race conditions when multiple attendants call simultaneously.';
+'Atomically gets the next person from the digital collection queue and creates a call record. Uses FOR UPDATE SKIP LOCKED to prevent race conditions when multiple attendants call simultaneously. Date format fixed to YYYY-MM-DD to match stored format.';

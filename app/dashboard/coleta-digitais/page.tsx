@@ -129,8 +129,8 @@ export default function ColetaDigitaisPage() {
 
   const loadFila = async () => {
     try {
-      // Formato brasileiro: DD/MM/YYYY
-      const hoje = new Date().toLocaleDateString('pt-BR');
+      // Formato ISO para match com o banco: YYYY-MM-DD
+      const hoje = new Date().toISOString().split('T')[0];
 
       console.log('🔍 LoadFila - Buscando atendimentos para hoje:', hoje);
 
@@ -206,8 +206,8 @@ export default function ColetaDigitaisPage() {
 
   const loadStats = async () => {
     try {
-      // Formato brasileiro: DD/MM/YYYY
-      const hoje = new Date().toLocaleDateString('pt-BR');
+      // Formato ISO para match com o banco: YYYY-MM-DD
+      const hoje = new Date().toISOString().split('T')[0];
 
       // Total pendente (atendimentos em andamento sem fotos)
       const { count: pendente } = await supabase
