@@ -66,19 +66,20 @@ export default function ColetaDigitaisPage() {
   }, []);
 
   useEffect(() => {
-    // Configurar sincronização em tempo real para chamadas
+    // Configurar sincronização em tempo real para atendimentos
     // Quando qualquer atendente chama alguém, todos veem a atualização
     const channel = supabase
-      .channel('chamada_digitais_changes')
+      .channel('atendimentos_changes')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escutar INSERT, UPDATE, DELETE
+          event: 'UPDATE', // Escutar apenas UPDATEs
           schema: 'public',
-          table: 'chamada_digitais'
+          table: 'atendimentos',
+          filter: 'fotos_coletadas=eq.false' // Apenas atendimentos pendentes
         },
         (payload) => {
-          console.log('Mudança detectada em chamada_digitais:', payload);
+          console.log('Mudança detectada em atendimentos:', payload);
           // Recarregar fila quando houver mudanças
           loadFila();
           loadStats();
@@ -127,7 +128,8 @@ export default function ColetaDigitaisPage() {
     try {
       const hoje = new Date().toISOString().split('T')[0];
 
-      // Buscar ATENDIMENTOS (não agendamentos!) de hoje que ainda não tiveram fotos coletadas
+      // Buscar atendimentos pendentes de coleta
+      // Exclui quem está com status 'chamando' (já sendo atendido por outro atendente)
       const { data, error } = await supabase
         .from('atendimentos')
         .select(`
@@ -143,34 +145,15 @@ export default function ColetaDigitaisPage() {
           preferencial
         `)
         .eq('dia_atual', hoje)
-        .eq('status', 'em_atendimento')
+        .eq('status', 'em_atendimento')  // Apenas quem está esperando
         .eq('fotos_coletadas', false)
+        .order('preferencial', { ascending: false, nullsFirst: false })
         .order('horario', { ascending: true });
 
       if (error) throw error;
 
-      // Buscar chamadas ativas (pessoas já sendo atendidas)
-      const { data: chamadasAtivas, error: chamadasError } = await supabase
-        .from('chamada_digitais')
-        .select('atendimento_id, status')
-        .in('status', ['chamado', 'coletando']);
-
-      if (chamadasError) {
-        console.error('Erro ao buscar chamadas ativas:', chamadasError);
-      }
-
-      // IDs de atendimentos que já estão sendo chamados
-      const idsAtendidos = new Set(
-        (chamadasAtivas || []).map((c: any) => c.atendimento_id)
-      );
-
-      // Filtrar atendimentos que NÃO estão sendo chamados
-      const atendimentosDisponiveis = (data || []).filter(
-        (atendimento) => !idsAtendidos.has(atendimento.id)
-      );
-
       // Mapear para o formato esperado pela interface
-      const atendimentosMapeados = atendimentosDisponiveis.map((atendimento) => ({
+      const atendimentosMapeados = (data || []).map((atendimento) => ({
         id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
@@ -184,14 +167,7 @@ export default function ColetaDigitaisPage() {
         atendimento_preferencial: atendimento.preferencial || false
       }));
 
-      // Ordenar: preferenciais primeiro, depois por horário
-      const filaOrdenada = atendimentosMapeados.sort((a, b) => {
-        if (a.atendimento_preferencial && !b.atendimento_preferencial) return -1;
-        if (!a.atendimento_preferencial && b.atendimento_preferencial) return 1;
-        return a.horario.localeCompare(b.horario);
-      });
-
-      setFila(filaOrdenada);
+      setFila(atendimentosMapeados);
     } catch (error) {
       console.error('Erro ao carregar fila:', error);
     } finally {
@@ -232,59 +208,17 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Buscar dados do atendente
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('Erro ao buscar dados do atendente');
-      }
-
-      // Chamar função RPC que usa locking atômico
-      // Essa função previne race conditions usando FOR UPDATE SKIP LOCKED
-      const { data, error } = await supabase.rpc('get_proximo_atendimento_digitais', {
-        p_atendente_id: user.id,
-        p_atendente_nome: userData.name
-      });
-
-      if (error) {
-        console.error('Erro RPC:', error);
-        throw new Error(error.message || 'Erro ao chamar próxima pessoa');
-      }
-
-      // Se não há ninguém na fila, retorna vazio
-      if (!data || data.length === 0) {
+      if (fila.length === 0) {
         alert('Não há pessoas na fila para coleta de digitais');
         return;
       }
 
-      // Pega o primeiro (e único) resultado
-      const proximaPessoa = data[0];
-
-      // Atualizar chamada atual com os dados retornados pela RPC
-      setChamadaAtual(proximaPessoa);
-      setShowModal(true);
-
-      // Recarregar fila para refletir a mudança
-      await loadFila();
-      await loadStats();
+      const proximo = fila[0];
+      await chamarPessoa(proximo);
 
     } catch (error: any) {
       console.error('Erro ao chamar pessoa:', error);
-
-      // Mensagens de erro mais específicas
-      if (error.message?.includes('already exists')) {
-        alert('Esta pessoa já foi chamada por outro atendente. Tente novamente.');
-      } else if (error.message?.includes('violates unique constraint')) {
-        alert('Esta pessoa já está sendo atendida. Chamando próxima pessoa...');
-        // Recarregar e tentar novamente
-        await loadFila();
-      } else {
-        alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
-      }
+      alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
     }
@@ -294,80 +228,35 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Verificar se pessoa já está sendo chamada/atendida
-      const { data: chamadaExistente, error: checkError } = await supabase
-        .from('chamada_digitais')
-        .select('id, status, atendente_nome')
-        .eq('atendimento_id', atendimento.id)
-        .in('status', ['chamado', 'coletando'])
-        .maybeSingle();
+      // Mudar status para 'chamando' para evitar que outro atendente chame a mesma pessoa
+      const { error: updateError } = await supabase
+        .from('atendimentos')
+        .update({ status: 'chamando' })
+        .eq('id', atendimento.id)
+        .eq('status', 'em_atendimento'); // Só atualiza se ainda estiver esperando
 
-      if (checkError) {
-        console.error('Erro ao verificar chamada:', checkError);
+      if (updateError) {
+        throw updateError;
       }
 
-      if (chamadaExistente) {
-        alert(`Esta pessoa já está sendo atendida por ${chamadaExistente.atendente_nome}`);
-        await loadFila();
-        return;
-      }
-
-      // Buscar dados do atendente
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('Erro ao buscar dados do atendente');
-      }
-
-      // Criar chamada no banco
-      const { data: chamada, error: insertError } = await supabase
-        .from('chamada_digitais')
-        .insert({
-          atendimento_id: atendimento.id,
-          agendamento_id: atendimento.id,
-          nome: atendimento.nome,
-          cpf: atendimento.cpf,
-          status: 'chamado',
-          atendente_id: user.id,
-          atendente_nome: userData.name,
-          preferencial: atendimento.atendimento_preferencial || false,
-          data_hora_chamada: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        // Se violou constraint de unicidade, outra pessoa já chamou
-        if (insertError.code === '23505') {
-          alert('Esta pessoa já foi chamada por outro atendente. Tente novamente.');
-          await loadFila();
-          return;
-        }
-        throw insertError;
-      }
-
-      // Mapear para o formato esperado
+      // Criar objeto da chamada para o modal
       const chamadaFormatada: ChamadaDigital = {
-        chamada_id: chamada.id,
-        atendimento_id: chamada.atendimento_id,
-        agendamento_id: chamada.agendamento_id,
-        nome: chamada.nome,
-        cpf: chamada.cpf,
-        status: chamada.status,
-        data_hora_chamada: chamada.data_hora_chamada,
-        preferencial: chamada.preferencial,
-        atendente_id: chamada.atendente_id,
-        atendente_nome: chamada.atendente_nome
+        chamada_id: atendimento.id,
+        atendimento_id: atendimento.id,
+        agendamento_id: atendimento.id,
+        nome: atendimento.nome,
+        cpf: atendimento.cpf,
+        status: 'chamando',
+        data_hora_chamada: new Date().toISOString(),
+        preferencial: atendimento.atendimento_preferencial || false,
+        atendente_id: user?.id || '',
+        atendente_nome: 'Atendente'
       };
 
       setChamadaAtual(chamadaFormatada);
       setShowModal(true);
 
-      // Recarregar fila
+      // Recarregar fila (atendimento não aparece mais pois está com status 'chamando')
       await loadFila();
       await loadStats();
 
@@ -385,26 +274,12 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Atualizar status da chamada para 'coletado'
-      const { error: chamadaError } = await supabase
-        .from('chamada_digitais')
-        .update({
-          status: 'coletado',
-          data_hora_coleta: new Date().toISOString(),
-          observacoes: observacao || null
-        })
-        .eq('id', chamadaAtual.chamada_id);
-
-      if (chamadaError) {
-        console.error('Erro ao atualizar chamada:', chamadaError);
-        throw chamadaError;
-      }
-
-      // Atualizar atendimento marcando fotos como coletadas
+      // Atualizar atendimento: fotos coletadas e voltar status
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
-          fotos_coletadas: true
+          fotos_coletadas: true,
+          status: 'em_atendimento'  // Volta para status normal (coleta concluída)
         })
         .eq('id', chamadaAtual.atendimento_id);
 
@@ -434,22 +309,19 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Atualizar status da chamada para 'ausente'
-      const { error: chamadaError } = await supabase
-        .from('chamada_digitais')
+      // Voltar status para 'em_atendimento' para pessoa poder ser chamada novamente
+      // Fotos ainda não foram coletadas (fotos_coletadas permanece false)
+      const { error: atendimentoError } = await supabase
+        .from('atendimentos')
         .update({
-          status: 'ausente',
-          observacoes: observacao || null
+          status: 'em_atendimento'  // Volta para fila
         })
-        .eq('id', chamadaAtual.chamada_id);
+        .eq('id', chamadaAtual.atendimento_id);
 
-      if (chamadaError) {
-        console.error('Erro ao atualizar chamada:', chamadaError);
-        throw chamadaError;
+      if (atendimentoError) {
+        console.error('Erro ao atualizar atendimento:', atendimentoError);
+        throw atendimentoError;
       }
-
-      // Nota: Não atualizamos o atendimento aqui, apenas a chamada
-      // O atendimento permanece com fotos_coletadas=false para nova tentativa
 
       setShowModal(false);
       setChamadaAtual(null);
