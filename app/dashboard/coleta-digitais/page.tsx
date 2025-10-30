@@ -11,7 +11,8 @@ interface AtendimentoFila {
   nome: string;
   cpf: string;
   email: string;
-  protocolo: string;
+  protocolo?: string;
+  telefone?: string;
   dia_atual: string;
   horario: string;
   status: string;
@@ -20,13 +21,16 @@ interface AtendimentoFila {
 }
 
 interface ChamadaDigital {
-  id: number;
+  chamada_id: number;
   atendimento_id: number;
+  agendamento_id: number;
   nome: string;
   cpf: string;
   status: string;
   data_hora_chamada: string;
   preferencial: boolean;
+  atendente_id: string;
+  atendente_nome: string;
 }
 
 export default function ColetaDigitaisPage() {
@@ -52,12 +56,40 @@ export default function ColetaDigitaisPage() {
   }, []);
 
   useEffect(() => {
-    // Auto-refresh a cada 10 segundos
+    // Auto-refresh a cada 3 segundos (reduzido de 10s para melhor responsividade)
     const interval = setInterval(() => {
       loadFila();
-    }, 10000);
+      loadStats();
+    }, 3000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Configurar sincronização em tempo real para chamadas
+    // Quando qualquer atendente chama alguém, todos veem a atualização
+    const channel = supabase
+      .channel('chamada_digitais_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escutar INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'chamada_digitais'
+        },
+        (payload) => {
+          console.log('Mudança detectada em chamada_digitais:', payload);
+          // Recarregar fila quando houver mudanças
+          loadFila();
+          loadStats();
+        }
+      )
+      .subscribe();
+
+    // Limpar ao desmontar
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAuthAndLoad = async () => {
@@ -95,44 +127,65 @@ export default function ColetaDigitaisPage() {
     try {
       const hoje = new Date().toISOString().split('T')[0];
 
+      // Buscar agendamentos confirmados de hoje que ainda não tiveram fotos coletadas
       const { data, error } = await supabase
-        .from('atendimentos')
+        .from('agendamentos')
         .select(`
           id,
           nome,
           cpf,
           email,
-          protocolo,
-          dia_atual,
+          telefone,
+          data_agendamento,
           horario,
           status,
-          fotos_coletadas
+          fotos_coletadas,
+          atendimento_preferencial
         `)
-        .eq('dia_atual', hoje)
+        .eq('data_agendamento', hoje)
+        .eq('status', 'confirmado')
         .eq('fotos_coletadas', false)
         .order('horario', { ascending: true });
 
       if (error) throw error;
 
-      // Buscar informação de preferencial dos agendamentos
-      const atendimentosComPreferencial = await Promise.all(
-        (data || []).map(async (atendimento) => {
-          const { data: agendamento } = await supabase
-            .from('agendamentos')
-            .select('atendimento_preferencial')
-            .eq('cpf', atendimento.cpf)
-            .eq('data_agendamento', hoje)
-            .single();
+      // Buscar chamadas ativas (pessoas já sendo atendidas)
+      const { data: chamadasAtivas, error: chamadasError } = await supabase
+        .from('chamada_digitais')
+        .select('agendamento_id, status')
+        .in('status', ['chamado', 'coletando']);
 
-          return {
-            ...atendimento,
-            atendimento_preferencial: agendamento?.atendimento_preferencial || false
-          };
-        })
+      if (chamadasError) {
+        console.error('Erro ao buscar chamadas ativas:', chamadasError);
+      }
+
+      // IDs de agendamentos que já estão sendo atendidos
+      const idsAtendidos = new Set(
+        (chamadasAtivas || []).map((c: any) => c.agendamento_id)
       );
 
+      // Filtrar agendamentos que NÃO estão sendo atendidos
+      const agendamentosDisponiveis = (data || []).filter(
+        (agendamento) => !idsAtendidos.has(agendamento.id)
+      );
+
+      // Mapear para o formato esperado pela interface
+      const agendamentosMapeados = agendamentosDisponiveis.map((agendamento) => ({
+        id: agendamento.id,
+        nome: agendamento.nome,
+        cpf: agendamento.cpf,
+        email: agendamento.email,
+        telefone: agendamento.telefone,
+        protocolo: `AGD-${agendamento.id}`,
+        dia_atual: agendamento.data_agendamento,
+        horario: agendamento.horario,
+        status: agendamento.status,
+        fotos_coletadas: agendamento.fotos_coletadas || false,
+        atendimento_preferencial: agendamento.atendimento_preferencial || false
+      }));
+
       // Ordenar: preferenciais primeiro, depois por horário
-      const filaOrdenada = atendimentosComPreferencial.sort((a, b) => {
+      const filaOrdenada = agendamentosMapeados.sort((a, b) => {
         if (a.atendimento_preferencial && !b.atendimento_preferencial) return -1;
         if (!a.atendimento_preferencial && b.atendimento_preferencial) return 1;
         return a.horario.localeCompare(b.horario);
@@ -152,16 +205,17 @@ export default function ColetaDigitaisPage() {
 
       // Total pendente
       const { count: pendente } = await supabase
-        .from('atendimentos')
+        .from('agendamentos')
         .select('*', { count: 'exact', head: true })
-        .eq('dia_atual', hoje)
+        .eq('data_agendamento', hoje)
+        .eq('status', 'confirmado')
         .eq('fotos_coletadas', false);
 
       // Coletados hoje
       const { count: coletados } = await supabase
-        .from('atendimentos')
+        .from('agendamentos')
         .select('*', { count: 'exact', head: true })
-        .eq('dia_atual', hoje)
+        .eq('data_agendamento', hoje)
         .eq('fotos_coletadas', true);
 
       setStats({
@@ -175,49 +229,151 @@ export default function ColetaDigitaisPage() {
   };
 
   const chamarProximo = async () => {
-    if (fila.length === 0) {
-      alert('Não há pessoas na fila para coleta de digitais');
-      return;
-    }
+    try {
+      setProcessando(true);
 
-    const proximo = fila[0];
-    await chamarPessoa(proximo);
+      // Buscar dados do atendente
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error('Erro ao buscar dados do atendente');
+      }
+
+      // Chamar função RPC que usa locking atômico
+      // Essa função previne race conditions usando FOR UPDATE SKIP LOCKED
+      const { data, error } = await supabase.rpc('get_proximo_atendimento_digitais', {
+        p_atendente_id: user.id,
+        p_atendente_nome: userData.name
+      });
+
+      if (error) {
+        console.error('Erro RPC:', error);
+        throw new Error(error.message || 'Erro ao chamar próxima pessoa');
+      }
+
+      // Se não há ninguém na fila, retorna vazio
+      if (!data || data.length === 0) {
+        alert('Não há pessoas na fila para coleta de digitais');
+        return;
+      }
+
+      // Pega o primeiro (e único) resultado
+      const proximaPessoa = data[0];
+
+      // Atualizar chamada atual com os dados retornados pela RPC
+      setChamadaAtual(proximaPessoa);
+      setShowModal(true);
+
+      // Recarregar fila para refletir a mudança
+      await loadFila();
+      await loadStats();
+
+    } catch (error: any) {
+      console.error('Erro ao chamar pessoa:', error);
+
+      // Mensagens de erro mais específicas
+      if (error.message?.includes('already exists')) {
+        alert('Esta pessoa já foi chamada por outro atendente. Tente novamente.');
+      } else if (error.message?.includes('violates unique constraint')) {
+        alert('Esta pessoa já está sendo atendida. Chamando próxima pessoa...');
+        // Recarregar e tentar novamente
+        await loadFila();
+      } else {
+        alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
+      }
+    } finally {
+      setProcessando(false);
+    }
   };
 
   const chamarPessoa = async (atendimento: AtendimentoFila) => {
     try {
       setProcessando(true);
 
+      // Verificar se pessoa já está sendo chamada/atendida
+      const { data: chamadaExistente, error: checkError } = await supabase
+        .from('chamada_digitais')
+        .select('id, status, atendente_nome')
+        .eq('agendamento_id', atendimento.id)
+        .in('status', ['chamado', 'coletando'])
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Erro ao verificar chamada:', checkError);
+      }
+
+      if (chamadaExistente) {
+        alert(`Esta pessoa já está sendo atendida por ${chamadaExistente.atendente_nome}`);
+        await loadFila();
+        return;
+      }
+
       // Buscar dados do atendente
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, name')
         .eq('auth_id', user.id)
         .single();
 
-      // Criar chamada
-      const { data: chamada, error } = await supabase
+      if (userError || !userData) {
+        throw new Error('Erro ao buscar dados do atendente');
+      }
+
+      // Criar chamada no banco
+      const { data: chamada, error: insertError } = await supabase
         .from('chamada_digitais')
         .insert({
           atendimento_id: atendimento.id,
+          agendamento_id: atendimento.id,
           nome: atendimento.nome,
           cpf: atendimento.cpf,
           status: 'chamado',
           atendente_id: user.id,
-          atendente_nome: userData?.name || 'Não identificado',
-          preferencial: atendimento.atendimento_preferencial || false
+          atendente_nome: userData.name,
+          preferencial: atendimento.atendimento_preferencial || false,
+          data_hora_chamada: new Date().toISOString()
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) {
+        // Se violou constraint de unicidade, outra pessoa já chamou
+        if (insertError.code === '23505') {
+          alert('Esta pessoa já foi chamada por outro atendente. Tente novamente.');
+          await loadFila();
+          return;
+        }
+        throw insertError;
+      }
 
-      setChamadaAtual(chamada);
+      // Mapear para o formato esperado
+      const chamadaFormatada: ChamadaDigital = {
+        chamada_id: chamada.id,
+        atendimento_id: chamada.atendimento_id,
+        agendamento_id: chamada.agendamento_id,
+        nome: chamada.nome,
+        cpf: chamada.cpf,
+        status: chamada.status,
+        data_hora_chamada: chamada.data_hora_chamada,
+        preferencial: chamada.preferencial,
+        atendente_id: chamada.atendente_id,
+        atendente_nome: chamada.atendente_nome
+      };
+
+      setChamadaAtual(chamadaFormatada);
       setShowModal(true);
 
-    } catch (error) {
+      // Recarregar fila
+      await loadFila();
+      await loadStats();
+
+    } catch (error: any) {
       console.error('Erro ao chamar pessoa:', error);
-      alert('Erro ao chamar pessoa. Tente novamente.');
+      alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
     }
@@ -229,25 +385,34 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Atualizar atendimento
-      const { error: errorAtendimento } = await supabase
-        .from('atendimentos')
-        .update({ fotos_coletadas: true })
-        .eq('id', chamadaAtual.atendimento_id);
-
-      if (errorAtendimento) throw errorAtendimento;
-
-      // Atualizar chamada
-      const { error: errorChamada } = await supabase
+      // Atualizar status da chamada para 'coletado'
+      const { error: chamadaError } = await supabase
         .from('chamada_digitais')
         .update({
           status: 'coletado',
           data_hora_coleta: new Date().toISOString(),
           observacoes: observacao || null
         })
-        .eq('id', chamadaAtual.id);
+        .eq('id', chamadaAtual.chamada_id);
 
-      if (errorChamada) throw errorChamada;
+      if (chamadaError) {
+        console.error('Erro ao atualizar chamada:', chamadaError);
+        throw chamadaError;
+      }
+
+      // Atualizar agendamento marcando fotos como coletadas
+      const { error: agendamentoError } = await supabase
+        .from('agendamentos')
+        .update({
+          fotos_coletadas: true,
+          status: 'concluido'
+        })
+        .eq('id', chamadaAtual.agendamento_id);
+
+      if (agendamentoError) {
+        console.error('Erro ao atualizar agendamento:', agendamentoError);
+        throw agendamentoError;
+      }
 
       // Fechar modal e recarregar
       setShowModal(false);
@@ -256,9 +421,9 @@ export default function ColetaDigitaisPage() {
       await loadFila();
       await loadStats();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao marcar como coletado:', error);
-      alert('Erro ao marcar como coletado. Tente novamente.');
+      alert('Erro ao marcar como coletado: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
     }
@@ -270,24 +435,42 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      const { error } = await supabase
+      // Atualizar status da chamada para 'ausente'
+      const { error: chamadaError } = await supabase
         .from('chamada_digitais')
         .update({
           status: 'ausente',
-          observacoes: observacao || 'Pessoa não compareceu'
+          observacoes: observacao || null
         })
-        .eq('id', chamadaAtual.id);
+        .eq('id', chamadaAtual.chamada_id);
 
-      if (error) throw error;
+      if (chamadaError) {
+        console.error('Erro ao atualizar chamada:', chamadaError);
+        throw chamadaError;
+      }
+
+      // Marcar agendamento como ausente
+      const { error: agendamentoError } = await supabase
+        .from('agendamentos')
+        .update({
+          status: 'ausente'
+        })
+        .eq('id', chamadaAtual.agendamento_id);
+
+      if (agendamentoError) {
+        console.error('Erro ao atualizar agendamento:', agendamentoError);
+        throw agendamentoError;
+      }
 
       setShowModal(false);
       setChamadaAtual(null);
       setObservacao('');
       await loadFila();
+      await loadStats();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao marcar como ausente:', error);
-      alert('Erro ao marcar como ausente. Tente novamente.');
+      alert('Erro ao marcar como ausente: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
     }
