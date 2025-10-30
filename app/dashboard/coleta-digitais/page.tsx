@@ -51,6 +51,9 @@ export default function ColetaDigitaisPage() {
     coletadosHoje: 0
   });
 
+  // Debug info
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -126,7 +129,18 @@ export default function ColetaDigitaisPage() {
 
   const loadFila = async () => {
     try {
-      const hoje = new Date().toISOString().split('T')[0];
+      // Formato brasileiro: DD/MM/YYYY
+      const hoje = new Date().toLocaleDateString('pt-BR');
+
+      console.log('🔍 LoadFila - Buscando atendimentos para hoje:', hoje);
+
+      // DEBUG: Buscar TODOS atendimentos de hoje (sem filtros)
+      const { data: todosAtendimentos } = await supabase
+        .from('atendimentos')
+        .select('id, nome, status, fotos_coletadas, dia_atual')
+        .eq('dia_atual', hoje);
+
+      console.log('🔎 DEBUG - TODOS os atendimentos de hoje:', todosAtendimentos);
 
       // Buscar atendimentos pendentes de coleta
       // Exclui quem está com status 'chamando' (já sendo atendido por outro atendente)
@@ -136,8 +150,6 @@ export default function ColetaDigitaisPage() {
           id,
           nome,
           cpf,
-          email,
-          telefone,
           dia_atual,
           horario,
           status,
@@ -150,6 +162,12 @@ export default function ColetaDigitaisPage() {
         .order('preferencial', { ascending: false, nullsFirst: false })
         .order('horario', { ascending: true });
 
+      console.log('📊 LoadFila - Resultado da query:', {
+        total: data?.length || 0,
+        error: error?.message,
+        data: data
+      });
+
       if (error) throw error;
 
       // Mapear para o formato esperado pela interface
@@ -157,8 +175,8 @@ export default function ColetaDigitaisPage() {
         id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
-        email: atendimento.email,
-        telefone: atendimento.telefone,
+        email: '',  // Tabela atendimentos não tem email
+        telefone: '',  // Tabela atendimentos não tem telefone
         protocolo: `ATD-${atendimento.id}`,
         dia_atual: atendimento.dia_atual,
         horario: atendimento.horario,
@@ -167,9 +185,21 @@ export default function ColetaDigitaisPage() {
         atendimento_preferencial: atendimento.preferencial || false
       }));
 
+      console.log('✅ LoadFila - Fila mapeada:', atendimentosMapeados.length, 'pessoas');
+
+      // Salvar info de debug
+      setDebugInfo({
+        hoje,
+        totalTodos: todosAtendimentos?.length || 0,
+        todosAtendimentos: todosAtendimentos,
+        totalFiltrados: data?.length || 0,
+        atendimentosFiltrados: data,
+        filaFinal: atendimentosMapeados.length
+      });
+
       setFila(atendimentosMapeados);
     } catch (error) {
-      console.error('Erro ao carregar fila:', error);
+      console.error('❌ Erro ao carregar fila:', error);
     } finally {
       setLoading(false);
     }
@@ -177,7 +207,8 @@ export default function ColetaDigitaisPage() {
 
   const loadStats = async () => {
     try {
-      const hoje = new Date().toISOString().split('T')[0];
+      // Formato brasileiro: DD/MM/YYYY
+      const hoje = new Date().toLocaleDateString('pt-BR');
 
       // Total pendente (atendimentos em andamento sem fotos)
       const { count: pendente } = await supabase
@@ -355,6 +386,66 @@ export default function ColetaDigitaisPage() {
             Gerencie a fila de coleta com prioridade para atendimentos preferenciais
           </p>
         </div>
+
+        {/* Painel de Debug */}
+        {debugInfo && (
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-6">
+            <h3 className="font-bold text-yellow-900 mb-2">🔍 DEBUG - Informações da Fila</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-semibold text-yellow-800">Data:</span>
+                <p className="text-yellow-900">{debugInfo.hoje}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-yellow-800">Total Atendimentos Hoje:</span>
+                <p className="text-yellow-900 font-mono text-lg">{debugInfo.totalTodos}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-yellow-800">Após Filtros:</span>
+                <p className="text-yellow-900 font-mono text-lg">{debugInfo.totalFiltrados}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-yellow-800">Fila Final:</span>
+                <p className="text-yellow-900 font-mono text-lg">{debugInfo.filaFinal}</p>
+              </div>
+            </div>
+            {debugInfo.todosAtendimentos && debugInfo.todosAtendimentos.length > 0 && (
+              <details className="mt-3">
+                <summary className="cursor-pointer font-semibold text-yellow-800">Ver Detalhes dos Atendimentos</summary>
+                <div className="mt-2 max-h-40 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="p-1">ID</th>
+                        <th className="p-1">Nome</th>
+                        <th className="p-1">Status</th>
+                        <th className="p-1">Fotos Coletadas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {debugInfo.todosAtendimentos.map((at: any) => (
+                        <tr key={at.id} className="border-t border-yellow-200">
+                          <td className="p-1">{at.id}</td>
+                          <td className="p-1">{at.nome}</td>
+                          <td className="p-1">
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              at.status === 'em_andamento' ? 'bg-green-200 text-green-800' :
+                              at.status === 'chamando' ? 'bg-blue-200 text-blue-800' :
+                              'bg-gray-200 text-gray-800'
+                            }`}>
+                              {at.status}
+                            </span>
+                          </td>
+                          <td className="p-1">{at.fotos_coletadas ? '✅ Sim' : '❌ Não'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </div>
+        )}
 
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
