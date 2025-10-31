@@ -21,7 +21,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Grid de Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Relatório de Atendimentos */}
           <button
             onClick={() => router.push('/dashboard/relatorios/gerar')}
@@ -81,6 +81,43 @@ export default function RelatoriosPage() {
                 </h3>
                 <p className="text-sm text-gray-600">
                   Visualize métricas e desempenho individual dos atendentes com filtro por período
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Relatório de Ações Itinerantes */}
+          <button
+            onClick={() => router.push('/dashboard/relatorios/acoes-itinerantes')}
+            className="bg-white border border-gray-200 rounded-lg p-6 hover:border-purple-500 hover:shadow-md transition-all text-left group"
+          >
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                <svg
+                  className="w-6 h-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-700 transition-colors">
+                  Ações Itinerantes ALECE
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Análise visual e gráficos dos atendimentos realizados por ação itinerante
                 </p>
               </div>
             </div>
