@@ -29,7 +29,6 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 import CreateAppointmentModal from "@/components/CreateAppointmentModal";
-import SimpleConfirmModal from "@/components/SimpleConfirmModal";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
@@ -78,11 +77,9 @@ export default function AgendamentosHojePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<"iniciar" | "concluido" | "cancelar" | "ausente" | "edit" | "delete" | null>(null);
+  const [modalAction, setModalAction] = useState<"iniciar" | "cancelar" | "ausente" | "edit" | "delete" | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showSimpleConfirm, setShowSimpleConfirm] = useState(false);
-  const [simpleConfirmData, setSimpleConfirmData] = useState<{id: number, nome: string, action: string} | null>(null);
   const [showEmptySlots, setShowEmptySlots] = useState(true);
   const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
@@ -166,6 +163,7 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
 
     try {
+      // Atualizar o status do agendamento
       const { error } = await supabase
         .from("agendamentos")
         .update({ status: newStatus })
@@ -183,8 +181,6 @@ export default function AgendamentosHojePage() {
 
       setIsModalOpen(false);
       setSelectedAppointment(null);
-      setShowSimpleConfirm(false);
-      setSimpleConfirmData(null);
 
       alert(`Status atualizado para "${newStatus}" com sucesso!`);
     } catch (err) {
@@ -281,18 +277,6 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const handleSimpleConfirm = async () => {
-    if (!simpleConfirmData) return;
-
-    setActionLoading(true);
-    try {
-      await handleStatusChange(simpleConfirmData.id, simpleConfirmData.action);
-    } catch (err) {
-      alert(`Erro ao ${simpleConfirmData.action}: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const generateReport = async () => {
     if (agendamentos.length === 0) {
@@ -742,54 +726,42 @@ export default function AgendamentosHojePage() {
                                 </button>
 
                                 {agendamento.status === "confirmado" && (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-2">
                                     <button
                                       onClick={() => {
                                         setSelectedAppointment(agendamento);
                                         setModalAction("iniciar");
                                         setIsModalOpen(true);
                                       }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      className="w-full px-3 py-2.5 text-sm rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
                                     >
-                                      <FiEdit className="w-3.5 h-3.5 mr-1" />
-                                      Iniciar
+                                      <FiCheckCircle className="w-4 h-4 mr-2" />
+                                      Iniciar Atendimento
                                     </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("ausente");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                    >
-                                      <FiXCircle className="w-3.5 h-3.5 mr-1" />
-                                      Ausente
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSimpleConfirmData({
-                                          id: agendamento.id,
-                                          nome: agendamento.nome,
-                                          action: 'concluido'
-                                        });
-                                        setShowSimpleConfirm(true);
-                                      }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                    >
-                                      <FiCheckCircle className="w-3.5 h-3.5 mr-1" />
-                                      Concluir
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("cancelar");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                    >
-                                      <FiSlash className="w-3.5 h-3.5 mr-1" />
-                                      Cancelar
-                                    </button>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("ausente");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      >
+                                        <FiXCircle className="w-3.5 h-3.5 mr-1" />
+                                        Ausente
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("cancelar");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      >
+                                        <FiSlash className="w-3.5 h-3.5 mr-1" />
+                                        Cancelar
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -838,20 +810,6 @@ export default function AgendamentosHojePage() {
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
         existingAppointments={existingAppointments}
-      />
-
-      <SimpleConfirmModal
-        isOpen={showSimpleConfirm}
-        onClose={() => {
-          setShowSimpleConfirm(false);
-          setSimpleConfirmData(null);
-        }}
-        onConfirm={handleSimpleConfirm}
-        title="Confirmar Conclusão"
-        message={`Tem certeza que deseja marcar o atendimento de ${simpleConfirmData?.nome} como concluído?`}
-        confirmText="Concluir"
-        confirmColor="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-        loading={actionLoading}
       />
     </>
   );

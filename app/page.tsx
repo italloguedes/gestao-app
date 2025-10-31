@@ -151,7 +151,7 @@ export default function Home() {
           }
 
           // Redireciona baseado na role
-          if (userData?.role === 'admin' || userData?.role === 'atendente') {
+          if (userData?.role === 'admin' || userData?.role === 'atendente' || userData?.role === 'superadmin') {
             router.push(AUTH_CONFIG.REDIRECT_URLS.DASHBOARD);
           } else {
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);

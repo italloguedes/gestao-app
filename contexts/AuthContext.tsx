@@ -38,13 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Inicializa verificando a sessão atual
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        // Atualiza o timestamp de expiração se a sessão for válida (3 horas)
-        localStorage.setItem('session-expiry', String(Date.now() + 10800000));
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setUser(session.user);
+          // Atualiza o timestamp de expiração se a sessão for válida (3 horas)
+          localStorage.setItem('session-expiry', String(Date.now() + 10800000));
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar autenticação:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initializeAuth();
@@ -52,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Verifica a expiração da sessão a cada minuto
     const interval = setInterval(checkSessionExpiry, 60000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
       if (checkSessionExpiry()) return; // Se a sessão expirou, não faz nada
 
       setUser(session?.user ?? null);
@@ -60,8 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         localStorage.setItem('session-expiry', String(Date.now() + 10800000));
       }
-      
-      if (session?.user && window.location.pathname === '/') {
+
+      // Apenas redireciona se estiver na página de login E tiver uma nova sessão
+      if (session?.user && window.location.pathname === '/' && _event === 'SIGNED_IN') {
         try {
           // Busca o usuário no banco de dados
           const { data: userData, error: userError } = await supabase
@@ -96,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
       clearInterval(interval);
     };
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signOut = async () => {
     try {
