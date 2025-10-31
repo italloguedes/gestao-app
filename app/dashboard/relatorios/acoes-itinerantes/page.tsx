@@ -131,12 +131,12 @@ export default function AcoesItinerantesPage() {
         return;
       }
 
-      // Filtrar apenas atendimentos que são de ações (solicitante começa com "ação" ou "acão")
-      const atendimentosAcoes = atendimentos.filter((a: any) =>
-        a.solicitante &&
-        (a.solicitante.toLowerCase().includes('ação') ||
-         a.solicitante.toLowerCase().includes('acão'))
-      );
+      // Filtrar apenas atendimentos que são de ações (solicitante começa com "ação" ou "acao")
+      const atendimentosAcoes = atendimentos.filter((a: any) => {
+        if (!a.solicitante) return false;
+        const solicitanteLower = a.solicitante.toLowerCase().trim();
+        return solicitanteLower.startsWith('ação') || solicitanteLower.startsWith('acao');
+      });
 
       setTotalAtendimentos(atendimentosAcoes.length);
 
