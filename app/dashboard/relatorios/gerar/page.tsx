@@ -416,7 +416,7 @@ export default function GerarRelatorioPage() {
 
       // Calcular contadores de status
       const counts: Record<string, number> = { total: atendimentos.length };
-      atendimentos.forEach((atendimento) => {
+      atendimentos.forEach((atendimento: any) => {
         counts[atendimento.status] = (counts[atendimento.status] || 0) + 1;
       });
       setStatusCounts(counts);

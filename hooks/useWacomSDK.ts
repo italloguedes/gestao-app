@@ -63,7 +63,7 @@ export function useWacomSDK({
         // Carrega via pacote NPM @wacom/signature-sdk
         try {
           // O pacote NPM expõe window.sdkReady
-          await import('@wacom/signature-sdk');
+          await import('@wacom/signature-sdk' as any);
 
           // Aguarda SDK estar pronto
           if ((window as any).sdkReady) {
@@ -120,7 +120,7 @@ export function useWacomSDK({
       setIsLoaded(true);
 
       // Cria objeto de assinatura
-      const newSigObj = new window.Module.SigObj();
+      const newSigObj = new (window.Module as any).SigObj();
       setSigObj(newSigObj);
 
       // Configura licença

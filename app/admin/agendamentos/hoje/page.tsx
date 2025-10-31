@@ -299,14 +299,14 @@ export default function AgendamentosHojePage() {
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       const title = 'Agendamentos - Sala Sensorial ALECE';
-      const titleWidth = doc.getStringUnitWidth(title) * doc.getFontSize() / doc.internal.scaleFactor;
+      const titleWidth = doc.getStringUnitWidth(title) * (doc as any).getFontSize() / doc.internal.scaleFactor;
       doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 19);
 
       doc.setTextColor(90, 90, 90);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const periodo = `Data: ${formatDate(selectedDate)} | Total: ${agendamentos.length} agendamentos`;
-      const periodoWidth = doc.getStringUnitWidth(periodo) * doc.getFontSize() / doc.internal.scaleFactor;
+      const periodoWidth = doc.getStringUnitWidth(periodo) * (doc as any).getFontSize() / doc.internal.scaleFactor;
       doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 36);
 
       const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status'];
@@ -354,7 +354,7 @@ export default function AgendamentosHojePage() {
           rowPageBreak: 'avoid',
       });
 
-      const pageCount = doc.getNumberOfPages();
+      const pageCount = (doc as any).getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
           doc.setFontSize(8);

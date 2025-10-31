@@ -33,17 +33,11 @@ const nextConfig = {
       }
     ],
   },
-  eslint: {
-    // Disable ESLint during builds
-    ignoreDuringBuilds: true,
-  },
+  // ESLint is now configured via .eslintrc.json
+  // TypeScript checking is enabled by default in Next.js 16+
   typescript: {
-    // Disable TypeScript checking during builds
-    ignoreBuildErrors: true,
-  },
-  experimental: {
-    // Enable app directory
-    appDir: true,
+    // ✅ TypeScript strict habilitado - erros bloquearão o build
+    ignoreBuildErrors: false,
   },
 }
 

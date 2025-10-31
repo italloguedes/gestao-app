@@ -105,7 +105,7 @@ export default function GestaoVagas() {
           selectedDate.getDay() !== 6;
 
         const horarioCompleto = horario + ':00';
-        const agendamentoExistente = agendamentos?.find(a => a.horario === horarioCompleto);
+        const agendamentoExistente = agendamentos?.find((a: any) => a.horario === horarioCompleto);
 
         // Uma vaga está liberada se:
         // 1. É um dia válido E

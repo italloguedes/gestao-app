@@ -79,7 +79,7 @@ export default function ColetaDigitaisPage() {
           table: 'atendimentos',
           filter: 'fotos_coletadas=eq.false' // Apenas atendimentos pendentes
         },
-        (payload) => {
+        (payload: any) => {
           // Recarregar fila quando houver mudanças
           loadFila();
           loadStats();
@@ -151,7 +151,7 @@ export default function ColetaDigitaisPage() {
       if (error) throw error;
 
       // Mapear para o formato esperado pela interface
-      const atendimentosMapeados = (data || []).map((atendimento) => ({
+      const atendimentosMapeados = (data || []).map((atendimento: any) => ({
         id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,

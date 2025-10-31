@@ -672,7 +672,7 @@ export default function AtendimentosPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-emerald-700">Editar Atendimento</h2>
-                <p className="text-sm text-gray-500">Protocolo: {selectedAtendimento.protocolo}</p>
+                <p className="text-sm text-gray-500">Protocolo: {selectedAtendimento?.protocolo}</p>
               </div>
             </div>
 

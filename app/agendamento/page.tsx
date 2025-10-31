@@ -428,7 +428,7 @@ async function getHorariosDisponiveis(data: Date) {
 
       // Verificar se existe agendamento para este horário
       const horarioCompleto = h + ':00';
-      const agendamentoExistente = agendamentos?.find(a => a.horario === horarioCompleto);
+      const agendamentoExistente = agendamentos?.find((a: any) => a.horario === horarioCompleto);
 
       // Um horário está disponível se:
       // 1. Não existe agendamento OU
@@ -491,7 +491,7 @@ function AgendamentoContent() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: any) => {
       setUser(user);
     });
   }, []);

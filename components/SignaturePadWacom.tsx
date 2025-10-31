@@ -70,17 +70,17 @@ export default function SignaturePadWacom({
   const detectDevice = useCallback(async () => {
     try {
       // Solicita acesso a dispositivos HID (Wacom STU-300)
-      if (!navigator.hid) {
+      if (!(navigator as any).hid) {
         setErrorMessage('WebHID não suportado neste navegador');
         addLog('✗ WebHID não disponível');
         return false;
       }
 
       // Lista dispositivos
-      const devices = await navigator.hid.getDevices();
+      const devices = await (navigator as any).hid.getDevices();
 
       // Filtrar Wacom (Vendor ID: 0x056a)
-      const wacomDevice = devices.find(d => d.vendorId === 0x056a);
+      const wacomDevice = devices.find((d: any) => d.vendorId === 0x056a);
 
       if (wacomDevice) {
         setDeviceConnected(true);
@@ -102,7 +102,7 @@ export default function SignaturePadWacom({
   // Solicitar permissão para dispositivo
   const requestDevice = useCallback(async () => {
     try {
-      if (!navigator.hid) {
+      if (!(navigator as any).hid) {
         setErrorMessage('WebHID não suportado. Use Chrome/Edge 89+');
         return false;
       }
@@ -110,7 +110,7 @@ export default function SignaturePadWacom({
       addLog('Solicitando permissão para dispositivo...');
 
       // Solicita acesso ao Wacom (Vendor ID: 0x056a)
-      const devices = await navigator.hid.requestDevice({
+      const devices = await (navigator as any).hid.requestDevice({
         filters: [{ vendorId: 0x056a }] // Wacom
       });
 

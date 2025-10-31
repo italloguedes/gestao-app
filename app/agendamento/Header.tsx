@@ -11,7 +11,7 @@ export default function Header({ onOpenAgendamentos }: { onOpenAgendamentos: () 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: any) => {
       setUser(user);
     });
   }, []);

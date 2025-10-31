@@ -97,7 +97,7 @@ export default function RelatoriosPorAtendentePage() {
       // Processar dados por atendente
       const atendentesMap = new Map<string, AtendenteStats>();
 
-      atendimentos.forEach((atendimento) => {
+      atendimentos.forEach((atendimento: any) => {
         const atendenteNome = atendimento.atendente_nome || 'Não identificado';
 
         if (!atendentesMap.has(atendenteNome)) {
@@ -123,7 +123,7 @@ export default function RelatoriosPorAtendentePage() {
 
       // Calcular contadores de status
       const counts: Record<string, number> = { total: atendimentos.length };
-      atendimentos.forEach((atendimento) => {
+      atendimentos.forEach((atendimento: any) => {
         counts[atendimento.status] = (counts[atendimento.status] || 0) + 1;
       });
       setStatusCounts(counts);
