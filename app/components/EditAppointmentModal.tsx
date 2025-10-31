@@ -2,6 +2,7 @@ import React from 'react';
 import { FiX, FiUser, FiPhone, FiCalendar, FiClock, FiCheck, FiXCircle } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
 import Loading from './Loading';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EditAppointmentModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface EditAppointmentModalProps {
 }
 
 export default function EditAppointmentModal({ isOpen, onClose, appointment, onSave, action: initialAction, onStatusChange, onDelete }: EditAppointmentModalProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
@@ -192,10 +194,29 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           throw updateError;
         }
 
+        // Atualizar estado local no componente pai para mudança instantânea de cor
+        onStatusChange(appointment.id, 'concluido');
+
         // Criar registro na tabela de atendimentos
         const now = new Date();
         const diaAtual = now.toISOString().split('T')[0];
         const horario = now.toTimeString().split(' ')[0];
+
+        // Buscar nome do atendente para salvar no registro
+        let atendenteNome = 'Não identificado';
+        if (user) {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('name')
+            .eq('auth_id', user.id)
+            .single();
+
+          if (userError) {
+            console.error('Erro ao buscar dados do atendente:', userError);
+          } else if (userData?.name) {
+            atendenteNome = userData.name;
+          }
+        }
 
         const { error: atendimentoError } = await supabase.from('atendimentos').insert([
           {
@@ -206,6 +227,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             horario,
             dia_atual: diaAtual,
             usuario_id: appointment.usuario_id || appointment.user_id,
+            atendente_nome: atendenteNome,
             protocolo,
             status: 'em_andamento',
           },
@@ -221,10 +243,16 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           const nomeEditado = formData.get('nome') || appointment.nome;
           const emailEditado = formData.get('email') || appointment.email;
           const cpfEditado = formData.get('cpf') || appointment.cpf;
-          
+
+          // Obter token de autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+
           const res = await fetch('/api/send-email', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': session ? `Bearer ${session.access_token}` : ''
+            },
             body: JSON.stringify({
               to: emailEditado,
               subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
@@ -293,6 +321,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             throw updateError;
           }
 
+          // Atualizar estado local no componente pai para mudança instantânea de cor
+          onStatusChange(appointment.id, 'ausente');
+
           console.log('✅ EditAppointmentModal: Status atualizado para ausente');
         setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
@@ -312,6 +343,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
           throw updateError;
         }
+
+        // Atualizar estado local no componente pai para mudança instantânea de cor
+        onStatusChange(appointment.id, 'concluido');
 
         console.log('✅ EditAppointmentModal: Status atualizado para concluido');
         setMessage('Atendimento concluído com sucesso!');
@@ -339,6 +373,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
             throw updateError;
           }
+
+          // Atualizar estado local no componente pai para mudança instantânea de cor
+          onStatusChange(appointment.id, 'cancelado');
 
           console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
         setMessage('Atendimento cancelado com sucesso!');

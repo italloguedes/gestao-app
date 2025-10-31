@@ -8,42 +8,42 @@ import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiLogOut, FiBarChart2, FiSetti
 import UserProfileModal from './UserProfileModal';
 import UserSettingsModal from './UserSettingsModal';
 
-// Memoized navigation items to prevent re-renders
+// Memoized navigation items to prevent re-renders - Modern Design
 const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname?: string }) => (
   <>
     <Link
       href="/dashboard"
-      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname === '/dashboard' ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname === '/dashboard' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
       onClick={onClose}
     >
-      <FiHome className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+      <FiHome className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Início</span>
     </Link>
 
     <Link
       href="/agendamento"
-      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname === '/agendamento' ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname === '/agendamento' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
       onClick={onClose}
     >
-      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Agendar</span>
     </Link>
 
     <Link
       href="/admin/agendamentos/hoje"
-      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname?.includes('/admin/agendamentos/hoje') ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname?.includes('/admin/agendamentos/hoje') ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
       onClick={onClose}
     >
-      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+      <FiCalendar className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Agenda de Hoje</span>
     </Link>
 
     <Link
       href="/dashboard/relatorios"
-      className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl ${pathname?.includes('/dashboard/relatorios') ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-200`}
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname?.includes('/dashboard/relatorios') ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
       onClick={onClose}
     >
-      <FiBarChart2 className="mr-2.5 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+      <FiBarChart2 className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Relatórios</span>
     </Link>
   </>
@@ -109,17 +109,17 @@ export default function DashboardHeader() {
 
 
   return (
-    <header className="bg-white/90 backdrop-blur-md shadow-md fixed top-0 left-0 right-0 z-50 border-b border-gray-200/70">
+    <header className="bg-white/95 backdrop-blur-lg shadow-lg fixed top-0 left-0 right-0 z-50 border-b-2 border-gray-200/50">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo e navegação principal */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Link 
-                href="/dashboard" 
-                className="flex items-center space-x-2"
+              <Link
+                href="/dashboard"
+                className="flex items-center space-x-2 group"
               >
-                <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white px-4 py-1.5 rounded-xl text-lg font-bold shadow-sm">
+                <span className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-800 text-white px-5 py-2 rounded-2xl text-lg font-black shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
                   Sala Sensorial / Alece
                 </span>
               </Link>
@@ -137,26 +137,29 @@ export default function DashboardHeader() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 focus:outline-none"
+                className="flex items-center space-x-3 focus:outline-none group"
               >
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-300 ring-2 ring-emerald-200">
                   {userInitial}
                 </div>
               </button>
 
               {/* Dropdown do usuário */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
+                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 py-2 z-50 animate-fade-in">
+                  <div className="px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-semibold text-lg">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
                         {userInitial}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">{userDisplayName}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        <p className="text-sm font-bold text-gray-900 truncate">{userDisplayName}</p>
+                        <p className="text-xs text-gray-600 truncate">{user?.email}</p>
                         {sessionRemaining && (
-                          <p className="text-xs text-emerald-600 font-medium mt-1">
+                          <p className="text-xs text-emerald-700 font-semibold mt-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                             Expira em: {sessionRemaining}
                           </p>
                         )}
@@ -164,36 +167,42 @@ export default function DashboardHeader() {
                     </div>
                   </div>
                   
-                  <div className="py-1">
+                  <div className="py-2 px-2">
                     <button
                       onClick={() => {
                         setShowProfileModal(true);
                         setShowUserMenu(false);
                       }}
-                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                      className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-all duration-200 group"
                     >
-                      <FiUser className="mr-3 h-4 w-4" />
+                      <div className="p-2 bg-emerald-100 rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                        <FiUser className="h-4 w-4 text-emerald-700" />
+                      </div>
                       Meu Perfil
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         setShowSettingsModal(true);
                         setShowUserMenu(false);
                       }}
-                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                      className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all duration-200 group"
                     >
-                      <FiSettings className="mr-3 h-4 w-4" />
+                      <div className="p-2 bg-blue-100 rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                        <FiSettings className="h-4 w-4 text-blue-700" />
+                      </div>
                       Configurações
                     </button>
                   </div>
-                  
-                  <div className="border-t border-gray-100 py-1">
+
+                  <div className="border-t-2 border-gray-100 py-2 px-2">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 group"
                     >
-                      <FiLogOut className="mr-3 h-4 w-4" />
+                      <div className="p-2 bg-red-100 rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                        <FiLogOut className="h-4 w-4 text-red-600" />
+                      </div>
                       Sair
                     </button>
                   </div>
@@ -204,12 +213,12 @@ export default function DashboardHeader() {
             {/* Botão do menu mobile */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+              className="md:hidden p-2.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
             >
               {isMobileMenuOpen ? (
-                <FiX className="w-5 h-5" />
+                <FiX className="w-6 h-6" />
               ) : (
-                <FiMenu className="w-5 h-5" />
+                <FiMenu className="w-6 h-6" />
               )}
             </button>
           </div>

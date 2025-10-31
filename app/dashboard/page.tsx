@@ -7,7 +7,14 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
+import AtendimentoModal from '@/components/AtendimentoModal';
+// import SignaturePadWacom from '@/components/SignaturePadWacom'; // DESABILITADO - Wacom físico
+// import type { WacomSignatureResult } from '@/components/SignaturePadWacom'; // DESABILITADO
+import SignaturePadCanvas from '@/components/SignaturePadCanvas';
+import ModoEntregaModal from '@/components/ModoEntregaModal';
 import jsPDF from 'jspdf';
+
+type ModoEntrega = 'impressao' | 'digital';
 
 interface DashboardStats {
   total: number;
@@ -71,7 +78,12 @@ export default function DashboardPage() {
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
-  // Removidas variáveis de estado do atendente
+
+  // Estados para sistema híbrido de assinatura
+  const [showModoEntregaModal, setShowModoEntregaModal] = useState(false);
+  const [modoEntregaSelecionado, setModoEntregaSelecionado] = useState<ModoEntrega | null>(null);
+  const [showSignaturePadCanvas, setShowSignaturePadCanvas] = useState(false);
+  const [assinaturaDataUrl, setAssinaturaDataUrl] = useState<string | null>(null);
 
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
@@ -102,8 +114,6 @@ export default function DashboardPage() {
       setCpfRecebedor('');
     }
   }, [showEntregarCinModal]);
-
-  // Removido useEffect para buscar nome do atendente
 
   const fetchDashboardData = async () => {
     try {
@@ -199,18 +209,57 @@ export default function DashboardPage() {
       return;
     }
 
-    // Substituir o confirm padrão por um toast com confirmação
-    const confirmed = window.confirm('Tem certeza que deseja confirmar a entrega da CIN? Esta ação é irreversível.');
-    if (!confirmed) return;
+    // Abrir modal de seleção de modo
+    setShowModoEntregaModal(true);
+  };
+
+  const handleSelectModoEntrega = (mode: ModoEntrega) => {
+    setShowModoEntregaModal(false);
+    setModoEntregaSelecionado(mode);
+
+    if (mode === 'impressao') {
+      // Modo impressão - gerar PDF sem assinatura
+      handleGerarPDFImpressao();
+    } else if (mode === 'digital') {
+      // Modo digital - abrir canvas de assinatura
+      setShowSignaturePadCanvas(true);
+    }
+  };
+
+  const handleSaveSignatureCanvas = async (signatureDataUrl: string) => {
+    setAssinaturaDataUrl(signatureDataUrl);
+    setShowSignaturePadCanvas(false);
+
+    // Gerar PDF com assinatura digital
+    await handleGerarPDFComAssinatura(signatureDataUrl);
+  };
+
+  const handleGerarPDFImpressao = async () => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
+      return;
+    }
 
     setGerandoComprovante(true);
     try {
+      // Buscar nome do atendente para o rodapé do PDF
+      let atendenteNome = 'Não identificado';
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
 
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
 
-      // Atualizar atendimento no Supabase
+      // Atualizar atendimento no Supabase (SEM assinatura digital - agora usa impressão em papel)
       const { error } = await supabase
         .from('atendimentos')
         .update({
@@ -220,6 +269,7 @@ export default function DashboardPage() {
           data_entrega: dataEntrega,
           status: 'entregue',
           data_hora_entrega: dataHoraEntrega,
+          // assinatura_base64: null, // Não salva assinatura digital - assinatura será manual no papel
         })
         .eq('id', selectedAtendimento.id);
 
@@ -239,145 +289,250 @@ export default function DashboardPage() {
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
 
-      // Gerar PDF moderno e profissional
+      // Gerar PDF profissional e elegante
       const doc = new jsPDF();
 
-      // Cabeçalho com fundo colorido
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.rect(0, 0, 210, 35, 'F');
+      // ===== CABEÇALHO INSTITUCIONAL =====
+      // Brasão/Logo à esquerda
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
 
-      // Logo centralizada com fundo branco circular
-      doc.setFillColor(255, 255, 255);
-      doc.circle(30, 18, 12, 'F');
-      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
-
-      // Título e subtítulo no cabeçalho
+      // Informações institucionais
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(255, 255, 255);
-      doc.text('COMPROVANTE DE ENTREGA', 105, 18, { align: 'center' });
       doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Carteira de Identidade Nacional', 105, 28, { align: 'center' });
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
 
-      // Número de protocolo destacado
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, 40, 174, 16, 3, 3, 'F');
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
+
+      // Linha divisória superior
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.5);
+      doc.line(15, 40, 195, 40);
+
+      // TÍTULO DO DOCUMENTO
       doc.setFont('helvetica', 'bold');
-      doc.text('PROTOCOLO:', 24, 50);
-      doc.setFont('helvetica', 'normal');
-      doc.text(selectedAtendimento.protocolo || 'N/A', 70, 50);
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42); // Slate-900
+      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
 
-      // Data e hora da entrega
-      doc.text('DATA/HORA:', 120, 50);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 165, 50, { align: 'center' });
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
 
-      // Seção de dados do titular
-      const secaoY = 65;
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.setTextColor(255, 255, 255);
-      doc.roundedRect(18, secaoY, 174, 10, 3, 3, 'F');
+      // ===== INFORMAÇÕES DO DOCUMENTO =====
+      // Box com bordas para protocolo e data
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.rect(15, 65, 85, 18);
+      doc.rect(110, 65, 85, 18);
+
+      // Protocolo
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+      doc.text('PROTOCOLO Nº', 18, 70);
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.setFont('helvetica', 'bold');
+      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
+
+      // Data e Hora de Emissão
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+      doc.text('DATA E HORA DA ENTREGA', 113, 70);
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59); // Slate-800
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
+
+      // ===== SEÇÃO 1: DADOS DO TITULAR =====
+      const secaoY = 93;
+
+      // Título da seção
       doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.text('DADOS DO TITULAR', 105, secaoY + 7, { align: 'center' });
+      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
 
-      // Bloco de dados do titular
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, secaoY + 10, 174, 40, 3, 3, 'F');
-      doc.setFontSize(11);
-      doc.setTextColor(80, 80, 80);
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, secaoY + 2, 195, secaoY + 2);
+
+      // Box de dados
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(248, 250, 252); // Slate-50
+      doc.rect(15, secaoY + 5, 180, 38, 'FD');
 
       // Estilo para labels e valores
-      const labelStyle = () => { doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129); };
-      const valueStyle = () => { doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); };
+      const labelStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139); // Slate-500
+      };
+      const valueStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42); // Slate-900
+      };
 
       // Dados do titular
-      let yData = secaoY + 22;
-      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(selectedAtendimento.nome, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(selectedAtendimento.cpf, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('Data do Atendimento:', 24, yData); valueStyle(); doc.text(formatDate(selectedAtendimento.dia_atual), 90, yData);
+      let yData = secaoY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.nome, 18, yData + 5);
 
-      // Seção de dados do recebedor
-      const recebedorY = secaoY + 60;
-      doc.setFillColor(16, 185, 129); // emerald-600
-      doc.setTextColor(255, 255, 255);
-      doc.roundedRect(18, recebedorY, 174, 10, 3, 3, 'F');
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.cpf, 18, yData + 5);
+
+      labelStyle();
+      doc.text('Data do Atendimento:', 110, yData);
+      valueStyle();
+      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
+
+      // ===== SEÇÃO 2: DADOS DO RECEBEDOR =====
+      const recebedorY = secaoY + 50;
+
+      // Título da seção
       doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.text('DADOS DO RECEBEDOR', 105, recebedorY + 7, { align: 'center' });
+      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
 
-      // Bloco de dados do recebedor
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, recebedorY + 10, 174, 50, 3, 3, 'F');
-      doc.setFontSize(11);
-      doc.setTextColor(80, 80, 80);
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
+
+      // Box de dados
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(248, 250, 252); // Slate-50
+      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
 
       // Dados do recebedor
-      yData = recebedorY + 22;
-      labelStyle(); doc.text('Nome:', 24, yData); valueStyle(); doc.text(nomeRecebedor, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('CPF:', 24, yData); valueStyle(); doc.text(cpfRecebedor, 60, yData);
-      yData += 10;
-      labelStyle(); doc.text('Vínculo:', 24, yData); valueStyle(); doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 60, yData);
+      yData = recebedorY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(nomeRecebedor, 18, yData + 5);
 
-      // Informações adicionais
-      const infoY = recebedorY + 70;
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.roundedRect(18, infoY, 174, 30, 3, 3, 'F');
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Este documento comprova a entrega da Carteira de Identidade Nacional (CIN) ao recebedor', 105, infoY + 10, { align: 'center' });
-      doc.text('identificado acima. A entrega foi registrada no sistema com data e hora especificadas.', 105, infoY + 18, { align: 'center' });
-      doc.text('Em caso de dúvidas, entre em contato com a Sala Sensorial da ALECE.', 105, infoY + 26, { align: 'center' });
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(cpfRecebedor, 18, yData + 5);
 
-      // Campo de assinatura destacado
-      const assinaturaY = 240;
-      doc.setDrawColor(16, 185, 129); // emerald-600
-      doc.setLineWidth(0.5);
-      doc.roundedRect(18, assinaturaY, 174, 35, 3, 3, 'S');
-      doc.setFontSize(12);
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.setFont('helvetica', 'bold');
-      doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 10, { align: 'center' });
-      doc.setTextColor(40, 40, 40);
-      doc.setLineWidth(0.3);
-      doc.line(45, assinaturaY + 20, 165, assinaturaY + 20);
+      labelStyle();
+      doc.text('Vínculo com o Titular:', 110, yData);
+      valueStyle();
+      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
+
+      // ===== DECLARAÇÃO =====
+      const infoY = recebedorY + 50;
+
       doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
+      doc.setTextColor(71, 85, 105); // Slate-600
       doc.setFont('helvetica', 'normal');
-      doc.text(`${nomeRecebedor} - CPF: ${cpfRecebedor}`, 100, assinaturaY + 25, { align: 'center' });
 
-      // Removido QR Code
-      // Rodapé moderno com fundo colorido
-      const rodapeY = 285;
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.rect(0, rodapeY - 15, 210, 20, 'F');
+      const declaracao = [
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
+      ];
 
-      // Linha decorativa superior do rodapé
-      doc.setDrawColor(16, 185, 129); // emerald-600
-      doc.setLineWidth(0.5);
-      doc.line(0, rodapeY - 15, 210, rodapeY - 15);
+      declaracao.forEach((linha, index) => {
+        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      });
 
-      // Informações do rodapé
-      doc.setFontSize(8);
+      // ===== SEÇÃO 3: ASSINATURA =====
+      const assinaturaY = 210;
+
+      // Título da seção
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // Slate-800
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(16, 185, 129); // emerald-600
-      doc.text('SALA SENSORIAL / ALECE', 105, rodapeY - 10, { align: 'center' });
+      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
 
+      // Linha divisória
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.3);
+      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
+
+      // Box para assinatura
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.setFillColor(255, 255, 255); // Branco
+      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
+
+      // Cidade e data
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105); // Slate-600
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Emitido em: ${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR')}`, 105, rodapeY - 3, { align: 'center' });
+      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
 
-      // Número da página
+      // Linha para assinatura
+      doc.setDrawColor(100, 116, 139); // Slate-500
+      doc.setLineWidth(0.4);
+      doc.line(45, assinaturaY + 35, 165, assinaturaY + 35);
+
+      // Nome e CPF do recebedor
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105); // Slate-600
+      doc.setFont('helvetica', 'normal');
+      doc.text(nomeRecebedor, 105, assinaturaY + 42, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 47, { align: 'center' });
+
+      // ===== RODAPÉ INSTITUCIONAL =====
+      const rodapeY = 270;
+
+      // Linha divisória superior
+      doc.setDrawColor(203, 213, 225); // Slate-300
+      doc.setLineWidth(0.5);
+      doc.line(15, rodapeY, 195, rodapeY);
+
+      // Informações de controle
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.setFont('helvetica', 'normal');
+
+      // Lado esquerdo - Emissor
+      doc.text('Documento emitido por:', 15, rodapeY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendenteNome, 15, rodapeY + 9);
+
+      // Centro - Data/Hora
+      doc.setFont('helvetica', 'normal');
+      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
+
+      // Lado direito - Página
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
+
+      // Linha final
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
+
+      // Aviso final
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'italic');
-      doc.setTextColor(120, 120, 120);
-      doc.text('Página 1/1', 105, rodapeY + 3, { align: 'center' });
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
+      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
       // Gerar URL do PDF
       const pdfBlob = doc.output('blob');
       const url = URL.createObjectURL(pdfBlob);
@@ -390,7 +545,253 @@ export default function DashboardPage() {
     setGerandoComprovante(false);
   };
 
-  // Removida função fetchNomeAtendente
+  // Gerar PDF com assinatura digital capturada
+  const handleGerarPDFComAssinatura = async (signatureDataUrl: string) => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
+      return;
+    }
+
+    setGerandoComprovante(true);
+    try {
+      // Buscar nome do atendente
+      let atendenteNome = 'Não identificado';
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
+
+      const now = new Date();
+      const dataEntrega = now.toISOString().split('T')[0];
+      const dataHoraEntrega = now.toISOString();
+
+      // Atualizar atendimento no Supabase (COM assinatura digital)
+      const { error } = await supabase
+        .from('atendimentos')
+        .update({
+          nome_recebedor: nomeRecebedor,
+          cpf_recebedor: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+          data_entrega: dataEntrega,
+          status: 'entregue',
+          data_hora_entrega: dataHoraEntrega,
+          assinatura_base64: signatureDataUrl, // Salva assinatura digital
+        })
+        .eq('id', selectedAtendimento.id);
+
+      if (error) throw error;
+
+      // Carregar logo
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      // Gerar PDF com assinatura digital incluída
+      const doc = new jsPDF();
+
+      // ===== CABEÇALHO (mesmo que impressão) =====
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, 40, 195, 40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
+
+      // Protocolo e data
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.rect(15, 65, 85, 18);
+      doc.rect(110, 65, 85, 18);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('PROTOCOLO Nº', 18, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('DATA E HORA DA ENTREGA', 113, 70);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
+
+      // Seções de dados (mesmo código)
+      const secaoY = 93;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, secaoY + 2, 195, secaoY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, secaoY + 5, 180, 38, 'FD');
+
+      const labelStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+      };
+      const valueStyle = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+      };
+
+      let yData = secaoY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.nome, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(selectedAtendimento.cpf, 18, yData + 5);
+      labelStyle();
+      doc.text('Data do Atendimento:', 110, yData);
+      valueStyle();
+      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
+
+      // Recebedor
+      const recebedorY = secaoY + 50;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
+      yData = recebedorY + 12;
+      labelStyle();
+      doc.text('Nome Completo:', 18, yData);
+      valueStyle();
+      doc.text(nomeRecebedor, 18, yData + 5);
+      yData += 13;
+      labelStyle();
+      doc.text('CPF:', 18, yData);
+      valueStyle();
+      doc.text(cpfRecebedor, 18, yData + 5);
+      labelStyle();
+      doc.text('Vínculo com o Titular:', 110, yData);
+      valueStyle();
+      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
+
+      // Declaração
+      const infoY = recebedorY + 50;
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      const declaracao = [
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
+      ];
+      declaracao.forEach((linha, index) => {
+        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      });
+
+      // ===== ASSINATURA DIGITAL =====
+      const assinaturaY = 210;
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
+
+      // INSERIR ASSINATURA DIGITAL
+      doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 20, 90, 22);
+
+      // Nome e CPF
+      doc.setFontSize(9);
+      doc.text(nomeRecebedor, 105, assinaturaY + 47, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 51, { align: 'center' });
+
+      // Rodapé
+      const rodapeY = 270;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, rodapeY, 195, rodapeY);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Documento emitido por:', 15, rodapeY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(atendenteNome, 15, rodapeY + 9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
+      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
+
+      // Gerar PDF
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+
+    } catch (err) {
+      console.error('Erro ao gerar comprovante:', err);
+      alert('Erro ao gerar comprovante. Tente novamente.');
+    }
+    setGerandoComprovante(false);
+  };
 
   // Funções para edição de atendimento
   const validateCPF = (cpf: string) => {
@@ -547,23 +948,27 @@ export default function DashboardPage() {
       {pdfUrl && (
         <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
       )}
-      {/* Modal de edição de atendimento */}
+      {/* Modal de edição de atendimento - Unificado */}
       {showEditAtendimentoModal && selectedAtendimentoForEdit && (
-        <EditAtendimentoModal
-          show={showEditAtendimentoModal}
+        <AtendimentoModal
+          atendimento={selectedAtendimentoForEdit}
+          isOpen={showEditAtendimentoModal}
           onClose={() => {
             setShowEditAtendimentoModal(false);
             setSelectedAtendimentoForEdit(null);
-            setEditingAtendimento({});
-            setValidationErrors({});
           }}
-          atendimento={selectedAtendimentoForEdit}
-          editingAtendimento={editingAtendimento}
-          onInputChange={handleInputChange}
-          onSave={handleSaveAtendimento}
-          onCancel={handleCancelEdit}
-          saving={savingAtendimento}
-          validationErrors={validationErrors}
+          onUpdate={(updated) => {
+            // Atualizar lista de atendimentos
+            setRecentAtendimentos(prev =>
+              prev.map(a => a.id === updated.id ? updated : a)
+            );
+            fetchDashboardData();
+          }}
+          onDelete={(id) => {
+            // Remover da lista
+            setRecentAtendimentos(prev => prev.filter(a => a.id !== id));
+            fetchDashboardData();
+          }}
         />
       )}
       {/* Modal de novo atendimento */}
@@ -577,15 +982,43 @@ export default function DashboardPage() {
           }}
         />
       )}
-      <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white py-6 px-3 pt-20">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-left">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">Painel de Controle</h1>
-            <p className="text-gray-600 mt-2 text-base md:text-lg">Bem-vindo ao gerenciamento de atendimentos.</p>
+      {/* Modal de Seleção de Modo de Entrega */}
+      <ModoEntregaModal
+        isOpen={showModoEntregaModal}
+        onClose={() => setShowModoEntregaModal(false)}
+        onSelectMode={handleSelectModoEntrega}
+      />
+
+      {/* Modal de Assinatura Digital via Canvas */}
+      <SignaturePadCanvas
+        isOpen={showSignaturePadCanvas}
+        onClose={() => setShowSignaturePadCanvas(false)}
+        onSave={handleSaveSignatureCanvas}
+        title="Assinatura do Recebedor"
+        recipientName={nomeRecebedor}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Cabeçalho do Dashboard - Design Moderno */}
+          <div className="text-left space-y-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
+              <div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  Painel de Controle
+                </h1>
+                <p className="text-gray-500 mt-2 text-sm md:text-base font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Bem-vindo ao gerenciamento de atendimentos
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Cards de Estatísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Cards de Estatísticas - Grid Moderno */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <StatCard title="Total de Atendimentos" value={stats.total} color="text-gray-900" />
             <StatCard title="Correções" value={stats.correcoes} color="text-red-600" />
             <StatCard title="Em Andamento" value={stats.emAndamento} color="text-blue-600" />
@@ -594,25 +1027,25 @@ export default function DashboardPage() {
             <StatCard title="Hoje" value={stats.hoje} color="text-emerald-600" />
           </div>
 
-          {/* Container para Ações Rápidas e Atendimentos Recentes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Container para Ações Rápidas e Atendimentos Recentes - Design Aprimorado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Ações Rápidas */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 flex flex-col justify-between transition-all duration-300 hover:shadow-xl animate-slide-up">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
-                  Ações Rápidas
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <div className="flex space-x-2">
-                  <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                  </button>
-                  <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Ações Rápidas
+                  </h2>
+                </div>
+                <div className="flex space-x-2">
+                  <button className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                   </button>
                 </div>
@@ -632,6 +1065,13 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
+                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={
+                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                  </svg>
+                }>
+                  🔐 Fila de Coleta de Digitais
+                </QuickAction>
                 <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={
                   <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -667,13 +1107,6 @@ export default function DashboardPage() {
                 }>
                   Gestão de Agendamentos
                 </QuickAction>
-                <QuickAction href="/admin/chamadas" color="border-orange-500 text-orange-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
-                  </svg>
-                }>
-                  Gerenciar Chamadas
-                </QuickAction>
                 <button
                   ref={entregarCinButtonRef}
                   onClick={() => setShowEntregarCinModal(true)}
@@ -693,16 +1126,22 @@ export default function DashboardPage() {
             </div>
 
             {/* Atendimentos Recentes */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-xl animate-slide-up">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold relative inline-block text-emerald-700">
-                  Atendimentos Recentes
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                </h2>
-                <Link href="/dashboard/atendimentos" className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Atendimentos Recentes
+                  </h2>
+                </div>
+                <Link href="/dashboard/atendimentos" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-emerald-50 transition-all duration-200">
                   Ver todos
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
@@ -718,10 +1157,10 @@ export default function DashboardPage() {
                   recentAtendimentos.map((atendimento) => (
                     <div
                       key={atendimento.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-gray-50 rounded-2xl border-2 border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-emerald-200 transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${getStatusColor(atendimento.status).replace('text-', 'bg-')}`}>
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mr-4 shadow-sm group-hover:scale-110 transition-transform duration-300 ${getStatusColor(atendimento.status).replace('text-', 'bg-')}`}>
                           {atendimento.status === 'correcao' ? (
                             <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -741,14 +1180,17 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-800">{atendimento.nome}</p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(atendimento.dia_atual)} - {atendimento.protocolo}
+                          <p className="font-bold text-gray-800 text-base group-hover:text-emerald-700 transition-colors">{atendimento.nome}</p>
+                          <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-1">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatDate(atendimento.dia_atual)} • {atendimento.protocolo}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <span className={`status-badge ${atendimento.status === 'correcao' ? 'status-error' :
+                      <div className="flex items-center gap-3">
+                        <span className={`status-badge font-semibold px-3 py-1.5 text-xs ${atendimento.status === 'correcao' ? 'status-error' :
                           atendimento.status === 'concluido' ? 'status-completed' :
                             atendimento.status === 'em_andamento' ? 'status-in-progress' :
                               'status-pending'}`}>
@@ -759,11 +1201,11 @@ export default function DashboardPage() {
                         </span>
                         {/* Botão de navegação */}
                         <button
-                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
                           onClick={() => router.push(`/dashboard/atendimentos/${atendimento.id}/AtendimentoDetalhes`)}
                         ></button>
-                        <button 
-                          className="ml-3 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                        <button
+                          className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                           onClick={() => handleEditAtendimento(atendimento)}
                           title="Editar atendimento"
                         >
@@ -1133,9 +1575,9 @@ function EntregarCinModal({
                 ) : (
                   <>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
-                    Gerar Comprovante
+                    Gerar e Imprimir
                   </>
                 )}
               </button>
@@ -1268,76 +1710,73 @@ function StatCard({ title, value, color }: { title: string, value: any, color: s
   const config = cardConfig[color as keyof typeof cardConfig] || cardConfig['text-gray-900'];
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border ${config.border} ${config.bg} ${config.shadow} shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`}>
-      {/* Gradiente de fundo sutil */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm"></div>
-      
-      {/* Barra lateral colorida */}
-      <div className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${config.gradient}`}></div>
-      
-        {/* Conteúdo principal */}
-        <div className="relative p-6">
-          {/* Layout horizontal para formato retangular */}
-          <div className="flex items-center justify-between">
-            {/* Lado esquerdo: título e valor */}
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wider mb-2">{title}</h3>
-              <div className="mb-1">
-                <span className={`text-3xl font-bold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>
-                  {value}
-                </span>
-              </div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Atendimentos</p>
+    <div className={`group relative overflow-hidden rounded-2xl border-2 ${config.border} bg-white shadow-md backdrop-blur-sm transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-opacity-80 animate-slide-up`}>
+      {/* Efeito de brilho no hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* Barra superior colorida animada */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${config.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+
+      {/* Círculo decorativo no canto */}
+      <div className={`absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br ${config.gradient} opacity-5 rounded-full group-hover:scale-150 transition-transform duration-500`}></div>
+
+      {/* Conteúdo principal */}
+      <div className="relative p-6">
+        {/* Layout horizontal para formato retangular */}
+        <div className="flex items-center justify-between">
+          {/* Lado esquerdo: título e valor */}
+          <div className="flex-1">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 group-hover:text-gray-600 transition-colors">{title}</h3>
+            <div className="mb-2">
+              <span className={`text-4xl font-extrabold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent transition-all duration-300 group-hover:scale-105 inline-block`}>
+                {value}
+              </span>
             </div>
-            
-            {/* Lado direito: ícone */}
-            <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${config.gradient} shadow-lg ml-4`}>
-              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-            </div>
+              Atendimentos
+            </p>
           </div>
-          
-          {/* Indicador de progresso decorativo */}
-          <div className="mt-4 h-1 w-full rounded-full bg-gray-200">
-            <div className={`h-1 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out`} 
-                 style={{ width: `${Math.min(100, (value / 100) * 10)}%` }}></div>
+
+          {/* Lado direito: ícone com animação */}
+          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg ml-4 transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-500`}>
+            <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+            </svg>
           </div>
         </div>
+
+        {/* Indicador de progresso decorativo com animação */}
+        <div className="mt-5 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+          <div className={`h-1.5 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out shadow-sm`}
+               style={{ width: `${Math.min(100, (value / 100) * 10 + 20)}%` }}></div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Card de ação rápida
+// Card de ação rápida - Design moderno
 function QuickAction({ href, color, icon, children }: any) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-3 rounded-xl shadow-sm border ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group`}
+      className={`flex items-center px-4 py-3.5 rounded-xl shadow-sm border-2 ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white hover:bg-gray-50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden`}
     >
-      <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300`}>
+      {/* Efeito de fundo gradiente no hover */}
+      <div className={`absolute inset-0 ${color.replace('text-', 'bg-').replace('-700', '-50')} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+      <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2.5 rounded-xl mr-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-sm relative z-10`}>
         {icon}
       </div>
-      <span className="font-medium">{children}</span>
-      <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors relative z-10">{children}</span>
+      <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:text-gray-600 group-hover:translate-x-2 transition-all duration-300 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>
     </Link>
   );
-}
-
-function gerarCpfAleatorio() {
-  // Gera um CPF válido (apenas para testes/demonstrativo)
-  function randomInt(n: number) { return Math.floor(Math.random() * n); }
-  let n = [];
-  for (let i = 0; i < 9; ++i) n.push(randomInt(10));
-  let d1 = 0, d2 = 0;
-  for (let i = 0; i < 9; ++i) d1 += n[i] * (10 - i);
-  d1 = 11 - (d1 % 11); if (d1 >= 10) d1 = 0;
-  for (let i = 0; i < 9; ++i) d2 += n[i] * (11 - i);
-  d2 += d1 * 2;
-  d2 = 11 - (d2 % 11); if (d2 >= 10) d2 = 0;
-  return `${n.join('')}${d1}${d2}`;
 }
 
 // Modal de edição de atendimento

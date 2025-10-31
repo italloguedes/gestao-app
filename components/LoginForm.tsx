@@ -45,7 +45,7 @@ export default function LoginForm() {
         }
 
         // Redireciona baseado na role
-        if (userData?.role === 'admin' || userData?.role === 'atendente') {
+        if (userData?.role === 'admin' || userData?.role === 'atendente' || userData?.role === 'superadmin') {
           router.push('/dashboard');
         } else {
           router.push('/agendamento');

@@ -1,8 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { sendEmailConfirmation } from '@/lib/emailService';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem criar agendamentos');
+  }
+
   try {
     const { nome, cpf, telefone, email, data, horario, data_nascimento, atendimento_preferencial } = await request.json();
 
@@ -107,7 +119,18 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem atualizar agendamentos');
+  }
+
   try {
     const { id, status } = await request.json();
 

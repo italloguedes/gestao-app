@@ -70,7 +70,7 @@ export function getVoiceConfig(type: keyof typeof VOICE_CONFIGS): VoiceConfig {
 export function getVoiceMessage(type: keyof typeof VOICE_MESSAGES, ...args: any[]): string {
   const messageFunction = VOICE_MESSAGES[type];
   if (typeof messageFunction === 'function') {
-    return messageFunction(...args);
+    return (messageFunction as (...args: any[]) => string)(...args);
   }
   return messageFunction;
 }
