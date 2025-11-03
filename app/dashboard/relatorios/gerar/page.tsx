@@ -238,7 +238,9 @@ export default function GerarRelatorioPage() {
     doc.setTextColor(90, 90, 90);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    const periodo = `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataInicio)}`;
+    const periodo = dataInicio && dataFim && dataInicio !== dataFim
+      ? `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataFim)}`
+      : `do dia ${formatDate(dataInicio || dataFim)}`;
     const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
     doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
 
@@ -328,7 +330,9 @@ export default function GerarRelatorioPage() {
     }
 
     // Salvar o PDF
-    const fileName = `lista_entrega_${dataInicio}.pdf`;
+    const fileName = dataInicio && dataFim && dataInicio !== dataFim
+      ? `lista_entrega_${dataInicio}_a_${dataFim}.pdf`
+      : `lista_entrega_${dataInicio || dataFim}.pdf`;
     doc.save(fileName);
   };
 
@@ -343,15 +347,9 @@ export default function GerarRelatorioPage() {
         return;
       }
 
-      // Validação específica para lista de entrega
-      if (tipoRelatorio === 'assinatura' && !dataInicio) {
-        setMessage({ text: 'Para gerar a lista de entrega, é necessário selecionar uma data', type: 'error' });
-        return;
-      }
-
-      // Validação para relatório completo
-      if (tipoRelatorio === 'completo' && !dataInicio && !dataFim) {
-        setMessage({ text: 'Para gerar o relatório completo, é necessário selecionar pelo menos uma data', type: 'error' });
+      // Validação de datas
+      if (!dataInicio && !dataFim) {
+        setMessage({ text: 'É necessário selecionar pelo menos uma data', type: 'error' });
         return;
       }
 
@@ -359,25 +357,25 @@ export default function GerarRelatorioPage() {
         .from('atendimentos')
         .select('*');
 
-      // Aplicar filtros apenas se estiverem preenchidos
-      if (tipoRelatorio === 'assinatura') {
-        // Para lista de entrega, usar apenas a data inicial
-        if (dataInicio) {
-          const dataInicioAjustada = dataInicio + 'T00:00:00';
-          const dataFimAjustada = dataInicio + 'T23:59:59';
-          query = query
-            .gte('dia_atual', dataInicioAjustada)
-            .lte('dia_atual', dataFimAjustada);
-        }
-      } else {
-        // Para relatório completo, usar período
-        if (dataInicio && dataFim) {
-          const dataInicioAjustada = dataInicio + 'T00:00:00';
-          const dataFimAjustada = dataFim + 'T23:59:59';
-          query = query
-            .gte('dia_atual', dataInicioAjustada)
-            .lte('dia_atual', dataFimAjustada);
-        }
+      // Aplicar filtros de data
+      if (dataInicio && dataFim) {
+        // Se ambas as datas estão preenchidas, usar intervalo
+        const dataInicioAjustada = dataInicio + 'T00:00:00';
+        const dataFimAjustada = dataFim + 'T23:59:59';
+        query = query
+          .gte('dia_atual', dataInicioAjustada)
+          .lte('dia_atual', dataFimAjustada);
+      } else if (dataInicio) {
+        // Se apenas data inicial, usar do início deste dia até o fim
+        const dataInicioAjustada = dataInicio + 'T00:00:00';
+        const dataFimAjustada = dataInicio + 'T23:59:59';
+        query = query
+          .gte('dia_atual', dataInicioAjustada)
+          .lte('dia_atual', dataFimAjustada);
+      } else if (dataFim) {
+        // Se apenas data final, usar até o fim deste dia
+        const dataFimAjustada = dataFim + 'T23:59:59';
+        query = query.lte('dia_atual', dataFimAjustada);
       }
 
       if (nome) {
@@ -484,7 +482,7 @@ export default function GerarRelatorioPage() {
               {/* Data Inicial */}
               <div>
                 <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-700 mb-2">
-                  {tipoRelatorio === 'assinatura' ? 'Data' : 'Data Inicial'}
+                  Data Inicial
                 </label>
                 <input
                   type="date"
@@ -496,20 +494,18 @@ export default function GerarRelatorioPage() {
               </div>
 
               {/* Data Final */}
-              {tipoRelatorio === 'completo' && (
-                <div>
-                  <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700 mb-2">
-                    Data Final
-                  </label>
-                  <input
-                    type="date"
-                    id="dataFim"
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
-                  />
-                </div>
-              )}
+              <div>
+                <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data Final
+                </label>
+                <input
+                  type="date"
+                  id="dataFim"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
+                />
+              </div>
 
               {/* Nome do Cliente */}
               <div>
