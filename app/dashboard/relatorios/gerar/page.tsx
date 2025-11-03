@@ -223,111 +223,144 @@ export default function GerarRelatorioPage() {
 
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+    const accentColor = [232, 245, 233] as [number, number, number]; // Verde claro
+    const borderColor = [200, 230, 201] as [number, number, number]; // Borda verde suave
 
-    // Cabeçalho
+    // Cabeçalho moderno com gradiente visual
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
+    doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+
+    // Título principal
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    const title = 'Lista de Entrega - Sala Sensorial / ALECE';
-    const titleWidth = doc.getStringUnitWidth(title) * 18 / doc.internal.scaleFactor;
-    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 20);
+    const title = 'LISTA DE ENTREGA';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 14);
 
-    // Informações do período
-    doc.setTextColor(90, 90, 90);
-    doc.setFontSize(12);
+    // Subtítulo
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const periodo = dataInicio && dataFim && dataInicio !== dataFim
-      ? `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataFim)}`
-      : `do dia ${formatDate(dataInicio || dataFim)}`;
-    const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
-    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
+    const subtitle = 'Sala Sensorial / ALECE';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
+    doc.text(subtitle, (doc.internal.pageSize.width - subtitleWidth) / 2, 22);
 
-    // Linha separadora
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.5);
-    doc.line(20, 40, doc.internal.pageSize.width - 20, 40);
+    // Box de informações do período
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.roundedRect(15, 40, doc.internal.pageSize.width - 30, 12, 2, 2, 'F');
 
-    // Cabeçalho da tabela
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(50, 50, 50);
-
-    // Posições das colunas
-    const col1 = 25; // Número
-    const col2 = 40; // Nome
-    const col3 = 100; // CPF
-    const col4 = 140; // Assinatura
-
-    // Cabeçalhos
-    doc.text('Nº', col1, 50);
-    doc.text('Nome Completo', col2, 50);
-    doc.text('CPF', col3, 50);
-    doc.text('Assinatura', col4, 50);
-
-    // Linha do cabeçalho
-    doc.setDrawColor(0, 135, 81);
-    doc.setLineWidth(1);
-    doc.line(20, 52, doc.internal.pageSize.width - 20, 52);
-
-    // Linhas para os dados
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const periodo = dataInicio && dataFim && dataInicio !== dataFim
+      ? `PERÍODO: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+      : `DATA: ${formatDate(dataInicio || dataFim)}`;
+    const periodoWidth = doc.getStringUnitWidth(periodo) * 9 / doc.internal.scaleFactor;
+    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 47);
 
-    let currentY = 60;
-    const lineHeight = 8;
+    // Total de atendimentos
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
+    const totalWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
+    doc.text(totalText, doc.internal.pageSize.width - 20 - totalWidth, 47);
 
-    atendimentos.forEach((atendimento, index) => {
-      // Verificar se precisa de nova página
-      if (currentY > doc.internal.pageSize.height - 40) {
-        doc.addPage();
-        currentY = 30;
+    // Tabela otimizada com AutoTable
+    const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
+    const tableRows = atendimentos.map((atendimento, index) => [
+      (index + 1).toString(),
+      atendimento.nome, // Nome completo sem truncar
+      atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+      '' // Espaço para assinatura
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 57,
+      styles: {
+        fontSize: 9,
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+        lineColor: borderColor,
+        lineWidth: 0.1,
+        minCellHeight: 12,
+        textColor: [40, 40, 40],
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+        lineWidth: 0
+      },
+      columnStyles: {
+        0: {
+          cellWidth: 12,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [0, 135, 81]
+        }, // Nº
+        1: {
+          cellWidth: 85,
+          halign: 'left',
+          overflow: 'linebreak' // Permite quebra de linha para nomes longos
+        }, // Nome Completo
+        2: {
+          cellWidth: 35,
+          halign: 'center',
+          fontStyle: 'normal',
+          font: 'courier'
+        }, // CPF
+        3: {
+          cellWidth: 48,
+          halign: 'center',
+          fillColor: [250, 250, 250]
+        } // Assinatura
+      },
+      alternateRowStyles: {
+        fillColor: [252, 252, 252]
+      },
+      margin: { left: 15, right: 15 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage',
+      didDrawPage: (data) => {
+        // Adicionar rodapé em cada página dentro do autoTable
+        const pageCount = (doc as any).getNumberOfPages();
+        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+
+        // Linha separadora do rodapé
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.line(15, doc.internal.pageSize.height - 18, doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 18);
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(110, 110, 110);
+
+        // Data e hora de geração (esquerda)
+        const now = new Date();
+        const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 12);
+
+        // Nome do atendente (centro)
+        doc.setFont('helvetica', 'bold');
+        const atendenteText = `${atendenteNome}`;
+        const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+        doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 12);
+
+        // Número da página (direita)
+        doc.setFont('helvetica', 'normal');
+        const pageText = `Página ${currentPage} de ${pageCount}`;
+        const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+        doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 15, doc.internal.pageSize.height - 12);
       }
-
-      // Número
-      doc.text((index + 1).toString(), col1, currentY);
-
-      // Nome (truncado se muito longo)
-      const nome = atendimento.nome.length > 30 ? atendimento.nome.substring(0, 27) + '...' : atendimento.nome;
-      doc.text(nome, col2, currentY);
-
-      // CPF formatado
-      const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-      doc.text(cpfFormatado, col3, currentY);
-
-      // Linha horizontal separadora
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(20, currentY + 2, doc.internal.pageSize.width - 20, currentY + 2);
-
-      currentY += lineHeight;
     });
-
-    // Rodapé
-    const pageCount = (doc as any).getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-
-      // Data e hora de geração
-      const now = new Date();
-      const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
-      doc.text(dataHoraGeracao, 20, doc.internal.pageSize.height - 15);
-
-      // Nome do atendente (centralizado)
-      const atendenteText = `Atendente: ${atendenteNome}`;
-      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 8 / doc.internal.scaleFactor;
-      doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 15);
-
-      // Número da página
-      const pageText = `Página ${i} de ${pageCount}`;
-      const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;
-      doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 20, doc.internal.pageSize.height - 15);
-    }
 
     // Salvar o PDF
     const fileName = dataInicio && dataFim && dataInicio !== dataFim
