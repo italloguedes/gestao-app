@@ -167,14 +167,21 @@ export default function AcoesItinerantesPage() {
         const acao = acoesMap.get(nomeAcao)!;
         acao.total++;
 
-        const status = atendimento.status?.toLowerCase();
-        if (status === 'concluído' || status === 'concluido') {
+        // Normalizar status para comparação (remover acentos e converter para minúsculas)
+        const status = atendimento.status || '';
+        const statusNormalizado = status
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+
+        // Verificar todas as variações de status
+        if (statusNormalizado.includes('concluido') || status.toLowerCase().includes('concluído')) {
           acao.concluidos++;
-        } else if (status === 'em_andamento' || status === 'em andamento') {
+        } else if (statusNormalizado.includes('em_andamento') || statusNormalizado.includes('em andamento') || status.toLowerCase().includes('em andamento')) {
           acao.emAndamento++;
-        } else if (status === 'correcao' || status === 'correção') {
+        } else if (statusNormalizado.includes('correcao') || status.toLowerCase().includes('correção')) {
           acao.correcao++;
-        } else if (status === 'bloqueado') {
+        } else if (statusNormalizado.includes('bloqueado')) {
           acao.bloqueados++;
         }
       });
