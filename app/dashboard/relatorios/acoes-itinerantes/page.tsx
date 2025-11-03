@@ -94,13 +94,13 @@ export default function AcoesItinerantesPage() {
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
 
   useEffect(() => {
-    // Definir datas padrão (últimos 30 dias)
+    // Definir datas padrão (últimos 180 dias para capturar mais dados históricos)
     const hoje = new Date();
-    const trintaDiasAtras = new Date();
-    trintaDiasAtras.setDate(hoje.getDate() - 30);
+    const diasAtras = new Date();
+    diasAtras.setDate(hoje.getDate() - 180);
 
     setDataFim(hoje.toISOString().split('T')[0]);
-    setDataInicio(trintaDiasAtras.toISOString().split('T')[0]);
+    setDataInicio(diasAtras.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
@@ -131,11 +131,12 @@ export default function AcoesItinerantesPage() {
         return;
       }
 
-      // Filtrar apenas atendimentos que são de ações (solicitante começa com "ação" ou "acao")
+      // Filtrar apenas atendimentos que são de ações (solicitante contém "ação" ou "acao")
       const atendimentosAcoes = atendimentos.filter((a: any) => {
         if (!a.solicitante) return false;
         const solicitanteLower = a.solicitante.toLowerCase().trim();
-        return solicitanteLower.startsWith('ação') || solicitanteLower.startsWith('acao');
+        // Verificar se contém "ação" ou "acao" em qualquer parte do texto
+        return solicitanteLower.includes('ação') || solicitanteLower.includes('acao');
       });
 
       setTotalAtendimentos(atendimentosAcoes.length);
