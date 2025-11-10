@@ -126,13 +126,21 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     if (authUserId) {
       const authUser = authUsers.find(u => u.id === authUserId);
       if (authUser) {
+        console.log('Usuário do Auth selecionado:', authUser);
         setFormData(prev => ({
           ...prev,
           email: authUser.email || prev.email,
-          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || prev.name,
-          auth_id: authUser.id
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || prev.name,
+          auth_id: authUser.id,
+          phone: authUser.phone || authUser.user_metadata?.phone || prev.phone
         }));
       }
+    } else {
+      // Limpar auth_id quando deselecionar
+      setFormData(prev => ({
+        ...prev,
+        auth_id: undefined
+      }));
     }
   };
 
@@ -142,6 +150,34 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     setError(null);
 
     try {
+      // Validações básicas
+      if (!formData.name || !formData.name.trim()) {
+        setError('O nome é obrigatório');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.email || !formData.email.trim()) {
+        setError('O email é obrigatório');
+        setLoading(false);
+        return;
+      }
+
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError('Formato de email inválido');
+        setLoading(false);
+        return;
+      }
+
+      // Se está criando novo usuário e não selecionou do Auth, precisa de senha
+      if (!user && !selectedAuthUser && (!formData.password || formData.password.length < 6)) {
+        setError('Ao criar um novo usuário, é necessário informar uma senha (mínimo 6 caracteres) ou selecionar um usuário existente do Supabase Auth');
+        setLoading(false);
+        return;
+      }
+
       // Obter token de autenticação
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -219,10 +255,20 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       } else {
         // === CRIANDO NOVO USUÁRIO ===
 
-        let authId = formData.auth_id;
+        let authId = formData.auth_id || selectedAuthUser;
 
-        // 1. Se deve criar no Auth (tem email e senha)
+        // 1. Se selecionou um usuário do Auth, usar o auth_id dele
+        if (selectedAuthUser && authUsers.length > 0) {
+          const selectedUser = authUsers.find(u => u.id === selectedAuthUser);
+          if (selectedUser) {
+            authId = selectedUser.id;
+            console.log('Usando usuário do Auth selecionado:', authId);
+          }
+        }
+
+        // 2. Se não tem auth_id mas tem email e senha, criar no Auth primeiro
         if (!authId && formData.email && formData.password) {
+          console.log('Criando novo usuário no Auth...');
           const createAuthData = {
             email: formData.email,
             password: formData.password,
@@ -244,21 +290,30 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
           if (!authResponse.ok) {
             const errorData = await authResponse.json();
-            throw new Error(errorData.error || 'Erro ao criar usuário no Supabase Auth');
+            console.error('Erro ao criar usuário no Auth:', errorData);
+            throw new Error(errorData.error || errorData.details || 'Erro ao criar usuário no Supabase Auth');
           }
 
           const authData = await authResponse.json();
           authId = authData.user.id;
+          console.log('Usuário criado no Auth com ID:', authId);
         }
 
-        // 2. Criar na tabela users
-        const createData = {
-          auth_id: authId || `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        // 3. Criar na tabela users
+        const createData: any = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
           status: formData.status
         };
+
+        // Só adicionar auth_id se tiver um (não criar temp IDs)
+        if (authId) {
+          createData.auth_id = authId;
+          console.log('Criando usuário na tabela com auth_id:', authId);
+        } else {
+          console.log('Criando usuário na tabela sem auth_id (usuário não autenticado)');
+        }
 
         const response = await fetch('/api/users', {
           method: 'POST',
@@ -271,13 +326,16 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('Erro ao criar usuário na tabela:', errorData);
           if (response.status === 401) {
             throw new Error('Sessão expirada. Faça login novamente.');
           } else if (response.status === 403) {
             throw new Error('Você não tem permissão para criar usuários.');
           }
-          throw new Error(errorData.error || 'Erro ao criar usuário');
+          throw new Error(errorData.error || 'Erro ao criar usuário na tabela');
         }
+
+        console.log('Usuário criado com sucesso!');
       }
 
       onSuccess?.();
@@ -491,7 +549,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           </div>
 
           {/* Password Field (apenas ao criar ou se quiser atualizar) */}
-          {(!user || formData.syncWithAuth) && (
+          {(!user || formData.syncWithAuth) && !selectedAuthUser && (
             <div className="group">
               <label htmlFor="password" className="flex items-center text-sm font-bold text-gray-700 mb-3 group-hover:text-emerald-700 transition-colors">
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-2 group-hover:bg-indigo-200 transition-colors">
@@ -500,8 +558,8 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   </svg>
                 </div>
                 Senha
-                <span className="ml-auto text-xs font-normal text-gray-400">
-                  {user ? '(Deixe em branco para manter a atual)' : '(Mínimo 6 caracteres)'}
+                <span className="ml-auto text-xs font-normal text-red-500">
+                  * Obrigatório
                 </span>
               </label>
               <input
@@ -510,13 +568,31 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 name="password"
                 value={formData.password || ''}
                 onChange={handleChange}
+                required={!selectedAuthUser}
                 className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300"
-                placeholder={user ? "Deixe em branco para não alterar" : "Digite uma senha segura"}
+                placeholder="Digite uma senha segura (mínimo 6 caracteres)"
                 minLength={6}
               />
               <p className="mt-2 text-xs text-gray-500 ml-10">
-                {user ? 'Preencha apenas se desejar alterar a senha no Supabase Auth' : 'Senha para login no sistema (mínimo 6 caracteres)'}
+                {user ? 'Preencha apenas se desejar alterar a senha no Supabase Auth' : 'Senha para login no sistema. Não é necessário se você selecionou um usuário do Supabase Auth acima.'}
               </p>
+            </div>
+          )}
+          
+          {/* Mensagem quando usuário do Auth é selecionado */}
+          {!user && selectedAuthUser && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4">
+              <div className="flex items-start space-x-3">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-green-900">Usuário do Supabase Auth selecionado</p>
+                  <p className="text-xs text-green-700 mt-1">
+                    O usuário já existe no sistema de autenticação. A senha não é necessária, pois o usuário já pode fazer login.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
