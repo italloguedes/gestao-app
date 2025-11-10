@@ -137,26 +137,54 @@ export default function AcoesItinerantesPage() {
 
       // Filtrar apenas atendimentos que são de ações (solicitante contém qualquer variação de "ação")
       // Usar busca case-insensitive e mais flexível para capturar todos os registros fieis da tabela
+      console.log('=== FILTRAGEM DE AÇÕES ===');
+      console.log(`Total de atendimentos no período: ${atendimentos.length}`);
+      
       const atendimentosAcoes = atendimentos.filter((a: any) => {
-        if (!a.solicitante) return false;
+        if (!a.solicitante) {
+          return false;
+        }
         // Normalizar o solicitante: remover espaços extras, converter para minúsculas e remover acentos
         const solicitante = a.solicitante.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         // Verificar se contém "acao" (sem acento após normalização) ou usar regex case-insensitive no original
         // Isso garante que captura: "AÇÃO", "ação", "acao", "Acao", "Ação Itinerante", etc.
-        return solicitante.includes('acao') || /acao|ação/i.test(a.solicitante.trim());
+        const isAcao = solicitante.includes('acao') || /acao|ação/i.test(a.solicitante.trim());
+        return isAcao;
       });
       
-      // Log para debug - ajuda a identificar se estão faltando registros
-      console.log(`Total de atendimentos no período: ${atendimentos.length}`);
+      // Log detalhado para debug
       console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
+      
+      // Verificar se há atendimentos sem solicitante que poderiam ser ações
+      const atendimentosSemSolicitante = atendimentos.filter((a: any) => !a.solicitante);
+      if (atendimentosSemSolicitante.length > 0) {
+        console.warn(`Atenção: ${atendimentosSemSolicitante.length} atendimento(s) sem solicitante (não incluídos no relatório)`);
+      }
+      
+      // Mostrar exemplos de solicitantes encontrados
+      const solicitantesUnicos = [...new Set(atendimentosAcoes.map((a: any) => a.solicitante))];
+      console.log(`Solicitantes únicos encontrados: ${solicitantesUnicos.length}`);
+      if (solicitantesUnicos.length <= 10) {
+        console.log('Exemplos de solicitantes:', solicitantesUnicos);
+      } else {
+        console.log('Primeiros 10 solicitantes:', solicitantesUnicos.slice(0, 10));
+      }
+      console.log('==========================');
 
       setTotalAtendimentos(atendimentosAcoes.length);
 
       // Agrupar por ação
+      console.log('=== AGRUPAMENTO POR AÇÃO ===');
       const acoesMap = new Map<string, AcaoData>();
+      const statusEncontrados = new Set<string>();
 
       atendimentosAcoes.forEach((atendimento: any) => {
         const nomeAcao = atendimento.solicitante;
+        
+        // Coletar todos os status únicos para análise
+        if (atendimento.status) {
+          statusEncontrados.add(String(atendimento.status).trim());
+        }
 
         if (!acoesMap.has(nomeAcao)) {
           acoesMap.set(nomeAcao, {
@@ -175,53 +203,139 @@ export default function AcoesItinerantesPage() {
         acao.total++;
 
         // Normalizar status para comparação (remover acentos e converter para minúsculas)
-        const status = (atendimento.status || '').trim();
+        // Tratar casos de null, undefined, empty string
+        const statusRaw = atendimento.status;
+        const status = (statusRaw === null || statusRaw === undefined || statusRaw === '') 
+          ? '' 
+          : String(statusRaw).trim();
+        
         const statusLower = status.toLowerCase();
         const statusNormalizado = statusLower
           .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/\s+/g, ' '); // Normaliza espaços múltiplos
 
         // Verificar todas as variações de status - usar if separados para garantir contagem correta
         // IMPORTANTE: Cada atendimento deve ser contado em apenas uma categoria
         let statusContado = false;
         
-        if (statusNormalizado.includes('concluido') || statusLower.includes('concluído')) {
+        // Concluído - todas as variações possíveis
+        if (!statusContado && (
+          statusNormalizado.includes('concluido') || 
+          statusLower.includes('concluído') ||
+          statusLower === 'concluido' ||
+          statusLower === 'concluído' ||
+          statusNormalizado === 'concluido' ||
+          status === 'Concluído' ||
+          status === 'Concluido' ||
+          status === 'CONCLUÍDO' ||
+          status === 'CONCLUIDO'
+        )) {
           acao.concluidos++;
           statusContado = true;
         }
         
-        if (!statusContado && (statusNormalizado.includes('em_andamento') || statusNormalizado.includes('em andamento') || statusLower.includes('em andamento'))) {
+        // Em Andamento - todas as variações possíveis
+        if (!statusContado && (
+          statusNormalizado.includes('em_andamento') || 
+          statusNormalizado.includes('em andamento') || 
+          statusLower.includes('em andamento') ||
+          statusLower === 'em andamento' ||
+          statusLower === 'em_andamento' ||
+          status === 'Em Andamento' ||
+          status === 'Em andamento' ||
+          status === 'EM ANDAMENTO' ||
+          status === 'em_andamento'
+        )) {
           acao.emAndamento++;
           statusContado = true;
         }
         
-        if (!statusContado && (statusNormalizado.includes('correcao') || statusLower.includes('correção'))) {
+        // Correção - todas as variações possíveis
+        if (!statusContado && (
+          statusNormalizado.includes('correcao') || 
+          statusLower.includes('correção') ||
+          statusLower === 'correcao' ||
+          statusLower === 'correção' ||
+          statusNormalizado === 'correcao' ||
+          status === 'Correção' ||
+          status === 'Correcao' ||
+          status === 'CORREÇÃO' ||
+          status === 'CORRECAO'
+        )) {
           acao.correcao++;
           statusContado = true;
         }
         
-        if (!statusContado && statusNormalizado.includes('bloqueado')) {
+        // Bloqueado - todas as variações possíveis
+        if (!statusContado && (
+          statusNormalizado.includes('bloqueado') ||
+          statusLower === 'bloqueado' ||
+          status === 'Bloqueado' ||
+          status === 'BLOQUEADO'
+        )) {
           acao.bloqueados++;
           statusContado = true;
         }
         
-        // Se não foi contado em nenhuma categoria, adicionar à categoria "Outros"
+        // Cancelado - adicionar também como categoria separada ou em Outros
+        if (!statusContado && (
+          statusNormalizado.includes('cancelado') ||
+          statusLower === 'cancelado' ||
+          status === 'Cancelado' ||
+          status === 'CANCELADO'
+        )) {
+          // Cancelados vão para "Outros" por enquanto, mas são contados
+          acao.outros++;
+          statusContado = true;
+          console.warn(`Status "Cancelado" encontrado para ação "${nomeAcao}" - adicionado em "Outros"`);
+        }
+        
+        // Se não foi contado em nenhuma categoria (incluindo status vazio/null), adicionar à categoria "Outros"
         if (!statusContado) {
           acao.outros++;
           if (status) {
-            console.warn(`Status não mapeado encontrado: "${status}" para ação "${nomeAcao}" - adicionado em "Outros"`);
+            console.warn(`Status não mapeado encontrado: "${status}" (original: "${statusRaw}") para ação "${nomeAcao}" - adicionado em "Outros"`);
+          } else {
+            console.warn(`Status vazio/null encontrado para ação "${nomeAcao}" - adicionado em "Outros"`);
           }
         }
       });
-
-      // Calcular percentuais e ordenar
+      
+      // Log de status únicos encontrados
+      console.log(`Status únicos encontrados nos atendimentos: ${statusEncontrados.size}`);
+      if (statusEncontrados.size > 0) {
+        console.log('Lista de status:', Array.from(statusEncontrados).sort());
+      }
+      console.log('============================');
+      
+      // Calcular percentuais e ordenar com validação rigorosa
       const acoesArray = Array.from(acoesMap.values()).map(acao => {
         // Validar que a soma dos status seja igual ao total
         const somaStatus = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
         
-        // Log para debug se houver discrepância
+        // Se houver discrepância, corrigir automaticamente ajustando "Outros"
         if (somaStatus !== acao.total) {
-          console.error(`ERRO: Discrepância na ação "${acao.nome}": Total=${acao.total}, Soma Status=${somaStatus}`);
+          const diferenca = acao.total - somaStatus;
+          console.error(`ERRO: Discrepância na ação "${acao.nome}": Total=${acao.total}, Soma Status=${somaStatus}, Diferença=${diferenca}`);
+          
+          // Corrigir automaticamente: ajustar "Outros" para compensar a diferença
+          if (diferenca > 0) {
+            // Faltam atendimentos contados - adicionar em "Outros"
+            acao.outros += diferenca;
+            console.warn(`Correção automática: Adicionados ${diferenca} atendimento(s) em "Outros" para ação "${acao.nome}"`);
+          } else if (diferenca < 0) {
+            // Há atendimentos contados a mais - remover de "Outros" se possível
+            const ajuste = Math.min(Math.abs(diferenca), acao.outros);
+            acao.outros -= ajuste;
+            console.warn(`Correção automática: Removidos ${ajuste} atendimento(s) de "Outros" para ação "${acao.nome}"`);
+          }
+        }
+        
+        // Validação final após correção
+        const somaFinal = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
+        if (somaFinal !== acao.total) {
+          console.error(`ERRO CRÍTICO: Ainda há discrepância após correção na ação "${acao.nome}": Total=${acao.total}, Soma Final=${somaFinal}`);
         }
         
         return {
@@ -232,17 +346,52 @@ export default function AcoesItinerantesPage() {
 
       setAcoes(acoesArray);
       
-      // Log adicional para verificar totais
+      // Validação rigorosa final - verificar totais
       const totalGeral = acoesArray.reduce((sum, acao) => sum + acao.total, 0);
       const somaStatusGeral = acoesArray.reduce((sum, acao) => 
         sum + acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros, 0
       );
-      console.log(`Total geral de atendimentos: ${totalGeral}`);
+      
+      // Logs detalhados para debug
+      console.log('=== VALIDAÇÃO DE DADOS ===');
+      console.log(`Total de atendimentos no período: ${atendimentos.length}`);
+      console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
+      console.log(`Total geral de atendimentos por ação: ${totalGeral}`);
       console.log(`Soma geral de status: ${somaStatusGeral}`);
-      console.log(`Total de atendimentos filtrados: ${atendimentosAcoes.length}`);
+      console.log(`Número de ações distintas: ${acoesArray.length}`);
+      
+      // Verificar se todos os atendimentos foram agrupados
+      if (totalGeral !== atendimentosAcoes.length) {
+        console.error(`ERRO: Total geral (${totalGeral}) não corresponde ao número de atendimentos filtrados (${atendimentosAcoes.length})`);
+        console.error(`Diferença: ${Math.abs(totalGeral - atendimentosAcoes.length)} atendimento(s)`);
+      }
+      
+      // Verificar se a soma dos status bate com o total
       if (totalGeral !== somaStatusGeral) {
         console.error(`ERRO: Total geral (${totalGeral}) não corresponde à soma de status (${somaStatusGeral})`);
+        console.error(`Diferença: ${Math.abs(totalGeral - somaStatusGeral)} atendimento(s)`);
+        
+        // Tentar identificar qual ação tem problema
+        acoesArray.forEach(acao => {
+          const somaAcao = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
+          if (somaAcao !== acao.total) {
+            console.error(`  - Ação "${acao.nome}": Total=${acao.total}, Soma=${somaAcao}, Diferença=${acao.total - somaAcao}`);
+          }
+        });
+      } else {
+        console.log('✓ Validação passou: Total geral corresponde à soma de status');
       }
+      
+      // Estatísticas por status
+      const statsPorStatus = {
+        concluidos: acoesArray.reduce((sum, acao) => sum + acao.concluidos, 0),
+        emAndamento: acoesArray.reduce((sum, acao) => sum + acao.emAndamento, 0),
+        correcao: acoesArray.reduce((sum, acao) => sum + acao.correcao, 0),
+        bloqueados: acoesArray.reduce((sum, acao) => sum + acao.bloqueados, 0),
+        outros: acoesArray.reduce((sum, acao) => sum + acao.outros, 0)
+      };
+      console.log('Estatísticas por status:', statsPorStatus);
+      console.log('========================');
 
       // Dados para gráfico de status (consolidado ou por ação)
       // Usar a mesma lógica de categorização da tabela para garantir consistência
@@ -277,10 +426,20 @@ export default function AcoesItinerantesPage() {
 
       setStatusData(statusArray);
       
-      // Log para debug
+      // Log detalhado para gráfico de status
+      console.log('=== GRÁFICO DE STATUS ===');
       const totalStatusGrafico = statusArray.reduce((sum, item) => sum + item.value, 0);
       const totalAcoesFiltradas = acoesFiltradas.reduce((sum, acao) => sum + acao.total, 0);
-      console.log(`Gráfico de status - Total: ${totalStatusGrafico}, Total ações filtradas: ${totalAcoesFiltradas}`);
+      console.log(`Total no gráfico: ${totalStatusGrafico}`);
+      console.log(`Total de ações filtradas: ${totalAcoesFiltradas}`);
+      console.log('Distribuição:', statusArray.map(s => `${s.name}: ${s.value}`).join(', '));
+      
+      if (totalStatusGrafico !== totalAcoesFiltradas) {
+        console.error(`ERRO no gráfico: Total (${totalStatusGrafico}) não corresponde ao total de ações (${totalAcoesFiltradas})`);
+      } else {
+        console.log('✓ Gráfico validado corretamente');
+      }
+      console.log('==========================');
 
       // Dados para timeline (atendimentos por dia)
       const atendimentosParaTimeline = selectedAcao
