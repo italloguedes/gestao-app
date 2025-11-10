@@ -6,7 +6,7 @@ import { FiCheck, FiX, FiLock, FiUnlock } from 'react-icons/fi';
 import DashboardHeader from '@/components/DashboardHeader';
 
 const HORARIOS = [
-  "08:00","8:30", "09:00", "10:00", "11:00", // manhã
+  "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40", // manhã
   "13:00","13:30", "14:00","14:30", "15:00", // tardee
 ];
 
