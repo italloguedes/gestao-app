@@ -132,17 +132,19 @@ export default function AcoesItinerantesPage() {
       }
 
       // Filtrar apenas atendimentos que são de ações (solicitante contém qualquer variação de "ação")
+      // Usar busca case-insensitive e mais flexível para capturar todos os registros fieis da tabela
       const atendimentosAcoes = atendimentos.filter((a: any) => {
         if (!a.solicitante) return false;
-        const solicitante = a.solicitante.trim();
-        // Verificar todas as variações: "AÇÃO", "ação", "acao", "ACAO"
-        return solicitante.includes('AÇÃO') ||
-               solicitante.includes('ação') ||
-               solicitante.includes('acao') ||
-               solicitante.includes('ACAO') ||
-               solicitante.includes('Ação') ||
-               solicitante.includes('Acao');
+        // Normalizar o solicitante: remover espaços extras, converter para minúsculas e remover acentos
+        const solicitante = a.solicitante.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        // Verificar se contém "acao" (sem acento após normalização) ou usar regex case-insensitive no original
+        // Isso garante que captura: "AÇÃO", "ação", "acao", "Acao", "Ação Itinerante", etc.
+        return solicitante.includes('acao') || /acao|ação/i.test(a.solicitante.trim());
       });
+      
+      // Log para debug - ajuda a identificar se estão faltando registros
+      console.log(`Total de atendimentos no período: ${atendimentos.length}`);
+      console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
 
       setTotalAtendimentos(atendimentosAcoes.length);
 

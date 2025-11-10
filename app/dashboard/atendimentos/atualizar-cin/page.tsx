@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,7 @@ function AtualizarCINForm() {
   const [cpf, setCpf] = useState(searchParams?.get('cpf') || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const cpfInputRef = useRef<HTMLInputElement>(null);
 
   // Formatar CPF durante digitação
   const formatCPF = (value: string) => {
@@ -113,8 +114,8 @@ function AtualizarCINForm() {
       // Obter token de autenticação
       const { data: { session } } = await supabase.auth.getSession();
 
-      // Enviar email de conclusão
-      const response = await fetch('/api/cin-pronta', {
+      // Enviar email de conclusão (não aguardar para melhorar UX - processar em background)
+      fetch('/api/cin-pronta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,30 +126,32 @@ function AtualizarCINForm() {
           nome: atendimento.nome,
           cpf: atendimento.cpf,
         }),
+      }).then(async (response) => {
+        const emailResult = await response.json();
+        if (!response.ok) {
+          console.error('Erro ao enviar email:', emailResult);
+        } else {
+          console.log('Email enviado com sucesso');
+        }
+      }).catch((error) => {
+        console.error('Erro ao enviar email:', error);
       });
 
-      const emailResult = await response.json();
-
-      if (!response.ok) {
-        console.error('Erro ao enviar email:', emailResult);
-        setMessage({
-          text: 'Atendimento concluído, mas houve um erro ao enviar o email: ' + emailResult.error,
-          type: 'error'
-        });
-        return;
-      }
-
-      console.log('Email enviado com sucesso');
+      // Mostrar sucesso imediatamente sem aguardar email
       setMessage({
-        text: `CIN atualizada com sucesso! Email de notificação enviado para ${atendimento.nome}.`,
+        text: `CIN atualizada com sucesso! Email de notificação será enviado para ${atendimento.nome}.`,
         type: 'success'
       });
 
-      // Limpar formulário após 2 segundos
+      // Limpar formulário e refocar imediatamente para próxima digitação
+      setCpf('');
       setTimeout(() => {
-        setCpf('');
         setMessage(null);
-      }, 3000);
+        // Refocar o campo para continuar digitando
+        if (cpfInputRef.current) {
+          cpfInputRef.current.focus();
+        }
+      }, 2000);
 
     } catch (error) {
       console.error('Erro ao processar solicitação:', error);
@@ -161,6 +164,12 @@ function AtualizarCINForm() {
   const handleReset = () => {
     setCpf('');
     setMessage(null);
+    // Refocar o campo após limpar
+    setTimeout(() => {
+      if (cpfInputRef.current) {
+        cpfInputRef.current.focus();
+      }
+    }, 100);
   };
 
   return (
@@ -255,6 +264,7 @@ function AtualizarCINForm() {
                     <FiUser className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                   </div>
                   <input
+                    ref={cpfInputRef}
                     type="text"
                     id="cpf"
                     value={cpf}
