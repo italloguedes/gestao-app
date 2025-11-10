@@ -98,13 +98,12 @@ export default function AcoesItinerantesPage() {
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
 
   useEffect(() => {
-    // Definir datas padrão (últimos 180 dias para capturar mais dados históricos)
+    // Definir datas padrão: início das ações (01/07/2025) até hoje
     const hoje = new Date();
-    const diasAtras = new Date();
-    diasAtras.setDate(hoje.getDate() - 180);
+    const dataInicioAcoes = new Date('2025-07-01'); // Data de início das ações itinerantes
 
     setDataFim(hoje.toISOString().split('T')[0]);
-    setDataInicio(diasAtras.toISOString().split('T')[0]);
+    setDataInicio(dataInicioAcoes.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
@@ -116,18 +115,54 @@ export default function AcoesItinerantesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Buscar todos os atendimentos do período
-      let query = supabase
-        .from('atendimentos')
-        .select('*')
-        .gte('dia_atual', dataInicio)
-        .lte('dia_atual', dataFim);
+      // Buscar todos os atendimentos do período com paginação automática
+      // O Supabase tem limite padrão de 1000 registros, então precisamos buscar em lotes
+      console.log('=== BUSCA DE ATENDIMENTOS ===');
+      console.log(`Período: ${dataInicio} a ${dataFim}`);
+      
+      let allAtendimentos: any[] = [];
+      let page = 0;
+      const pageSize = 1000; // Limite máximo do Supabase
+      let hasMore = true;
 
-      const { data: atendimentos, error } = await query;
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
 
-      if (error) throw error;
+        let query = supabase
+          .from('atendimentos')
+          .select('*')
+          .gte('dia_atual', dataInicio)
+          .lte('dia_atual', dataFim)
+          .order('dia_atual', { ascending: false })
+          .order('horario', { ascending: false })
+          .range(from, to);
 
-      if (!atendimentos) {
+        const { data: atendimentos, error } = await query;
+
+        if (error) throw error;
+
+        if (atendimentos && atendimentos.length > 0) {
+          allAtendimentos = [...allAtendimentos, ...atendimentos];
+          console.log(`Página ${page + 1}: ${atendimentos.length} registros encontrados (Total acumulado: ${allAtendimentos.length})`);
+          
+          // Se retornou menos que o pageSize, não há mais registros
+          if (atendimentos.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log(`Total de registros buscados: ${allAtendimentos.length}`);
+      console.log('============================');
+
+      const atendimentos = allAtendimentos;
+
+      if (!atendimentos || atendimentos.length === 0) {
         setAcoes([]);
         setStatusData([]);
         setTimelineData([]);
