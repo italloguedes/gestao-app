@@ -44,6 +44,7 @@ interface AcaoData {
   emAndamento: number;
   correcao: number;
   bloqueados: number;
+  outros: number;
   percentualConclusao: number;
 }
 
@@ -79,7 +80,10 @@ const STATUS_COLORS: Record<string, string> = {
   'bloqueado': COLORS.danger,
   'Bloqueado': COLORS.danger,
   'cancelado': '#6B7280',
-  'Cancelado': '#6B7280'
+  'Cancelado': '#6B7280',
+  'Outros': '#6B7280',
+  'outros': '#6B7280',
+  'Não definido': '#9CA3AF'
 };
 
 export default function AcoesItinerantesPage() {
@@ -107,7 +111,7 @@ export default function AcoesItinerantesPage() {
     if (dataInicio && dataFim) {
       fetchData();
     }
-  }, [dataInicio, dataFim]);
+  }, [dataInicio, dataFim, selectedAcao]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -162,6 +166,7 @@ export default function AcoesItinerantesPage() {
             emAndamento: 0,
             correcao: 0,
             bloqueados: 0,
+            outros: 0,
             percentualConclusao: 0
           });
         }
@@ -170,54 +175,120 @@ export default function AcoesItinerantesPage() {
         acao.total++;
 
         // Normalizar status para comparação (remover acentos e converter para minúsculas)
-        const status = atendimento.status || '';
-        const statusNormalizado = status
-          .toLowerCase()
+        const status = (atendimento.status || '').trim();
+        const statusLower = status.toLowerCase();
+        const statusNormalizado = statusLower
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
 
-        // Verificar todas as variações de status
-        if (statusNormalizado.includes('concluido') || status.toLowerCase().includes('concluído')) {
+        // Verificar todas as variações de status - usar if separados para garantir contagem correta
+        // IMPORTANTE: Cada atendimento deve ser contado em apenas uma categoria
+        let statusContado = false;
+        
+        if (statusNormalizado.includes('concluido') || statusLower.includes('concluído')) {
           acao.concluidos++;
-        } else if (statusNormalizado.includes('em_andamento') || statusNormalizado.includes('em andamento') || status.toLowerCase().includes('em andamento')) {
+          statusContado = true;
+        }
+        
+        if (!statusContado && (statusNormalizado.includes('em_andamento') || statusNormalizado.includes('em andamento') || statusLower.includes('em andamento'))) {
           acao.emAndamento++;
-        } else if (statusNormalizado.includes('correcao') || status.toLowerCase().includes('correção')) {
+          statusContado = true;
+        }
+        
+        if (!statusContado && (statusNormalizado.includes('correcao') || statusLower.includes('correção'))) {
           acao.correcao++;
-        } else if (statusNormalizado.includes('bloqueado')) {
+          statusContado = true;
+        }
+        
+        if (!statusContado && statusNormalizado.includes('bloqueado')) {
           acao.bloqueados++;
+          statusContado = true;
+        }
+        
+        // Se não foi contado em nenhuma categoria, adicionar à categoria "Outros"
+        if (!statusContado) {
+          acao.outros++;
+          if (status) {
+            console.warn(`Status não mapeado encontrado: "${status}" para ação "${nomeAcao}" - adicionado em "Outros"`);
+          }
         }
       });
 
       // Calcular percentuais e ordenar
-      const acoesArray = Array.from(acoesMap.values()).map(acao => ({
-        ...acao,
-        percentualConclusao: acao.total > 0 ? (acao.concluidos / acao.total) * 100 : 0
-      })).sort((a, b) => b.total - a.total);
+      const acoesArray = Array.from(acoesMap.values()).map(acao => {
+        // Validar que a soma dos status seja igual ao total
+        const somaStatus = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
+        
+        // Log para debug se houver discrepância
+        if (somaStatus !== acao.total) {
+          console.error(`ERRO: Discrepância na ação "${acao.nome}": Total=${acao.total}, Soma Status=${somaStatus}`);
+        }
+        
+        return {
+          ...acao,
+          percentualConclusao: acao.total > 0 ? (acao.concluidos / acao.total) * 100 : 0
+        };
+      }).sort((a, b) => b.total - a.total);
 
       setAcoes(acoesArray);
+      
+      // Log adicional para verificar totais
+      const totalGeral = acoesArray.reduce((sum, acao) => sum + acao.total, 0);
+      const somaStatusGeral = acoesArray.reduce((sum, acao) => 
+        sum + acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros, 0
+      );
+      console.log(`Total geral de atendimentos: ${totalGeral}`);
+      console.log(`Soma geral de status: ${somaStatusGeral}`);
+      console.log(`Total de atendimentos filtrados: ${atendimentosAcoes.length}`);
+      if (totalGeral !== somaStatusGeral) {
+        console.error(`ERRO: Total geral (${totalGeral}) não corresponde à soma de status (${somaStatusGeral})`);
+      }
 
       // Dados para gráfico de status (consolidado ou por ação)
-      const filteredAtendimentos = selectedAcao
-        ? atendimentosAcoes.filter((a: any) => a.solicitante === selectedAcao)
-        : atendimentosAcoes;
+      // Usar a mesma lógica de categorização da tabela para garantir consistência
+      const acoesFiltradas = selectedAcao
+        ? acoesArray.filter(acao => acao.nome === selectedAcao)
+        : acoesArray;
 
-      const statusMap = new Map<string, number>();
-      filteredAtendimentos.forEach((atendimento: any) => {
-        const status = atendimento.status || 'Não definido';
-        statusMap.set(status, (statusMap.get(status) || 0) + 1);
+      // Agregar os dados das ações filtradas
+      const statusAgregado = {
+        'Concluídos': 0,
+        'Em Andamento': 0,
+        'Correção': 0,
+        'Bloqueados': 0,
+        'Outros': 0
+      };
+
+      acoesFiltradas.forEach(acao => {
+        statusAgregado['Concluídos'] += acao.concluidos;
+        statusAgregado['Em Andamento'] += acao.emAndamento;
+        statusAgregado['Correção'] += acao.correcao;
+        statusAgregado['Bloqueados'] += acao.bloqueados;
+        statusAgregado['Outros'] += acao.outros;
       });
 
-      const statusArray: StatusData[] = Array.from(statusMap.entries()).map(([name, value]) => ({
-        name,
-        value,
-        color: STATUS_COLORS[name] || '#6B7280'
-      }));
+      const statusArray: StatusData[] = Object.entries(statusAgregado)
+        .filter(([_, value]) => value > 0) // Remover categorias com zero
+        .map(([name, value]) => ({
+          name,
+          value,
+          color: STATUS_COLORS[name] || '#6B7280'
+        }));
 
       setStatusData(statusArray);
+      
+      // Log para debug
+      const totalStatusGrafico = statusArray.reduce((sum, item) => sum + item.value, 0);
+      const totalAcoesFiltradas = acoesFiltradas.reduce((sum, acao) => sum + acao.total, 0);
+      console.log(`Gráfico de status - Total: ${totalStatusGrafico}, Total ações filtradas: ${totalAcoesFiltradas}`);
 
       // Dados para timeline (atendimentos por dia)
+      const atendimentosParaTimeline = selectedAcao
+        ? atendimentosAcoes.filter((a: any) => a.solicitante === selectedAcao)
+        : atendimentosAcoes;
+        
       const timelineMap = new Map<string, number>();
-      filteredAtendimentos.forEach((atendimento: any) => {
+      atendimentosParaTimeline.forEach((atendimento: any) => {
         const data = atendimento.dia_atual || atendimento.created_at?.split('T')[0];
         if (data) {
           timelineMap.set(data, (timelineMap.get(data) || 0) + 1);
@@ -260,12 +331,13 @@ export default function AcoesItinerantesPage() {
       acao.emAndamento.toString(),
       acao.correcao.toString(),
       acao.bloqueados.toString(),
+      acao.outros.toString(),
       `${acao.percentualConclusao.toFixed(1)}%`
     ]);
 
     (doc as any).autoTable({
       startY: 45,
-      head: [['Ação', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', '% Conclusão']],
+      head: [['Ação', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [59, 130, 246] },
@@ -569,6 +641,7 @@ export default function AcoesItinerantesPage() {
                   <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Em Andamento</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Correção</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Bloqueados</th>
+                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Outros</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">% Conclusão</th>
                 </tr>
               </thead>
@@ -604,6 +677,11 @@ export default function AcoesItinerantesPage() {
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700">
                         {acao.bloqueados}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
+                        {acao.outros}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
