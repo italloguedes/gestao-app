@@ -12,7 +12,7 @@ const UNIDADE = "Sala Sensorial ALECE";
 const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
 const ENDERECO_COMPLETO = "Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238";
 const HORARIOS = [
-  "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40", // manhã
+  "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", // manhã
   "13:00", "13:30", "14:00", "14:30", "15:00", // tarde
 ];
 
