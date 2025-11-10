@@ -44,13 +44,44 @@ export async function initializeDatabase() {
 
 export async function getUsers() {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Buscar todos os usuários com paginação automática
+    // O Supabase tem limite padrão de 1000 registros
+    console.log('=== BUSCA DE USUÁRIOS DA TABELA ===');
+    let allUsers: User[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (error) throw error;
-    return data as User[];
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allUsers = [...allUsers, ...data];
+        console.log(`Página ${page + 1}: ${data.length} usuários encontrados (Total acumulado: ${allUsers.length})`);
+        
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    console.log(`Total de usuários da tabela buscados: ${allUsers.length}`);
+    console.log('===================================');
+    
+    return allUsers as User[];
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
