@@ -145,7 +145,7 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes")
         .eq("data", selectedDate)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
@@ -289,85 +289,144 @@ export default function AgendamentosHojePage() {
       const { default: jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
 
+      // helper to load image as base64
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+
       const doc = new jsPDF();
-      const primaryColor: [number, number, number] = [16, 185, 129];
-      const secondaryColor: [number, number, number] = [248, 249, 250];
 
-      doc.setFillColor(...primaryColor);
-      doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
+      // try to include logo like dashboard reports
+      try {
+        const logoBase64 = await getBase64FromUrl('/logoautismo.png');
+        doc.addImage(logoBase64, 'PNG', 15, 10, 28, 28);
+      } catch (e) {
+        // ignore image errors
+      }
+
+      // Header texts (institutional)
       doc.setFont('helvetica', 'bold');
-      const title = 'Agendamentos - Sala Sensorial ALECE';
-      const titleWidth = doc.getStringUnitWidth(title) * (doc as any).getFontSize() / doc.internal.scaleFactor;
-      doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 19);
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', doc.internal.pageSize.width / 2, 18, { align: 'center' });
 
-      doc.setTextColor(90, 90, 90);
-      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Sala Sensorial - Agendamentos', doc.internal.pageSize.width / 2, 24, { align: 'center' });
+
+      // divider
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, 34, doc.internal.pageSize.width - 15, 34);
+
+      // Title and period
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text('RELATÓRIO DE AGENDAMENTOS', doc.internal.pageSize.width / 2, 44, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
       const periodo = `Data: ${formatDate(selectedDate)} | Total: ${agendamentos.length} agendamentos`;
-      const periodoWidth = doc.getStringUnitWidth(periodo) * (doc as any).getFontSize() / doc.internal.scaleFactor;
-      doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 36);
+      doc.text(periodo, doc.internal.pageSize.width / 2, 50, { align: 'center' });
 
-      const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status'];
-      const tableRows = agendamentos.map((a: any) => [
-          a.horario.substring(0, 5),
-          a.nome.length > 25 ? a.nome.substring(0, 22) + '...' : a.nome,
-          a.telefone,
-          a.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
-          a.status.charAt(0).toUpperCase() + a.status.slice(1).toLowerCase()
-      ]);
+      // helper to extract observacoes text
+      const extractObservacoes = (obs: any) => {
+        if (!obs) return '';
+        if (typeof obs === 'string') {
+          try {
+            const parsed = JSON.parse(obs);
+            if (Array.isArray(parsed)) {
+              return parsed.map((p: any) => p.texto || p.observacao || p).join(' | ');
+            }
+            if (typeof parsed === 'object') return parsed.texto || parsed.observacao || JSON.stringify(parsed);
+            return String(parsed);
+          } catch (e) {
+            return obs;
+          }
+        }
+        if (Array.isArray(obs)) return obs.map(o => o.texto || o.observacao || o).join(' | ');
+        if (typeof obs === 'object') return obs.texto || obs.observacao || JSON.stringify(obs);
+        return String(obs);
+      };
 
-      autoTable(doc, {
-          head: [tableColumn],
-          body: tableRows,
-          startY: 44,
-          styles: {
-              fontSize: 9,
-              cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
-              lineColor: [220, 220, 220],
-              lineWidth: 0.1,
-              minCellHeight: 8,
-              textColor: [50, 50, 50],
-              halign: 'center'
-          },
-          headStyles: {
-              fillColor: primaryColor,
-              textColor: [255, 255, 255],
-              fontSize: 10,
-              fontStyle: 'bold',
-              halign: 'center',
-              cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-              minCellHeight: 10
-          },
-          columnStyles: {
-              0: { cellWidth: 25, halign: 'center' },
-              1: { cellWidth: 45, halign: 'left' },
-              2: { cellWidth: 35, halign: 'center' },
-              3: { cellWidth: 35, halign: 'center' },
-              4: { cellWidth: 30, halign: 'center' }
-          },
-          alternateRowStyles: {
-              fillColor: secondaryColor
-          },
-          margin: { left: 15, right: 15 },
-          rowPageBreak: 'avoid',
+      const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status', 'Observações'];
+      const tableRows = agendamentos.map((a: any) => {
+        const nome = a.nome || '';
+        const nomeShort = nome.length > 30 ? nome.substring(0, 27) + '...' : nome;
+        const cpf = (a.cpf || '').toString().replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        const statusLabel = (a.status || '').charAt(0).toUpperCase() + (a.status || '').slice(1).toLowerCase();
+        const observacoesText = extractObservacoes(a.observacoes || '');
+        const observacoesShort = observacoesText.length > 120 ? observacoesText.substring(0, 117) + '...' : observacoesText;
+        return [
+          (a.horario || '').substring(0, 5),
+          nomeShort,
+          a.telefone || '',
+          cpf,
+          statusLabel,
+          observacoesShort,
+        ];
       });
 
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 56,
+        styles: {
+          fontSize: 9,
+          cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+          lineColor: [220, 220, 220],
+          lineWidth: 0.1,
+          minCellHeight: 8,
+          textColor: [50, 50, 50],
+          halign: 'center'
+        },
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'center',
+          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+          minCellHeight: 10
+        },
+        columnStyles: {
+          0: { cellWidth: 20, halign: 'center' },
+          1: { cellWidth: 50, halign: 'left' },
+          2: { cellWidth: 35, halign: 'center' },
+          3: { cellWidth: 35, halign: 'center' },
+          4: { cellWidth: 30, halign: 'center' },
+          5: { cellWidth: 70, halign: 'left' }
+        },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        margin: { left: 15, right: 15 },
+        rowPageBreak: 'auto',
+      });
+
+      // footer with generation date and pages
       const pageCount = (doc as any).getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.setTextColor(128, 128, 128);
-          doc.setDrawColor(220, 220, 220);
-          doc.setLineWidth(0.3);
-          doc.line(15, doc.internal.pageSize.height - 15, doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 15);
-          const now = new Date();
-          const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
-          doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 8);
-          const pageText = `Página ${i} de ${pageCount}`;
-          const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;
-          doc.text(pageText, doc.internal.pageSize.width - 15 - pageTextWidth, doc.internal.pageSize.height - 8);
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.line(15, doc.internal.pageSize.height - 15, doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 15);
+        const now = new Date();
+        const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+        doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 8);
+        const pageText = `Página ${i} de ${pageCount}`;
+        const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;
+        doc.text(pageText, doc.internal.pageSize.width - 15 - pageTextWidth, doc.internal.pageSize.height - 8);
       }
 
       const fileName = `Agendamentos_${selectedDate.replace(/-/g, '_')}.pdf`;
