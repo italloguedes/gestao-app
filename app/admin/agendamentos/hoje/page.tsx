@@ -306,7 +306,6 @@ export default function AgendamentosHojePage() {
       // try to include logo like dashboard reports
       try {
         const logoBase64 = await getBase64FromUrl('/logoautismo.png');
-        // smaller logo and slightly lower to align with text
         doc.addImage(logoBase64, 'PNG', 15, 12, 22, 22);
       } catch (e) {
         // ignore image errors
@@ -316,29 +315,29 @@ export default function AgendamentosHojePage() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.setTextColor(15, 23, 42);
-  doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', doc.internal.pageSize.width / 2, 20, { align: 'center' });
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', doc.internal.pageSize.width / 2, 20, { align: 'center' });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
-  doc.text('Sala Sensorial - Agendamentos', doc.internal.pageSize.width / 2, 26, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Sala Sensorial - Agendamentos', doc.internal.pageSize.width / 2, 26, { align: 'center' });
 
-  // divider
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.5);
-  doc.line(15, 42, doc.internal.pageSize.width - 15, 42);
+      // divider
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(15, 42, doc.internal.pageSize.width - 15, 42);
 
-  // Title and period
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(15, 23, 42);
-  doc.text('RELATÓRIO DE AGENDAMENTOS', doc.internal.pageSize.width / 2, 54, { align: 'center' });
+      // Title and period
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text('RELATÓRIO DE AGENDAMENTOS', doc.internal.pageSize.width / 2, 54, { align: 'center' });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
-  const periodo = `Data: ${formatDate(selectedDate)} | Total: ${agendamentos.length} agendamentos`;
-  doc.text(periodo, doc.internal.pageSize.width / 2, 60, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const periodo = `Data: ${formatDate(selectedDate)} | Total: ${agendamentos.length} agendamentos`;
+      doc.text(periodo, doc.internal.pageSize.width / 2, 60, { align: 'center' });
 
       // helper to extract observacoes text
       const extractObservacoes = (obs: any) => {
@@ -363,62 +362,55 @@ export default function AgendamentosHojePage() {
       const tableColumn = ['Horário', 'Nome', 'Telefone', 'CPF', 'Status', 'Observações'];
       const tableRows = agendamentos.map((a: any) => {
         const nome = a.nome || '';
-        const nomeShort = nome.length > 30 ? nome.substring(0, 27) + '...' : nome;
+        const nomeShort = nome.length > 25 ? nome.substring(0, 22) + '...' : nome;
         const cpf = (a.cpf || '').toString().replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         const statusLabel = (a.status || '').charAt(0).toUpperCase() + (a.status || '').slice(1).toLowerCase();
         const observacoesText = extractObservacoes(a.observacoes || '');
-        const observacoesShort = observacoesText.length > 120 ? observacoesText.substring(0, 117) + '...' : observacoesText;
+        
         return [
           (a.horario || '').substring(0, 5),
           nomeShort,
           a.telefone || '',
           cpf,
           statusLabel,
-          observacoesShort,
+          observacoesText,
         ];
       });
 
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-  startY: 66,
+        startY: 66,
         styles: {
-          fontSize: 9,
-          cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+          fontSize: 8,
+          cellPadding: 2,
           lineColor: [220, 220, 220],
           lineWidth: 0.1,
-          minCellHeight: 8,
           textColor: [50, 50, 50],
-          halign: 'center'
+          halign: 'center',
+          overflow: 'linebreak'
         },
         headStyles: {
-          fillColor: [16, 185, 129],
+          fillColor: [16, 185, 129], // Green color
           textColor: [255, 255, 255],
-          fontSize: 10,
+          fontSize: 9,
           fontStyle: 'bold',
-          halign: 'center',
-          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-          minCellHeight: 10
         },
         columnStyles: {
-          0: { cellWidth: 20, halign: 'center' },
-          1: { cellWidth: 50, halign: 'left' },
-          2: { cellWidth: 35, halign: 'center' },
-          3: { cellWidth: 35, halign: 'center' },
-          4: { cellWidth: 30, halign: 'center' },
-          5: { cellWidth: 70, halign: 'left' }
+          0: { cellWidth: 18, halign: 'center' },
+          1: { cellWidth: 40, halign: 'left' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 20, halign: 'center' },
+          5: { cellWidth: 'auto', halign: 'left' }
         },
         alternateRowStyles: { fillColor: [248, 249, 250] },
-        margin: { left: 15, right: 15 },
-        rowPageBreak: 'auto',
       });
 
       // footer with generation date, generated by and pages
-      // try to resolve user name/email for footer
       let generatedBy = '';
       try {
         if (user && user.id) {
-          // prefer explicit name from users table
           const { data: userData } = await supabase.from('users').select('name').eq('auth_id', user.id).single();
           generatedBy = userData?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || '';
         } else {
@@ -440,7 +432,6 @@ export default function AgendamentosHojePage() {
         const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
         doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 12);
 
-        // generated by centered
         if (generatedBy) {
           doc.text(`Gerado por: ${generatedBy}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 12, { align: 'center' });
         }
