@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   UserRole,
   Permission,
@@ -31,20 +32,26 @@ interface UsePermissionsReturn {
 }
 
 export function usePermissions(): UsePermissionsReturn {
+  const { user, loading: authLoading, ensureValidSession } = useAuth();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-
         if (!user) {
           setRole(null);
+          setLoading(false);
           return;
         }
 
-        // Busca o role do usuário na tabela users
+        const sessionValid = await ensureValidSession();
+        if (!sessionValid) {
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
         const { data: userData, error } = await supabase
           .from('users')
           .select('role')
@@ -54,10 +61,10 @@ export function usePermissions(): UsePermissionsReturn {
         if (error && error.code !== 'PGRST116') {
           console.error('Erro ao buscar role do usuário:', error);
           setRole(null);
+          setLoading(false);
           return;
         }
 
-        // Se não encontrou por auth_id, tenta por email
         if (!userData) {
           const { data: userByEmail } = await supabase
             .from('users')
@@ -67,34 +74,28 @@ export function usePermissions(): UsePermissionsReturn {
 
           if (userByEmail) {
             setRole(userByEmail.role as UserRole);
+            setLoading(false);
             return;
           }
 
-          // Se não encontrou, considera como 'user'
           setRole('user');
+          setLoading(false);
           return;
         }
 
         setRole(userData.role as UserRole);
+        setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar permissões:', error);
         setRole(null);
-      } finally {
         setLoading(false);
       }
     };
 
-    fetchUserRole();
-
-    // Atualiza quando houver mudança de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    if (!authLoading) {
       fetchUserRole();
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    }
+  }, [user, authLoading, ensureValidSession]);
 
   return {
     role,

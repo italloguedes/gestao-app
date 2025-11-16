@@ -3,6 +3,8 @@
 import React, { ReactElement, useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/apiClient";
 import {
   FiCheck,
   FiX,
@@ -69,7 +71,7 @@ const HORARIOS = (() => {
 
 export default function AgendamentosHojePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading, ensureValidSession } = useAuth();
   const [hasAccess, setHasAccess] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +90,7 @@ export default function AgendamentosHojePage() {
     checkUser();
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (hasAccess) {
@@ -100,28 +102,38 @@ export default function AgendamentosHojePage() {
 
   const checkUser = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("role")
-          .eq("auth_id", user.id)
-          .single();
-
-        if (userError) {
-          setHasAccess(false);
-          return;
-        }
-
-        setHasAccess(
-          userData?.role === "atendente" ||
-          userData?.role === "admin" ||
-          userData?.role === "superadmin"
-        );
+      if (!user) {
+        setHasAccess(false);
+        setLoading(false);
+        return;
       }
+
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        setHasAccess(false);
+        setLoading(false);
+        router.push('/?session_expired=true');
+        return;
+      }
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("role")
+        .eq("auth_id", user.id)
+        .single();
+
+      if (userError) {
+        setHasAccess(false);
+        return;
+      }
+
+      setHasAccess(
+        userData?.role === "atendente" ||
+        userData?.role === "admin" ||
+        userData?.role === "superadmin"
+      );
     } catch (err) {
+      console.error('Erro ao verificar usuário:', err);
       setHasAccess(false);
     }
   };
@@ -163,13 +175,18 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
 
     try {
-      // Atualizar o status do agendamento
-      const { error } = await supabase
-        .from("agendamentos")
-        .update({ status: newStatus })
-        .eq("id", id);
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
+      }
 
-      if (error) throw error;
+      const { data, error } = await apiClient.put('/api/agendamentos', { id, status: newStatus });
+
+      if (error) {
+        throw new Error(error);
+      }
 
       setAgendamentos((prevAgendamentos: Agendamento[]) =>
         prevAgendamentos.map((agendamento: Agendamento) =>
@@ -184,6 +201,7 @@ export default function AgendamentosHojePage() {
 
       alert(`Status atualizado para "${newStatus}" com sucesso!`);
     } catch (err) {
+      console.error('Erro ao atualizar status:', err);
       alert(`Erro ao atualizar status: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
@@ -194,12 +212,22 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
 
     try {
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
+      }
+
       const { error } = await supabase
         .from("agendamentos")
         .update(updatedAppointment)
         .eq("id", updatedAppointment.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar agendamento:', error);
+        throw error;
+      }
 
       setAgendamentos((prevAgendamentos: Agendamento[]) =>
         prevAgendamentos.map((agendamento: Agendamento) =>
@@ -212,6 +240,7 @@ export default function AgendamentosHojePage() {
       setIsModalOpen(false);
       alert('Agendamento atualizado com sucesso!');
     } catch (err) {
+      console.error('Erro ao atualizar agendamento:', err);
       alert("Erro ao atualizar agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
@@ -221,31 +250,26 @@ export default function AgendamentosHojePage() {
   const handleCreateAppointment = async (appointmentData: any) => {
     setActionLoading(true);
     try {
-      // Obter token de autenticação
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const response = await fetch('/api/agendamentos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': session ? `Bearer ${session.access_token}` : ''
-        },
-        body: JSON.stringify(appointmentData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar agendamento');
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
       }
 
-      const newAppointment = await response.json();
+      const { data, error } = await apiClient.post('/api/agendamentos', appointmentData);
+
+      if (error) {
+        throw new Error(error);
+      }
 
       setAgendamentos((prevAgendamentos: Agendamento[]) =>
-        [...prevAgendamentos, newAppointment].sort((a, b) => a.horario.localeCompare(b.horario))
+        [...prevAgendamentos, data].sort((a, b) => a.horario.localeCompare(b.horario))
       );
 
       alert('Agendamento criado com sucesso!');
     } catch (err) {
+      console.error('Erro ao criar agendamento:', err);
       alert(`Erro ao criar agendamento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setActionLoading(false);
@@ -256,12 +280,22 @@ export default function AgendamentosHojePage() {
     setActionLoading(true);
 
     try {
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
+      }
+
       const { error } = await supabase
         .from("agendamentos")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao excluir agendamento:', error);
+        throw error;
+      }
 
       setAgendamentos((prevAgendamentos: Agendamento[]) =>
         prevAgendamentos.filter((agendamento: Agendamento) => agendamento.id !== id)
@@ -271,6 +305,7 @@ export default function AgendamentosHojePage() {
       setSelectedAppointment(null);
       alert('Agendamento excluído com sucesso!');
     } catch (err) {
+      console.error('Erro ao excluir agendamento:', err);
       alert("Erro ao excluir agendamento. Por favor, tente novamente.");
     } finally {
       setActionLoading(false);
