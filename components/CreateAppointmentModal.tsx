@@ -48,13 +48,27 @@ const [preferential, setPreferential] = useState(false);
 
   const HORARIOS = React.useMemo(() => {
     const slots: string[] = [];
-    for (let h = 7; h < 18; h++) {
-      for (let m = 0; m < 60; m += 5) {
-        const hs = h.toString().padStart(2, "0");
-        const ms = m.toString().padStart(2, "0");
-        slots.push(`${hs}:${ms}`);
+    let hora = 7;
+    let minuto = 0;
+    const endHour = 20;
+    const endMinute = 20;
+
+    while (true) {
+      const horaStr = hora.toString().padStart(2, "0");
+      const minutoStr = minuto.toString().padStart(2, "0");
+      slots.push(`${horaStr}:${minutoStr}`);
+
+      if (hora === endHour && minuto === endMinute) break;
+
+      minuto += 5;
+      if (minuto >= 60) {
+        minuto = 0;
+        hora += 1;
       }
+
+      if (hora >= 24) break;
     }
+
     return slots;
   }, []);
 
