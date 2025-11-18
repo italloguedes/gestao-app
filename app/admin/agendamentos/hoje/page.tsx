@@ -56,16 +56,30 @@ interface Agendamento {
   atendimento_preferencial?: boolean;
 }
 
-// Gerar horários por dia (7:00 às 18:00 com intervalos de 5 minutos)
+// Gerar horários de 07:00 até 20:20 (intervalo de 5 minutos)
 const HORARIOS = (() => {
-  const horarios = [];
-  for (let hora = 7; hora < 18; hora++) {
-    for (let minuto = 0; minuto < 60; minuto += 5) {
-      const horaStr = hora.toString().padStart(2, '0');
-      const minutoStr = minuto.toString().padStart(2, '0');
-      horarios.push(`${horaStr}:${minutoStr}`);
+  const horarios: string[] = [];
+  let hora = 7;
+  let minuto = 0;
+  const endHour = 20;
+  const endMinute = 20;
+
+  while (true) {
+    const horaStr = hora.toString().padStart(2, '0');
+    const minutoStr = minuto.toString().padStart(2, '0');
+    horarios.push(`${horaStr}:${minutoStr}`);
+
+    if (hora === endHour && minuto === endMinute) break;
+
+    minuto += 5;
+    if (minuto >= 60) {
+      minuto = 0;
+      hora += 1;
     }
+
+    if (hora >= 24) break;
   }
+
   return horarios;
 })();
 

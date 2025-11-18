@@ -5,10 +5,32 @@ import { supabase } from '@/lib/supabase-client';
 import { FiCheck, FiX, FiLock, FiUnlock } from 'react-icons/fi';
 import DashboardHeader from '@/components/DashboardHeader';
 
-const HORARIOS = [
-  "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", // manhã
-  "13:00","13:30", "14:00","14:30", "15:00", // tardee
-];
+// Gerar horários de 07:00 até 20:20 (intervalo de 5 minutos)
+const HORARIOS = (() => {
+  const horarios: string[] = [];
+  let hora = 7;
+  let minuto = 0;
+  const endHour = 20;
+  const endMinute = 20;
+
+  while (true) {
+    const horaStr = hora.toString().padStart(2, '0');
+    const minutoStr = minuto.toString().padStart(2, '0');
+    horarios.push(`${horaStr}:${minutoStr}`);
+
+    if (hora === endHour && minuto === endMinute) break;
+
+    minuto += 5;
+    if (minuto >= 60) {
+      minuto = 0;
+      hora += 1;
+    }
+
+    if (hora >= 24) break;
+  }
+
+  return horarios;
+})();
 
 interface User {
   id: string;
