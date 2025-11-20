@@ -463,21 +463,6 @@ function AgendamentoContent() {
     // 2. Todos os useEffects
     useEffect(() => {
         const today = new Date();
-        setCurrentDate(today);
-        setCurrentMonth(today.getMonth());
-        setCurrentYear(today.getFullYear());
-    }, []);
-
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUser(user);
-        });
-    }, []);
-
-    // Verificar disponibilidade de horários
-    useEffect(() => {
-        if (currentDate === null || currentMonth === null || currentYear === null) return;
-
         const checkAvailability = async () => {
             const availability: { [key: string]: boolean } = {};
 

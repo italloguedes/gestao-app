@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scheduleReminderEmails } from '@/lib/emailScheduler';
 
+export const dynamic = 'force-dynamic';
+
+
 /**
  * API Route para agendamento de emails via Cron
  * Requer token secreto no header Authorization: Bearer <CRON_SECRET>
