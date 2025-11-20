@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         }
 
         const agendamentosMap = new Set(
-            agendamentos?.map(a => a.horario.slice(0, 5)) || []
+            agendamentos?.map((a: { horario: string }) => a.horario.slice(0, 5)) || []
         );
 
         // Verificar se é o dia atual para filtrar horários passados
