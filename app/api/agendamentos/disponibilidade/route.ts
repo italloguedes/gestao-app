@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 
-// Definição dos horários fixos
-const HORARIOS_MANHA = [
-    "08:00", "08:25", "08:50", "09:15", "09:40",
-    "10:05", "10:30", "10:55", "11:20", "11:45"
-];
-
-const HORARIOS_TARDE = [
-    "13:00", "13:40", "14:20", "15:00", "15:40"
-];
+import { HORARIOS_MANHA, HORARIOS_TARDE } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
