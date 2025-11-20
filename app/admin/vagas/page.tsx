@@ -258,6 +258,34 @@ export default function GestaoVagas() {
     }
   };
 
+  const unblockAllSlots = async () => {
+    if (!confirm('Tem certeza que deseja desbloquear todas as vagas bloqueadas administrativamente para este dia?')) return;
+
+    setLoading(true);
+    try {
+      const dataFormatada = formatDateForDB(selectedDate);
+
+      // Deletar apenas os bloqueios administrativos (status = 'bloqueado')
+      // Isso preserva os agendamentos confirmados (status = 'confirmado')
+      const { error: deleteError } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq('data', dataFormatada)
+        .eq('status', 'bloqueado');
+
+      if (deleteError) throw deleteError;
+
+      await loadVagasStatus();
+      setSuccess('Todas as vagas bloqueadas foram liberadas!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Erro ao desbloquear todas as vagas:', err);
+      setError('Erro ao desbloquear vagas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('pt-BR', {
       timeZone: 'America/Fortaleza',
@@ -340,99 +368,85 @@ export default function GestaoVagas() {
                   </p>
                 </div>
 
-                <button
-                  onClick={blockAllSlots}
-                  className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-                >
-                  <FiLock className="mr-2 -ml-1 h-5 w-5" aria-hidden="true" />
-                  Bloquear Dia Inteiro
-                </button>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mb-4"></div>
+                <p className="text-gray-500">Carregando disponibilidade...</p>
               </div>
-            </div>
-
-            {/* Área Principal */}
-            <div className="lg:col-span-3">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-64 bg-white rounded-xl shadow-sm border border-gray-100">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mb-4"></div>
-                  <p className="text-gray-500">Carregando disponibilidade...</p>
-                </div>
               ) : (
-                <div className="space-y-6">
-                  {/* Manhã */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-800 flex items-center">
-                        <FiClock className="mr-2 text-emerald-600" /> Manhã
-                      </h3>
-                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        08:00 - 12:00
-                      </span>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                        {HORARIOS_MANHA.map(horario => (
-                          <button
-                            key={horario}
-                            onClick={() => toggleVaga(horario)}
-                            className={`
-                              relative p-3 rounded-lg border transition-all duration-200 flex flex-col items-center justify-center gap-2
-                              ${getSlotStatusColor(horario)}
-                            `}
-                          >
-                            <span className="font-bold text-lg">{horario}</span>
-                            {vagasLiberadas[horario] ? (
-                              <div className="flex items-center text-xs font-medium text-emerald-700">
-                                <FiUnlock className="mr-1" /> Livre
-                              </div>
-                            ) : (
-                              <div className="flex items-center text-xs font-medium text-gray-500">
-                                <FiLock className="mr-1" /> Ocupado
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+              <div className="space-y-6">
+                {/* Manhã */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800 flex items-center">
+                      <FiClock className="mr-2 text-emerald-600" /> Manhã
+                    </h3>
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      08:00 - 12:00
+                    </span>
                   </div>
-
-                  {/* Tarde */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-800 flex items-center">
-                        <FiClock className="mr-2 text-orange-500" /> Tarde
-                      </h3>
-                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">
-                        13:00 - 16:00
-                      </span>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                        {HORARIOS_TARDE.map(horario => (
-                          <button
-                            key={horario}
-                            onClick={() => toggleVaga(horario)}
-                            className={`
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {HORARIOS_MANHA.map(horario => (
+                        <button
+                          key={horario}
+                          onClick={() => toggleVaga(horario)}
+                          className={`
                               relative p-3 rounded-lg border transition-all duration-200 flex flex-col items-center justify-center gap-2
                               ${getSlotStatusColor(horario)}
                             `}
-                          >
-                            <span className="font-bold text-lg">{horario}</span>
-                            {vagasLiberadas[horario] ? (
-                              <div className="flex items-center text-xs font-medium text-emerald-700">
-                                <FiUnlock className="mr-1" /> Livre
-                              </div>
-                            ) : (
-                              <div className="flex items-center text-xs font-medium text-gray-500">
-                                <FiLock className="mr-1" /> Ocupado
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
+                        >
+                          <span className="font-bold text-lg">{horario}</span>
+                          {vagasLiberadas[horario] ? (
+                            <div className="flex items-center text-xs font-medium text-emerald-700">
+                              <FiUnlock className="mr-1" /> Livre
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-xs font-medium text-gray-500">
+                              <FiLock className="mr-1" /> Ocupado
+                            </div>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
+
+                {/* Tarde */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800 flex items-center">
+                      <FiClock className="mr-2 text-orange-500" /> Tarde
+                    </h3>
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                      13:00 - 16:00
+                    </span>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {HORARIOS_TARDE.map(horario => (
+                        <button
+                          key={horario}
+                          onClick={() => toggleVaga(horario)}
+                          className={`
+                              relative p-3 rounded-lg border transition-all duration-200 flex flex-col items-center justify-center gap-2
+                              ${getSlotStatusColor(horario)}
+                            `}
+                        >
+                          <span className="font-bold text-lg">{horario}</span>
+                          {vagasLiberadas[horario] ? (
+                            <div className="flex items-center text-xs font-medium text-emerald-700">
+                              <FiUnlock className="mr-1" /> Livre
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-xs font-medium text-gray-500">
+                              <FiLock className="mr-1" /> Ocupado
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
               )}
 
               {error && (
