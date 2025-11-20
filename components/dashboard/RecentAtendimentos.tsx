@@ -8,10 +8,13 @@ interface Atendimento {
     id: number;
     nome: string;
     cpf: string;
+    email: string;
+    solicitante: string;
     protocolo: string;
     dia_atual: string;
     horario: string;
     status: string;
+    observacoes?: string;
     [key: string]: any;
 }
 
