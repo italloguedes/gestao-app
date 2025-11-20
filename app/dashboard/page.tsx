@@ -16,7 +16,8 @@ import QuickAction from '@/components/dashboard/QuickAction';
 import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
 import PdfModal from '@/components/dashboard/PdfModal';
 import { generateComprovantePDF } from '@/lib/pdf-utils';
-import { FiPlus, FiFingerprint, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { FiPlus, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { MdFingerprint } from 'react-icons/md';
 
 type ModoEntrega = 'impressao' | 'digital';
 
@@ -447,7 +448,7 @@ export default function DashboardPage() {
                   <span className="font-medium">Novo Atendimento</span>
                 </button>
 
-                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<FiFingerprint className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<MdFingerprint className="h-5 w-5" />}>
                   Fila de Coleta de Digitais
                 </QuickAction>
 

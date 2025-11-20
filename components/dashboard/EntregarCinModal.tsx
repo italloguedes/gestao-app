@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiX, FiSearch, FiUser, FiCalendar, FiCheck, FiAlertCircle, FiPrinter } from 'react-icons/fi';
+import { FiX, FiSearch, FiUser, FiCheck, FiAlertCircle, FiPrinter } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -10,6 +10,7 @@ interface Atendimento {
     protocolo: string;
     dia_atual: string;
     status: string;
+    [key: string]: any; // Allow other properties to pass through
 }
 
 interface EntregarCinModalProps {
