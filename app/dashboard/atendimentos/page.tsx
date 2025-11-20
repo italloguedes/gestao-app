@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,10 +26,14 @@ interface Atendimento {
 
 
 export default function AtendimentosPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -45,7 +49,7 @@ export default function AtendimentosPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
 
-  const router = useRouter();
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -90,7 +94,7 @@ export default function AtendimentosPage() {
   const fetchAtendimentos = async () => {
     try {
       setLoading(true);
-      
+
       // Query otimizada - apenas campos necessários
       let query = supabase
         .from('atendimentos')
@@ -111,10 +115,10 @@ export default function AtendimentosPage() {
       if (atendimentosResult.error) throw atendimentosResult.error;
 
       const atendimentosData = atendimentosResult.data || [];
-      
+
       // Calcular fotos pendentes localmente (mais rápido)
       const fotosPendentesCount = atendimentosData.filter((a: Atendimento) => !a.fotos_coletadas).length;
-      
+
       setAtendimentos(atendimentosData);
       setTotalCount(atendimentosResult.count || 0);
       setTotalPages(Math.ceil((atendimentosResult.count || 0) / itemsPerPage));
@@ -235,14 +239,14 @@ export default function AtendimentosPage() {
 
   const handleInputChange = (field: keyof Atendimento, value: string) => {
     setValidationErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
-    
+
     if (field === 'cpf') {
       const error = validateCPF(value);
       if (error) {
         setValidationErrors((prev: Record<string, string>) => ({ ...prev, [field]: error }));
       }
     }
-    
+
     if (field === 'email') {
       const error = validateEmail(value);
       if (error) {
@@ -262,7 +266,7 @@ export default function AtendimentosPage() {
     // Validar campos obrigatórios
     const requiredFields: (keyof Atendimento)[] = ['nome', 'cpf', 'email', 'solicitante', 'protocolo', 'dia_atual', 'horario', 'status'];
     const newValidationErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!editingAtendimento[field]) {
         newValidationErrors[field] = 'Este campo é obrigatório';
@@ -276,7 +280,7 @@ export default function AtendimentosPage() {
 
     try {
       setSaving(true);
-      
+
 
       const { error } = await supabase
         .from('atendimentos')
@@ -284,12 +288,12 @@ export default function AtendimentosPage() {
         .eq('id', selectedAtendimento.id);
 
       if (error) throw error;
-      
+
       // Atualizar a lista de atendimentos
-      setAtendimentos((prev: Atendimento[]) => 
-        prev.map((a: Atendimento) => 
-          a.id === selectedAtendimento.id 
-            ? { ...a, ...editingAtendimento } 
+      setAtendimentos((prev: Atendimento[]) =>
+        prev.map((a: Atendimento) =>
+          a.id === selectedAtendimento.id
+            ? { ...a, ...editingAtendimento }
             : a
         )
       );
@@ -320,16 +324,16 @@ export default function AtendimentosPage() {
 
     try {
       setSaving(true);
-      
+
       const { error } = await supabase
         .from('atendimentos')
         .delete()
         .eq('id', selectedAtendimento.id);
 
       if (error) throw error;
-      
+
       // Atualizar a lista de atendimentos
-      setAtendimentos((prev: Atendimento[]) => 
+      setAtendimentos((prev: Atendimento[]) =>
         prev.filter((a: Atendimento) => a.id !== selectedAtendimento.id)
       );
 
@@ -348,15 +352,15 @@ export default function AtendimentosPage() {
   const handleToggleFotosColetadas = useCallback(async (atendimentoId: number, fotosColetadas: boolean) => {
     // Otimização: atualizar UI primeiro (otimistic update)
     const newFotosColetadas = !fotosColetadas;
-    
-    setAtendimentos((prev: Atendimento[]) => 
-      prev.map((a: Atendimento) => 
-        a.id === atendimentoId 
-          ? { ...a, fotos_coletadas: newFotosColetadas } 
+
+    setAtendimentos((prev: Atendimento[]) =>
+      prev.map((a: Atendimento) =>
+        a.id === atendimentoId
+          ? { ...a, fotos_coletadas: newFotosColetadas }
           : a
       )
     );
-    
+
     setFotosPendentes((prev: number) => fotosColetadas ? prev + 1 : prev - 1);
 
     try {
@@ -368,18 +372,18 @@ export default function AtendimentosPage() {
       if (error) throw error;
     } catch (err: any) {
       console.error('Erro ao atualizar status das fotos:', err);
-      
+
       // Reverter mudanças em caso de erro
-      setAtendimentos((prev: Atendimento[]) => 
-        prev.map((a: Atendimento) => 
-          a.id === atendimentoId 
-            ? { ...a, fotos_coletadas: fotosColetadas } 
+      setAtendimentos((prev: Atendimento[]) =>
+        prev.map((a: Atendimento) =>
+          a.id === atendimentoId
+            ? { ...a, fotos_coletadas: fotosColetadas }
             : a
         )
       );
-      
+
       setFotosPendentes((prev: number) => fotosColetadas ? prev - 1 : prev + 1);
-      
+
       alert('Erro ao atualizar status das fotos. Tente novamente.');
     }
   }, []);
@@ -430,11 +434,10 @@ export default function AtendimentosPage() {
                 </div>
 
                 {/* Contador de fotos pendentes */}
-                <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${
-                  fotosPendentes > 0
-                    ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300 text-amber-800'
-                    : 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300 text-emerald-800'
-                }`}>
+                <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${fotosPendentes > 0
+                  ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300 text-amber-800'
+                  : 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300 text-emerald-800'
+                  }`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -456,10 +459,10 @@ export default function AtendimentosPage() {
                 className="group inline-flex items-center px-6 py-3.5 border-2 border-transparent text-sm font-bold rounded-2xl shadow-xl text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100 relative overflow-hidden"
                 title="Atualizar lista de atendimentos"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   className={`h-5 w-5 transition-transform duration-500 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'}`}
-                  viewBox="0 0 20 20" 
+                  viewBox="0 0 20 20"
                   fill="currentColor"
                 >
                   <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -480,149 +483,149 @@ export default function AtendimentosPage() {
             </div>
           </div>
 
-        <div className="space-y-6">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+          <div className="space-y-6">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar por nome, protocolo, CPF ou solicitante..."
+                className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50 backdrop-blur-sm text-slate-700 placeholder-slate-400"
+                value={searchTerm}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
+              />
+              <button
+                onClick={handleSearch}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+              >
+                Buscar
+              </button>
             </div>
-            <input
-              type="text"
-              placeholder="Buscar por nome, protocolo, CPF ou solicitante..."
-              className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50 backdrop-blur-sm text-slate-700 placeholder-slate-400"
-              value={searchTerm}
-              onChange={(e) => handleSearchInputChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch();
-                }
-              }}
-            />
-            <button
-              onClick={handleSearch}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
-            >
-              Buscar
-            </button>
-          </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          {isRefreshing && (
-            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-3 animate-fade-in">
-              <svg className="animate-spin h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span className="text-emerald-700 font-medium">Atualizando lista de atendimentos...</span>
-            </div>
-          )}
+            {isRefreshing && (
+              <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-3 animate-fade-in">
+                <svg className="animate-spin h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-emerald-700 font-medium">Atualizando lista de atendimentos...</span>
+              </div>
+            )}
 
-          <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Protocolo</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Nome</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">CPF</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Data/Hora</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Fotos</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {atendimentos.map((atendimento) => (
-                    <tr key={atendimento.id} className="hover:bg-slate-50/50 transition-all duration-200 group">
-                      <td className="px-6 py-4">
-                        <div className="font-mono text-sm font-semibold text-slate-800">
-                          {atendimento.protocolo}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{atendimento.nome}</div>
-                        <div className="text-sm text-slate-500">{atendimento.solicitante}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-mono text-sm text-slate-700">
-                          {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-slate-800">{formatDate(atendimento.dia_atual)}</div>
-                        <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
-                          {getStatusLabel(atendimento.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <FotosColetadasToggle
-                            fotosColetadas={atendimento.fotos_coletadas || false}
-                            onToggle={async () => {
-                              await handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false);
-                            }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleEditAtendimento(atendimento)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                          title="Editar atendimento"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Editar
-                        </button>
-                      </td>
+            <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Protocolo</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Nome</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">CPF</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Data/Hora</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Fotos</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {atendimentos.map((atendimento) => (
+                      <tr key={atendimento.id} className="hover:bg-slate-50/50 transition-all duration-200 group">
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-sm font-semibold text-slate-800">
+                            {atendimento.protocolo}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-slate-800">{atendimento.nome}</div>
+                          <div className="text-sm text-slate-500">{atendimento.solicitante}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-sm text-slate-700">
+                            {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-slate-800">{formatDate(atendimento.dia_atual)}</div>
+                          <div className="text-sm text-slate-500">{formatTime(atendimento.horario)}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
+                            {getStatusLabel(atendimento.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <FotosColetadasToggle
+                              fotosColetadas={atendimento.fotos_coletadas || false}
+                              onToggle={async () => {
+                                await handleToggleFotosColetadas(atendimento.id, atendimento.fotos_coletadas || false);
+                              }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleEditAtendimento(atendimento)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            title="Editar atendimento"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-slate-200">
-            <div className="text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
-              Mostrando <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> a <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, totalCount)}</span> de <span className="font-semibold text-slate-800">{totalCount}</span> registros
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Anterior
-              </button>
-              <span className="px-4 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg font-medium">
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                Próxima
-                <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-slate-200">
+              <div className="text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
+                Mostrando <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> a <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, totalCount)}</span> de <span className="font-semibold text-slate-800">{totalCount}</span> registros
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Anterior
+                </button>
+                <span className="px-4 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg font-medium">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Próxima
+                  <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -663,7 +666,7 @@ export default function AtendimentosPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            
+
             <div className="flex items-center mb-6">
               <div className="bg-emerald-100 p-3 rounded-xl mr-4">
                 <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -685,7 +688,7 @@ export default function AtendimentosPage() {
                   </svg>
                   Dados do Atendimento
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -695,9 +698,8 @@ export default function AtendimentosPage() {
                       type="text"
                       value={editingAtendimento.nome || ''}
                       onChange={(e) => handleInputChange('nome', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.nome ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.nome ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="Nome completo"
                     />
                     {validationErrors.nome && (
@@ -713,9 +715,8 @@ export default function AtendimentosPage() {
                       type="text"
                       value={editingAtendimento.cpf || ''}
                       onChange={(e) => handleInputChange('cpf', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.cpf ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.cpf ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="000.000.000-00"
                     />
                     {validationErrors.cpf && (
@@ -731,9 +732,8 @@ export default function AtendimentosPage() {
                       type="email"
                       value={editingAtendimento.email || ''}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.email ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.email ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="email@exemplo.com"
                     />
                     {validationErrors.email && (
@@ -749,9 +749,8 @@ export default function AtendimentosPage() {
                       type="text"
                       value={editingAtendimento.solicitante || ''}
                       onChange={(e) => handleInputChange('solicitante', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.solicitante ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.solicitante ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="Nome do solicitante"
                     />
                     {validationErrors.solicitante && (
@@ -767,9 +766,8 @@ export default function AtendimentosPage() {
                       type="date"
                       value={editingAtendimento.dia_atual || ''}
                       onChange={(e) => handleInputChange('dia_atual', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.dia_atual ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.dia_atual ? 'border-red-300' : 'border-gray-300'
+                        }`}
                     />
                     {validationErrors.dia_atual && (
                       <p className="text-red-500 text-xs mt-1">{validationErrors.dia_atual}</p>
@@ -784,9 +782,8 @@ export default function AtendimentosPage() {
                       type="time"
                       value={editingAtendimento.horario || ''}
                       onChange={(e) => handleInputChange('horario', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.horario ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.horario ? 'border-red-300' : 'border-gray-300'
+                        }`}
                     />
                     {validationErrors.horario && (
                       <p className="text-red-500 text-xs mt-1">{validationErrors.horario}</p>
@@ -800,9 +797,8 @@ export default function AtendimentosPage() {
                     <select
                       value={editingAtendimento.status || ''}
                       onChange={(e) => handleInputChange('status', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.status ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.status ? 'border-red-300' : 'border-gray-300'
+                        }`}
                     >
                       <option value="">Selecione o status</option>
                       <option value="pendente">Pendente</option>
@@ -826,9 +822,8 @@ export default function AtendimentosPage() {
                       type="text"
                       value={editingAtendimento.protocolo || ''}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('protocolo', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                        validationErrors.protocolo ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${validationErrors.protocolo ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       placeholder="Número do protocolo"
                     />
                     {validationErrors.protocolo && (
@@ -868,7 +863,7 @@ export default function AtendimentosPage() {
                 </svg>
                 Excluir Atendimento
               </button>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={handleCancelEdit}
