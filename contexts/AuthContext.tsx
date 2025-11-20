@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { AUTH_CONFIG } from '@/lib/auth-config';
 import { hasAccessToDashboard } from '@/lib/models/User';
+import { SessionWarningModal } from '@/components/SessionWarningModal';
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +19,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signOut: async () => {},
+  signOut: async () => { },
   refreshSession: async () => false,
   ensureValidSession: async () => false,
 });
@@ -26,16 +27,18 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [timeUntilAutoLogout, setTimeUntilAutoLogout] = useState(0);
   const router = useRouter();
   const refreshingRef = useRef<Promise<boolean> | null>(null);
   const expiryCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isSessionValid = useCallback((session: any): boolean => {
     if (!session) return false;
-    
+
     const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
     if (!expiresAt) return false;
-    
+
     const now = Date.now();
     return expiresAt > now;
   }, []);
@@ -45,7 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (expiryCheckIntervalRef.current) {
         clearInterval(expiryCheckIntervalRef.current);
       }
+      if (expiryCheckIntervalRef.current) {
+        clearInterval(expiryCheckIntervalRef.current);
+      }
       localStorage.removeItem('app-session');
+      localStorage.removeItem('auth_login_timestamp');
       await supabase.auth.signOut();
       setUser(null);
       router.push('/');
@@ -90,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error || !session || !isSessionValid(session)) {
         const refreshed = await refreshSession();
-        
+
         if (!refreshed) {
           const { data: { session: retrySession } } = await supabase.auth.getSession();
           if (!isSessionValid(retrySession)) {
@@ -99,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return false;
           }
         }
-        
+
         const { data: { session: finalSession } } = await supabase.auth.getSession();
         return isSessionValid(finalSession);
       }
@@ -123,17 +130,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshSession, signOut, isSessionValid]);
 
+  const handleRenewSession = useCallback(async () => {
+    setShowSessionWarning(false);
+    localStorage.setItem('auth_login_timestamp', Date.now().toString());
+    await refreshSession();
+  }, [refreshSession]);
+
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setUser(session.user);
-          
+
+          // Inicializar timestamp de login se não existir
+          if (!localStorage.getItem('auth_login_timestamp')) {
+            localStorage.setItem('auth_login_timestamp', Date.now().toString());
+          }
+
           const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
           const now = Date.now();
           const timeUntilExpiry = expiresAt ? expiresAt - now : null;
-          
+
           if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
             await refreshSession();
           }
@@ -153,7 +171,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     expiryCheckIntervalRef.current = setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+      const loginTimestampStr = localStorage.getItem('auth_login_timestamp');
+
+      // Verificação de Timeout Hard (2 horas)
+      if (loginTimestampStr) {
+        const loginTimestamp = parseInt(loginTimestampStr);
+        const now = Date.now();
+        const sessionDuration = now - loginTimestamp;
+        const timeRemaining = AUTH_CONFIG.SESSION_TIMEOUT - sessionDuration;
+
+        // Se passou do tempo limite (2h)
+        if (sessionDuration > AUTH_CONFIG.SESSION_TIMEOUT) {
+          console.warn('Sessão excedeu o limite de 2 horas. Realizando logout forçado...');
+          setShowSessionWarning(false);
+          await signOut();
+          return;
+        }
+
+        // Se está no período de aviso (últimos 10 min)
+        if (sessionDuration > (AUTH_CONFIG.SESSION_TIMEOUT - AUTH_CONFIG.SESSION_WARNING_THRESHOLD)) {
+          if (!showSessionWarning) {
+            setShowSessionWarning(true);
+          }
+          setTimeUntilAutoLogout(timeRemaining);
+        } else {
+          if (showSessionWarning) {
+            setShowSessionWarning(false);
+          }
+        }
+      }
+
       if (!isSessionValid(session)) {
         console.error('Sessão inválida detectada no intervalo de background');
         const refreshed = await refreshSession();
@@ -173,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
       const now = Date.now();
       const timeUntilExpiry = expiresAt ? expiresAt - now : null;
-      
+
       if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
         console.log('Auto-renovando sessão próxima da expiração...');
         const refreshed = await refreshSession();
@@ -189,10 +236,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-    }, 60000);
+    }, 1000); // Verificação a cada segundo para o timer ficar preciso
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       setUser(session?.user ?? null);
+
+      if (_event === 'SIGNED_IN') {
+        localStorage.setItem('auth_login_timestamp', Date.now().toString());
+      }
 
       if (session?.user && window.location.pathname === '/' && _event === 'SIGNED_IN') {
         try {
@@ -231,6 +282,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, signOut, refreshSession, ensureValidSession }}>
       {children}
+      <SessionWarningModal
+        isOpen={showSessionWarning}
+        onRenew={handleRenewSession}
+        onLogout={signOut}
+        expiresIn={timeUntilAutoLogout}
+      />
     </AuthContext.Provider>
   );
 }

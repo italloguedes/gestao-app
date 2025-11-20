@@ -7,6 +7,10 @@ export const AUTH_CONFIG = {
       NUMBERS: true,
       SPECIAL_CHARS: true,
     },
+
+    // Configurações de Sessão
+    SESSION_TIMEOUT: 2 * 60 * 60 * 1000, // 2 horas em milissegundos
+    SESSION_WARNING_THRESHOLD: 10 * 60 * 1000, // 10 minutos em milissegundos
     
     // URLs de redirecionamento
     REDIRECT_URLS: {
