@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label"; // Assuming we might need a Label component, or use standard label
+
 import Link from "next/link";
 
 export default function LoginForm() {
