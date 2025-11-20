@@ -39,7 +39,7 @@ export default function ClientLayout({
   return (
     <AuthProvider>
       <UserProvider>
-        <div className="fixed inset-0 bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] -z-10" />
+
         <div className="min-h-screen flex flex-col">
           {children}
         </div>
