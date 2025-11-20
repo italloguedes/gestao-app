@@ -7,10 +7,14 @@ interface Atendimento {
     id: number;
     nome: string;
     cpf: string;
+    email: string;
+    solicitante: string;
     protocolo: string;
     dia_atual: string;
+    horario: string;
     status: string;
-    [key: string]: any; // Allow other properties to pass through
+    observacoes?: string;
+    [key: string]: any;
 }
 
 interface EntregarCinModalProps {
