@@ -201,6 +201,63 @@ export default function GestaoVagas() {
     }
   };
 
+  const blockAllSlots = async () => {
+    if (!confirm('Tem certeza que deseja bloquear todas as vagas disponíveis para este dia?')) return;
+
+    setLoading(true);
+    try {
+      const dataFormatada = formatDateForDB(selectedDate);
+      const allSlots = [...HORARIOS_MANHA, ...HORARIOS_TARDE];
+
+      // Buscar agendamentos existentes para não tentar bloquear o que já está ocupado/bloqueado
+      const { data: existingAppointments, error: fetchError } = await supabase
+        .from('agendamentos')
+        .select('horario')
+        .eq('data', dataFormatada);
+
+      if (fetchError) throw fetchError;
+
+      const existingTimes = new Set(existingAppointments?.map((a: any) => a.horario.slice(0, 5)));
+
+      // Filtrar apenas os horários que estão livres
+      const slotsToBlock = allSlots.filter(horario => !existingTimes.has(horario));
+
+      if (slotsToBlock.length === 0) {
+        setError('Não há vagas disponíveis para bloquear neste dia.');
+        setLoading(false);
+        return;
+      }
+
+      // Preparar dados para inserção em massa
+      const recordsToInsert = slotsToBlock.map(horario => ({
+        data: dataFormatada,
+        horario: horario + ':00',
+        user_id: user?.auth_id,
+        nome: 'BLOQUEIO ADMINISTRATIVO',
+        email: 'admin@sistema.com',
+        cpf: '00000000000',
+        telefone: '00000000000',
+        data_nascimento: '2000-01-01',
+        status: 'bloqueado'
+      }));
+
+      const { error: insertError } = await supabase
+        .from('agendamentos')
+        .insert(recordsToInsert);
+
+      if (insertError) throw insertError;
+
+      await loadVagasStatus();
+      setSuccess(`${slotsToBlock.length} vagas bloqueadas com sucesso!`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Erro ao bloquear todas as vagas:', err);
+      setError('Erro ao bloquear vagas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('pt-BR', {
       timeZone: 'America/Fortaleza',
@@ -215,20 +272,6 @@ export default function GestaoVagas() {
   };
 
   const getSlotStatusColor = (horario: string) => {
-    // Precisamos saber se está bloqueado ou agendado para dar a cor correta
-    // Mas o estado vagasLiberadas só diz se está livre ou não.
-    // Vamos inferir pelo loadVagasStatus ou melhorar o estado local?
-    // Pela simplicidade, vamos re-verificar no render ou melhorar o estado.
-    // Melhoria: O estado vagasLiberadas poderia ser um objeto com o status exato.
-    // Mas para manter compatibilidade rápida, vamos assumir:
-    // Se !vagasLiberadas[horario], pode ser bloqueado ou agendado.
-    // O ideal seria ter o status exato.
-
-    // Vamos simplificar: Se está livre -> Verde. Se não -> Vermelho/Cinza.
-    // Mas queremos distinguir bloqueio de agendamento.
-    // Vamos fazer uma pequena mudança no loadVagasStatus para guardar o status real se possível?
-    // Ou apenas usar a cor de "Ocupado" genérica.
-
     return vagasLiberadas[horario]
       ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
       : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200';
@@ -290,12 +333,20 @@ export default function GestaoVagas() {
                     setSelectedDate(newDate);
                   }}
                 />
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
                   <h4 className="text-sm font-semibold text-blue-800 mb-2">Informações</h4>
                   <p className="text-xs text-blue-600">
                     Clique em um horário para bloquear ou desbloquear. Horários agendados por usuários não podem ser bloqueados aqui.
                   </p>
                 </div>
+
+                <button
+                  onClick={blockAllSlots}
+                  className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+                >
+                  <FiLock className="mr-2 -ml-1 h-5 w-5" aria-hidden="true" />
+                  Bloquear Dia Inteiro
+                </button>
               </div>
             </div>
 
