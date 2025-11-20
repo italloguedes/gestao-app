@@ -11,24 +11,15 @@ export const metadata: Metadata = {
   description: "Sistema de gestão empresarial desenvolvido para a Sala Sensorial da ALECE por Itallo Guedes",
 };
 
-import { ThemeProvider } from "@/components/theme-provider";
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ClientLayout>{children}</ClientLayout>
-        </ThemeProvider>
+    <html lang="pt-BR">
+      <body className={`${inter.className} min-h-screen bg-gray-50 text-gray-900 antialiased`}>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

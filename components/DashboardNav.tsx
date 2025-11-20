@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase-client';
 import { getUserByAuthId, createUser, hasAccessToDashboard, isAdmin, type UserRole } from '@/lib/models/User';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function DashboardNav() {
   const [isAdminUser, setIsAdminUser] = useState(false);
@@ -277,7 +276,6 @@ export default function DashboardNav() {
           // ... existing code
           {/* Desktop user menu */}
           <div className="hidden sm:flex items-center space-x-4">
-            <ThemeToggle />
             {isClient && (
               // ... existing code
               <div className="mr-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-medium text-emerald-700 flex items-center gap-2">
@@ -342,7 +340,6 @@ export default function DashboardNav() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <ThemeToggle />
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"

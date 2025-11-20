@@ -318,7 +318,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50/50">
       <DashboardHeader />
 
       {/* Modals */}
@@ -399,25 +399,25 @@ export default function DashboardPage() {
         {/* Header Section with Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Painel de Controle</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo de volta, {user?.email}</p>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Painel de Controle</h1>
+            <p className="text-gray-500 mt-1">Bem-vindo de volta, {user?.email}</p>
           </div>
 
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative flex-1 md:w-80">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="h-5 w-5 text-muted-foreground" />
+                <FiSearch className="h-5 w-5 text-gray-400" />
               </div>
               <Input
                 type="text"
                 placeholder="Buscar atendimento (Nome ou CPF)..."
-                className="pl-10 bg-card border-input focus:border-primary focus:ring-primary rounded-xl shadow-sm"
+                className="pl-10 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl shadow-sm"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 onKeyDown={handleGlobalSearch}
               />
             </div>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm shadow-primary/20" onClick={() => setShowNovoAtendimentoModal(true)}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm shadow-emerald-200" onClick={() => setShowNovoAtendimentoModal(true)}>
               <FiPlus className="mr-2 h-5 w-5" />
               Novo Atendimento
             </Button>
@@ -441,31 +441,31 @@ export default function DashboardPage() {
 
           {/* Sidebar Area - Quick Actions */}
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
-            <div className="bg-card rounded-3xl shadow-lg border border-border p-6">
-              <h2 className="text-lg font-bold text-card-foreground mb-4 flex items-center gap-2">
-                <FiCheckCircle className="text-primary" />
+            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <FiCheckCircle className="text-emerald-500" />
                 Ações Rápidas
               </h2>
               <div className="space-y-3">
-                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50 dark:bg-amber-900/20 dark:text-amber-400" icon={<MdFingerprint className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<MdFingerprint className="h-5 w-5" />}>
                   Fila de Coleta
                 </QuickAction>
 
-                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-400" icon={<FiRefreshCw className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700 bg-blue-50/50" icon={<FiRefreshCw className="h-5 w-5" />}>
                   Atualizar CIN
                 </QuickAction>
 
-                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700 bg-red-50/50 dark:bg-red-900/20 dark:text-red-400" icon={<FiAlertTriangle className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700 bg-red-50/50" icon={<FiAlertTriangle className="h-5 w-5" />}>
                   Ver Correções
                 </QuickAction>
 
                 <Button
-                  className="w-full justify-start h-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 dark:hover:bg-emerald-950/50"
+                  className="w-full justify-start h-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl"
                   variant="ghost"
                   onClick={() => setShowEntregarCinModal(true)}
                 >
-                  <div className="bg-emerald-200 p-1.5 rounded-lg mr-3 dark:bg-emerald-900">
-                    <FiCheckCircle className="h-5 w-5 text-emerald-800 dark:text-emerald-400" />
+                  <div className="bg-emerald-200 p-1.5 rounded-lg mr-3">
+                    <FiCheckCircle className="h-5 w-5 text-emerald-800" />
                   </div>
                   <span className="font-medium">Entregar CIN</span>
                 </Button>
@@ -476,7 +476,7 @@ export default function DashboardPage() {
               <div className="relative z-10">
                 <h3 className="text-xl font-bold mb-2">Precisa de ajuda?</h3>
                 <p className="text-emerald-100 text-sm mb-4">Confira o manual do sistema ou entre em contato com o suporte.</p>
-                <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full dark:bg-emerald-950 dark:text-emerald-100 dark:hover:bg-emerald-900">
+                <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full">
                   Ver Documentação
                 </Button>
               </div>
