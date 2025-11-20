@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,15 +8,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
-// import SignaturePadWacom from '@/components/SignaturePadWacom'; // DESABILITADO - Wacom físico
-// import type { WacomSignatureResult } from '@/components/SignaturePadWacom'; // DESABILITADO
 import SignaturePadCanvas from '@/components/SignaturePadCanvas';
 import ModoEntregaModal from '@/components/ModoEntregaModal';
-import jsPDF from 'jspdf';
+import DashboardStats from '@/components/dashboard/DashboardStats';
+import RecentAtendimentos from '@/components/dashboard/RecentAtendimentos';
+import QuickAction from '@/components/dashboard/QuickAction';
+import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
+import PdfModal from '@/components/dashboard/PdfModal';
+import { generateComprovantePDF } from '@/lib/pdf-utils';
+import { FiPlus, FiFingerprint, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 
 type ModoEntrega = 'impressao' | 'digital';
 
-interface DashboardStats {
+interface DashboardStatsData {
   total: number;
   correcoes: number;
   emAndamento: number;
@@ -47,12 +51,13 @@ interface AtendimentoEntrega extends Atendimento {
   data_entrega?: string;
   data_hora_entrega?: string;
   usuario_id?: string | number;
+  vinculo?: string;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<DashboardStatsData>({
     total: 0,
     correcoes: 0,
     emAndamento: 0,
@@ -65,13 +70,14 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [recentAtendimentos, setRecentAtendimentos] = useState<Atendimento[]>([]);
+
+  // Estados para entrega de CIN
   const [showEntregarCinModal, setShowEntregarCinModal] = useState(false);
   const [atendimentosParaEntrega, setAtendimentosParaEntrega] = useState<AtendimentoEntrega[]>([]);
   const [selectedAtendimento, setSelectedAtendimento] = useState<AtendimentoEntrega | null>(null);
   const [nomeRecebedor, setNomeRecebedor] = useState('');
   const [cpfRecebedor, setCpfRecebedor] = useState('');
   const [loadingAtendimentosEntrega, setLoadingAtendimentosEntrega] = useState(false);
-  const entregarCinButtonRef = useRef<HTMLButtonElement>(null);
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -88,9 +94,6 @@ export default function DashboardPage() {
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
   const [selectedAtendimentoForEdit, setSelectedAtendimentoForEdit] = useState<Atendimento | null>(null);
-  const [editingAtendimento, setEditingAtendimento] = useState<Partial<Atendimento>>({});
-  const [savingAtendimento, setSavingAtendimento] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Estados para o modal de novo atendimento
   const [showNovoAtendimentoModal, setShowNovoAtendimentoModal] = useState(false);
@@ -112,6 +115,8 @@ export default function DashboardPage() {
       setSelectedAtendimento(null);
       setNomeRecebedor('');
       setCpfRecebedor('');
+      setVinculo('');
+      setOutroVinculo('');
     }
   }, [showEntregarCinModal]);
 
@@ -120,18 +125,14 @@ export default function DashboardPage() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-
       // Fetch all atendimentos stats in parallel
       const [
         atendimentosData,
         agendamentosData,
         recentAtendimentosData
       ] = await Promise.all([
-        // Atendimentos stats
         supabase.rpc('get_atendimentos_stats', { data_atual: today }),
-        // Agendamentos stats
         supabase.rpc('get_agendamentos_stats'),
-        // Recent atendimentos
         supabase
           .from('atendimentos')
           .select('*')
@@ -163,7 +164,6 @@ export default function DashboardPage() {
 
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
-
     } finally {
       setLoading(false);
     }
@@ -180,7 +180,6 @@ export default function DashboardPage() {
         .neq('status', 'entregue');
 
       if (busca) {
-        // Busca por nome ou CPF (case insensitive para nome)
         query = query.or(`nome.ilike.%${busca}%,cpf.eq.${busca}`);
       }
 
@@ -188,9 +187,7 @@ export default function DashboardPage() {
         .order('dia_atual', { ascending: false })
         .order('horario', { ascending: false });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setAtendimentosParaEntrega(data || []);
 
@@ -202,14 +199,10 @@ export default function DashboardPage() {
     }
   };
 
-  // A função getStatusColor foi movida para o escopo global
-
   const handleGerarComprovante = async () => {
     if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
       return;
     }
-
-    // Abrir modal de seleção de modo
     setShowModoEntregaModal(true);
   };
 
@@ -218,10 +211,8 @@ export default function DashboardPage() {
     setModoEntregaSelecionado(mode);
 
     if (mode === 'impressao') {
-      // Modo impressão - gerar PDF sem assinatura
-      handleGerarPDFImpressao();
+      handleProcessarEntrega(null);
     } else if (mode === 'digital') {
-      // Modo digital - abrir canvas de assinatura
       setShowSignaturePadCanvas(true);
     }
   };
@@ -229,327 +220,11 @@ export default function DashboardPage() {
   const handleSaveSignatureCanvas = async (signatureDataUrl: string) => {
     setAssinaturaDataUrl(signatureDataUrl);
     setShowSignaturePadCanvas(false);
-
-    // Gerar PDF com assinatura digital
-    await handleGerarPDFComAssinatura(signatureDataUrl);
+    await handleProcessarEntrega(signatureDataUrl);
   };
 
-  const handleGerarPDFImpressao = async () => {
-    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
-      return;
-    }
-
-    setGerandoComprovante(true);
-    try {
-      // Buscar nome do atendente para o rodapé do PDF
-      let atendenteNome = 'Não identificado';
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (userError) {
-        console.error('Erro ao buscar dados do atendente:', userError);
-      } else if (userData?.name) {
-        atendenteNome = userData.name;
-      }
-
-      const now = new Date();
-      const dataEntrega = now.toISOString().split('T')[0];
-      const dataHoraEntrega = now.toISOString();
-
-      // Atualizar atendimento no Supabase (SEM assinatura digital - agora usa impressão em papel)
-      const { error } = await supabase
-        .from('atendimentos')
-        .update({
-          nome_recebedor: nomeRecebedor,
-          cpf_recebedor: cpfRecebedor,
-          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
-          data_entrega: dataEntrega,
-          status: 'entregue',
-          data_hora_entrega: dataHoraEntrega,
-          // assinatura_base64: null, // Não salva assinatura digital - assinatura será manual no papel
-        })
-        .eq('id', selectedAtendimento.id);
-
-      if (error) throw error;
-
-      // Carregar logo
-      const logoUrl = '/logoautismo.png';
-      const getBase64FromUrl = async (url: string) => {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-      const logoBase64 = await getBase64FromUrl(logoUrl);
-
-      // Gerar PDF profissional e elegante
-      const doc = new jsPDF();
-
-      // ===== CABEÇALHO INSTITUCIONAL =====
-      // Brasão/Logo à esquerda
-      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
-
-      // Informações institucionais
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105); // Slate-600
-      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
-
-      // Linha divisória superior
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.5);
-      doc.line(15, 40, 195, 40);
-
-      // TÍTULO DO DOCUMENTO
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(15, 23, 42); // Slate-900
-      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(71, 85, 105); // Slate-600
-      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
-
-      // ===== INFORMAÇÕES DO DOCUMENTO =====
-      // Box com bordas para protocolo e data
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.3);
-      doc.rect(15, 65, 85, 18);
-      doc.rect(110, 65, 85, 18);
-
-      // Protocolo
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139); // Slate-500
-      doc.setFont('helvetica', 'normal');
-      doc.text('PROTOCOLO Nº', 18, 70);
-
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
-
-      // Data e Hora de Emissão
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139); // Slate-500
-      doc.setFont('helvetica', 'normal');
-      doc.text('DATA E HORA DA ENTREGA', 113, 70);
-
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
-
-      // ===== SEÇÃO 1: DADOS DO TITULAR =====
-      const secaoY = 93;
-
-      // Título da seção
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
-
-      // Linha divisória
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.3);
-      doc.line(15, secaoY + 2, 195, secaoY + 2);
-
-      // Box de dados
-      doc.setDrawColor(226, 232, 240); // Slate-200
-      doc.setFillColor(248, 250, 252); // Slate-50
-      doc.rect(15, secaoY + 5, 180, 38, 'FD');
-
-      // Estilo para labels e valores
-      const labelStyle = () => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139); // Slate-500
-      };
-      const valueStyle = () => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(15, 23, 42); // Slate-900
-      };
-
-      // Dados do titular
-      let yData = secaoY + 12;
-      labelStyle();
-      doc.text('Nome Completo:', 18, yData);
-      valueStyle();
-      doc.text(selectedAtendimento.nome, 18, yData + 5);
-
-      yData += 13;
-      labelStyle();
-      doc.text('CPF:', 18, yData);
-      valueStyle();
-      doc.text(selectedAtendimento.cpf, 18, yData + 5);
-
-      labelStyle();
-      doc.text('Data do Atendimento:', 110, yData);
-      valueStyle();
-      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
-
-      // ===== SEÇÃO 2: DADOS DO RECEBEDOR =====
-      const recebedorY = secaoY + 50;
-
-      // Título da seção
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
-
-      // Linha divisória
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.3);
-      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
-
-      // Box de dados
-      doc.setDrawColor(226, 232, 240); // Slate-200
-      doc.setFillColor(248, 250, 252); // Slate-50
-      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
-
-      // Dados do recebedor
-      yData = recebedorY + 12;
-      labelStyle();
-      doc.text('Nome Completo:', 18, yData);
-      valueStyle();
-      doc.text(nomeRecebedor, 18, yData + 5);
-
-      yData += 13;
-      labelStyle();
-      doc.text('CPF:', 18, yData);
-      valueStyle();
-      doc.text(cpfRecebedor, 18, yData + 5);
-
-      labelStyle();
-      doc.text('Vínculo com o Titular:', 110, yData);
-      valueStyle();
-      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
-
-      // ===== DECLARAÇÃO =====
-      const infoY = recebedorY + 50;
-
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105); // Slate-600
-      doc.setFont('helvetica', 'normal');
-
-      const declaracao = [
-        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
-        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
-        'e assumo total responsabilidade pela guarda e uso do documento.'
-      ];
-
-      declaracao.forEach((linha, index) => {
-        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
-      });
-
-      // ===== SEÇÃO 3: ASSINATURA =====
-      const assinaturaY = 210;
-
-      // Título da seção
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
-
-      // Linha divisória
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.3);
-      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
-
-      // Box para assinatura
-      doc.setDrawColor(226, 232, 240); // Slate-200
-      doc.setFillColor(255, 255, 255); // Branco
-      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
-
-      // Cidade e data
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105); // Slate-600
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
-
-      // Linha para assinatura
-      doc.setDrawColor(100, 116, 139); // Slate-500
-      doc.setLineWidth(0.4);
-      doc.line(45, assinaturaY + 35, 165, assinaturaY + 35);
-
-      // Nome e CPF do recebedor
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105); // Slate-600
-      doc.setFont('helvetica', 'normal');
-      doc.text(nomeRecebedor, 105, assinaturaY + 42, { align: 'center' });
-      doc.setFontSize(8);
-      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 47, { align: 'center' });
-
-      // ===== RODAPÉ INSTITUCIONAL =====
-      const rodapeY = 270;
-
-      // Linha divisória superior
-      doc.setDrawColor(203, 213, 225); // Slate-300
-      doc.setLineWidth(0.5);
-      doc.line(15, rodapeY, 195, rodapeY);
-
-      // Informações de controle
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139); // Slate-500
-      doc.setFont('helvetica', 'normal');
-
-      // Lado esquerdo - Emissor
-      doc.text('Documento emitido por:', 15, rodapeY + 5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(atendenteNome, 15, rodapeY + 9);
-
-      // Centro - Data/Hora
-      doc.setFont('helvetica', 'normal');
-      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
-
-      // Lado direito - Página
-      doc.setFont('helvetica', 'normal');
-      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
-      doc.setFont('helvetica', 'bold');
-      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
-
-      // Linha final
-      doc.setLineWidth(0.3);
-      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
-
-      // Aviso final
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(100, 116, 139); // Slate-500
-      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
-      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
-      // Gerar URL do PDF
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      setPdfUrl(url);
-
-
-    } catch (err) {
-      console.error('Erro ao gerar comprovante:', err);
-    }
-    setGerandoComprovante(false);
-  };
-
-  // Gerar PDF com assinatura digital capturada
-  const handleGerarPDFComAssinatura = async (signatureDataUrl: string) => {
-    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
-      return;
-    }
+  const handleProcessarEntrega = async (signatureDataUrl: string | null) => {
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) return;
 
     setGerandoComprovante(true);
     try {
@@ -561,9 +236,7 @@ export default function DashboardPage() {
         .eq('auth_id', user.id)
         .single();
 
-      if (userError) {
-        console.error('Erro ao buscar dados do atendente:', userError);
-      } else if (userData?.name) {
+      if (!userError && userData?.name) {
         atendenteNome = userData.name;
       }
 
@@ -571,7 +244,7 @@ export default function DashboardPage() {
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
 
-      // Atualizar atendimento no Supabase (COM assinatura digital)
+      // Atualizar atendimento no Supabase
       const { error } = await supabase
         .from('atendimentos')
         .update({
@@ -581,7 +254,7 @@ export default function DashboardPage() {
           data_entrega: dataEntrega,
           status: 'entregue',
           data_hora_entrega: dataHoraEntrega,
-          assinatura_base64: signatureDataUrl, // Salva assinatura digital
+          assinatura_base64: signatureDataUrl,
         })
         .eq('id', selectedAtendimento.id);
 
@@ -601,294 +274,29 @@ export default function DashboardPage() {
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
 
-      // Gerar PDF com assinatura digital incluída
-      const doc = new jsPDF();
-
-      // ===== CABEÇALHO (mesmo que impressão) =====
-      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59);
-      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text('Sala Sensorial - Atendimento Especializado', 105, 21, { align: 'center' });
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.5);
-      doc.line(15, 40, 195, 40);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(15, 23, 42);
-      doc.text('COMPROVANTE DE ENTREGA', 105, 50, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(71, 85, 105);
-      doc.text('Carteira de Identidade Nacional - CIN', 105, 57, { align: 'center' });
-
-      // Protocolo e data
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.rect(15, 65, 85, 18);
-      doc.rect(110, 65, 85, 18);
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.setFont('helvetica', 'normal');
-      doc.text('PROTOCOLO Nº', 18, 70);
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text(selectedAtendimento.protocolo || 'N/A', 18, 78);
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.setFont('helvetica', 'normal');
-      doc.text('DATA E HORA DA ENTREGA', 113, 70);
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
-
-      // Seções de dados (mesmo código)
-      const secaoY = 93;
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.line(15, secaoY + 2, 195, secaoY + 2);
-      doc.setDrawColor(226, 232, 240);
-      doc.setFillColor(248, 250, 252);
-      doc.rect(15, secaoY + 5, 180, 38, 'FD');
-
-      const labelStyle = () => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139);
-      };
-      const valueStyle = () => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(15, 23, 42);
-      };
-
-      let yData = secaoY + 12;
-      labelStyle();
-      doc.text('Nome Completo:', 18, yData);
-      valueStyle();
-      doc.text(selectedAtendimento.nome, 18, yData + 5);
-      yData += 13;
-      labelStyle();
-      doc.text('CPF:', 18, yData);
-      valueStyle();
-      doc.text(selectedAtendimento.cpf, 18, yData + 5);
-      labelStyle();
-      doc.text('Data do Atendimento:', 110, yData);
-      valueStyle();
-      doc.text(formatDate(selectedAtendimento.dia_atual), 110, yData + 5);
-
-      // Recebedor
-      const recebedorY = secaoY + 50;
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text('II. IDENTIFICAÇÃO DO RECEBEDOR', 15, recebedorY);
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.line(15, recebedorY + 2, 195, recebedorY + 2);
-      doc.setDrawColor(226, 232, 240);
-      doc.setFillColor(248, 250, 252);
-      doc.rect(15, recebedorY + 5, 180, 38, 'FD');
-      yData = recebedorY + 12;
-      labelStyle();
-      doc.text('Nome Completo:', 18, yData);
-      valueStyle();
-      doc.text(nomeRecebedor, 18, yData + 5);
-      yData += 13;
-      labelStyle();
-      doc.text('CPF:', 18, yData);
-      valueStyle();
-      doc.text(cpfRecebedor, 18, yData + 5);
-      labelStyle();
-      doc.text('Vínculo com o Titular:', 110, yData);
-      valueStyle();
-      doc.text(vinculo === 'outros' ? outroVinculo : vinculo, 110, yData + 5);
-
-      // Declaração
-      const infoY = recebedorY + 50;
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.setFont('helvetica', 'normal');
-      const declaracao = [
-        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
-        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
-        'e assumo total responsabilidade pela guarda e uso do documento.'
-      ];
-      declaracao.forEach((linha, index) => {
-        doc.text(linha, 105, infoY + (index * 5), { align: 'center' });
+      // Gerar PDF
+      const url = await generateComprovantePDF({
+        atendimento: selectedAtendimento,
+        recebedor: {
+          nome: nomeRecebedor,
+          cpf: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+        },
+        atendenteNome,
+        dataEntrega,
+        logoBase64,
+        signatureDataUrl
       });
 
-      // ===== ASSINATURA DIGITAL =====
-      const assinaturaY = 210;
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text('III. ASSINATURA E CONFIRMAÇÃO DE RECEBIMENTO', 15, assinaturaY);
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.line(15, assinaturaY + 2, 195, assinaturaY + 2);
-      doc.setDrawColor(226, 232, 240);
-      doc.setFillColor(255, 255, 255);
-      doc.rect(15, assinaturaY + 8, 180, 45, 'FD');
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Fortaleza/CE, ${formatDate(dataEntrega)}`, 105, assinaturaY + 16, { align: 'center' });
-
-      // INSERIR ASSINATURA DIGITAL
-      doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 20, 90, 22);
-
-      // Nome e CPF
-      doc.setFontSize(9);
-      doc.text(nomeRecebedor, 105, assinaturaY + 47, { align: 'center' });
-      doc.setFontSize(8);
-      doc.text(`CPF: ${cpfRecebedor}`, 105, assinaturaY + 51, { align: 'center' });
-
-      // Rodapé
-      const rodapeY = 270;
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.5);
-      doc.line(15, rodapeY, 195, rodapeY);
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Documento emitido por:', 15, rodapeY + 5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(atendenteNome, 15, rodapeY + 9);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.text('Página:', 195, rodapeY + 5, { align: 'right' });
-      doc.setFont('helvetica', 'bold');
-      doc.text('1 de 1', 195, rodapeY + 9, { align: 'right' });
-      doc.setLineWidth(0.3);
-      doc.line(15, rodapeY + 12, 195, rodapeY + 12);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(100, 116, 139);
-      doc.text('Este documento possui validade legal como comprovante de entrega.', 105, rodapeY + 17, { align: 'center' });
-      doc.text('Assembleia Legislativa do Estado do Ceará - Sala Sensorial', 105, rodapeY + 21, { align: 'center' });
-
-      // Gerar PDF
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
+      fetchDashboardData(); // Atualizar dados do dashboard
 
     } catch (err) {
       console.error('Erro ao gerar comprovante:', err);
       alert('Erro ao gerar comprovante. Tente novamente.');
-    }
-    setGerandoComprovante(false);
-  };
-
-  // Funções para edição de atendimento
-  const validateCPF = (cpf: string) => {
-    const cpfLimpo = cpf.replace(/\D/g, '');
-    if (cpfLimpo.length !== 11) return 'CPF deve ter 11 dígitos';
-    return null;
-  };
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return 'E-mail inválido';
-    return null;
-  };
-
-  const handleEditAtendimento = (atendimento: Atendimento) => {
-    setSelectedAtendimentoForEdit(atendimento);
-    setEditingAtendimento(atendimento);
-    setValidationErrors({});
-    setShowEditAtendimentoModal(true);
-  };
-
-  const handleInputChange = (field: keyof Atendimento, value: string) => {
-    setValidationErrors(prev => ({ ...prev, [field]: '' }));
-    
-    if (field === 'cpf') {
-      const error = validateCPF(value);
-      if (error) {
-        setValidationErrors(prev => ({ ...prev, [field]: error }));
-      }
-    }
-    
-    if (field === 'email') {
-      const error = validateEmail(value);
-      if (error) {
-        setValidationErrors(prev => ({ ...prev, [field]: error }));
-      }
-    }
-
-    setEditingAtendimento(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSaveAtendimento = async () => {
-    if (!selectedAtendimentoForEdit || !editingAtendimento) return;
-
-    // Validar campos obrigatórios
-    const requiredFields: (keyof Atendimento)[] = ['nome', 'cpf', 'email', 'solicitante', 'protocolo', 'dia_atual', 'horario', 'status'];
-    const newValidationErrors: Record<string, string> = {};
-    
-    requiredFields.forEach(field => {
-      if (!editingAtendimento[field]) {
-        newValidationErrors[field] = 'Este campo é obrigatório';
-      }
-    });
-
-    if (Object.keys(newValidationErrors).length > 0) {
-      setValidationErrors(newValidationErrors);
-      return;
-    }
-
-    try {
-      setSavingAtendimento(true);
-      
-
-      const { error } = await supabase
-        .from('atendimentos')
-        .update(editingAtendimento)
-        .eq('id', selectedAtendimentoForEdit.id);
-
-      if (error) throw error;
-      
-      // Atualizar a lista de atendimentos recentes
-      setRecentAtendimentos(prev => 
-        prev.map(a => 
-          a.id === selectedAtendimentoForEdit.id 
-            ? { ...a, ...editingAtendimento } 
-            : a
-        )
-      );
-
-
-      setShowEditAtendimentoModal(false);
-      setSelectedAtendimentoForEdit(null);
-      setEditingAtendimento({});
-      setValidationErrors({});
-    } catch (err: any) {
-      console.error('Erro ao salvar atendimento:', err);
     } finally {
-      setSavingAtendimento(false);
+      setGerandoComprovante(false);
     }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingAtendimento(selectedAtendimentoForEdit || {});
-    setValidationErrors({});
   };
 
   if (loading) {
@@ -899,14 +307,14 @@ export default function DashboardPage() {
           <div className="max-w-6xl mx-auto">
             <div className="animate-pulse space-y-5">
               <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[...Array(6)].map((_, i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[...Array(4)].map((_, i) => (
                   <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-20 bg-gray-200 rounded-xl"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="h-64 bg-gray-200 rounded-xl"></div>
                 ))}
               </div>
             </div>
@@ -919,36 +327,34 @@ export default function DashboardPage() {
   return (
     <>
       <DashboardHeader />
-      {/* Modal Entregar CIN */}
-      {showEntregarCinModal && (
-        <EntregarCinModal
-          show={showEntregarCinModal}
-          onClose={() => setShowEntregarCinModal(false)}
-          atendimentos={atendimentosParaEntrega}
-          onBuscar={buscarAtendimentos}
-          busca={busca}
-          setBusca={setBusca}
-          buscando={buscando}
-          loading={loadingAtendimentosEntrega}
-          onSelect={setSelectedAtendimento}
-          selected={selectedAtendimento}
-          nomeRecebedor={nomeRecebedor}
-          setNomeRecebedor={setNomeRecebedor}
-          cpfRecebedor={cpfRecebedor}
-          setCpfRecebedor={setCpfRecebedor}
-          vinculo={vinculo}
-          setVinculo={setVinculo}
-          outroVinculo={outroVinculo}
-          setOutroVinculo={setOutroVinculo}
-          gerandoComprovante={gerandoComprovante}
-          onGerarComprovante={handleGerarComprovante}
-        />
-      )}
-      {/* Modal de visualização do PDF */}
+
+      <EntregarCinModal
+        show={showEntregarCinModal}
+        onClose={() => setShowEntregarCinModal(false)}
+        atendimentos={atendimentosParaEntrega}
+        onBuscar={buscarAtendimentos}
+        busca={busca}
+        setBusca={setBusca}
+        buscando={buscando}
+        loading={loadingAtendimentosEntrega}
+        onSelect={setSelectedAtendimento}
+        selected={selectedAtendimento}
+        nomeRecebedor={nomeRecebedor}
+        setNomeRecebedor={setNomeRecebedor}
+        cpfRecebedor={cpfRecebedor}
+        setCpfRecebedor={setCpfRecebedor}
+        vinculo={vinculo}
+        setVinculo={setVinculo}
+        outroVinculo={outroVinculo}
+        setOutroVinculo={setOutroVinculo}
+        gerandoComprovante={gerandoComprovante}
+        onGerarComprovante={handleGerarComprovante}
+      />
+
       {pdfUrl && (
         <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
       )}
-      {/* Modal de edição de atendimento - Unificado */}
+
       {showEditAtendimentoModal && selectedAtendimentoForEdit && (
         <AtendimentoModal
           atendimento={selectedAtendimentoForEdit}
@@ -958,38 +364,35 @@ export default function DashboardPage() {
             setSelectedAtendimentoForEdit(null);
           }}
           onUpdate={(updated) => {
-            // Atualizar lista de atendimentos
             setRecentAtendimentos(prev =>
               prev.map(a => a.id === updated.id ? updated : a)
             );
             fetchDashboardData();
           }}
           onDelete={(id) => {
-            // Remover da lista
             setRecentAtendimentos(prev => prev.filter(a => a.id !== id));
             fetchDashboardData();
           }}
         />
       )}
-      {/* Modal de novo atendimento */}
+
       {showNovoAtendimentoModal && (
         <NovoAtendimentoModal
           show={showNovoAtendimentoModal}
           onClose={() => setShowNovoAtendimentoModal(false)}
           onSuccess={() => {
             setShowNovoAtendimentoModal(false);
-            fetchDashboardData(); // Refresh dashboard data
+            fetchDashboardData();
           }}
         />
       )}
-      {/* Modal de Seleção de Modo de Entrega */}
+
       <ModoEntregaModal
         isOpen={showModoEntregaModal}
         onClose={() => setShowModoEntregaModal(false)}
         onSelectMode={handleSelectModoEntrega}
       />
 
-      {/* Modal de Assinatura Digital via Canvas */}
       <SignaturePadCanvas
         isOpen={showSignaturePadCanvas}
         onClose={() => setShowSignaturePadCanvas(false)}
@@ -997,10 +400,11 @@ export default function DashboardPage() {
         title="Assinatura do Recebedor"
         recipientName={nomeRecebedor}
       />
+
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* Cabeçalho do Dashboard - Design Moderno */}
-          <div className="text-left space-y-3 animate-fade-in">
+          {/* Cabeçalho do Dashboard */}
+          <div className="text-left space-y-3 animate-in fade-in duration-500">
             <div className="flex items-center gap-3">
               <div className="h-12 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
               <div>
@@ -1008,1041 +412,82 @@ export default function DashboardPage() {
                   Painel de Controle
                 </h1>
                 <p className="text-gray-500 mt-2 text-sm md:text-base font-medium flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
                   Bem-vindo ao gerenciamento de atendimentos
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Cards de Estatísticas - Grid Moderno */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            <StatCard title="Total de Atendimentos" value={stats.total} color="text-gray-900" />
-            <StatCard title="Correções" value={stats.correcoes} color="text-red-600" />
-            <StatCard title="Em Andamento" value={stats.emAndamento} color="text-blue-600" />
-            <StatCard title="Concluídos" value={stats.concluidos} color="text-green-600" />
-            <StatCard title="Bloqueados" value={stats.bloqueados} color="text-gray-700" />
-            <StatCard title="Hoje" value={stats.hoje} color="text-emerald-600" />
-          </div>
+          {/* Cards de Estatísticas */}
+          <DashboardStats stats={stats} loading={loading} />
 
-          {/* Container para Ações Rápidas e Atendimentos Recentes - Design Aprimorado */}
+          {/* Container para Ações Rápidas e Atendimentos Recentes */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Ações Rápidas */}
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 flex flex-col justify-between transition-all duration-300 hover:shadow-xl animate-slide-up">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 flex flex-col transition-all duration-300 hover:shadow-xl animate-in slide-in-from-bottom-8 duration-700">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
-                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                    <FiCheckCircle className="h-5 w-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-gray-800">
                     Ações Rápidas
                   </h2>
                 </div>
-                <div className="flex space-x-2">
-                  <button className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
-                </div>
               </div>
+
               <div className="flex flex-col space-y-3">
                 <button
                   onClick={() => setShowNovoAtendimentoModal(true)}
                   className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 text-emerald-700 bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group w-full"
                 >
                   <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    <FiPlus className="h-5 w-5" />
                   </div>
                   <span className="font-medium">Novo Atendimento</span>
-                  <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
                 </button>
-                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-                  </svg>
-                }>
-                  🔐 Fila de Coleta de Digitais
+
+                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<FiFingerprint className="h-5 w-5" />}>
+                  Fila de Coleta de Digitais
                 </QuickAction>
-                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                }>
+
+                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={<FiRefreshCw className="h-5 w-5" />}>
                   Atualizar CIN
                 </QuickAction>
-                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                }>
+
+                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700" icon={<FiAlertTriangle className="h-5 w-5" />}>
                   Ver Correções
                 </QuickAction>
-                <QuickAction href="/dashboard/atendimentos/cancelados" color="border-orange-500 text-orange-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                }>
+
+                <QuickAction href="/dashboard/atendimentos/cancelados" color="border-orange-500 text-orange-700" icon={<FiXCircle className="h-5 w-5" />}>
                   Atendimentos Cancelados
                 </QuickAction>
-                <QuickAction href="/dashboard/atendimentos/bloqueados" color="border-gray-500 text-gray-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                }>
+
+                <QuickAction href="/dashboard/atendimentos/bloqueados" color="border-gray-500 text-gray-700" icon={<FiLock className="h-5 w-5" />}>
                   Atendimentos Bloqueados
                 </QuickAction>
-                <QuickAction href="/admin/gestao" color="border-purple-500 text-purple-700" icon={
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                }>
+
+                <QuickAction href="/admin/gestao" color="border-purple-500 text-purple-700" icon={<FiCalendar className="h-5 w-5" />}>
                   Gestão de Agendamentos
                 </QuickAction>
+
                 <button
-                  ref={entregarCinButtonRef}
                   onClick={() => setShowEntregarCinModal(true)}
                   className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 bg-white/80 backdrop-blur-sm hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-300 hover:shadow-md transition-all duration-300 group mt-2"
                 >
                   <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                    <svg className="h-5 w-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" />
-                    </svg>
+                    <FiCheckCircle className="h-5 w-5 text-emerald-700" />
                   </div>
                   <span className="font-medium text-emerald-700">Entregar CIN</span>
-                  <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
                 </button>
               </div>
             </div>
 
             {/* Atendimentos Recentes */}
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-xl animate-slide-up">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-800">
-                    Atendimentos Recentes
-                  </h2>
-                </div>
-                <Link href="/dashboard/atendimentos" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-emerald-50 transition-all duration-200">
-                  Ver todos
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
-              <div className="space-y-4">
-                {recentAtendimentos.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                    <svg className="h-12 w-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p>Nenhum atendimento registrado</p>
-                  </div>
-                ) : (
-                  recentAtendimentos.map((atendimento) => (
-                    <div
-                      key={atendimento.id}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-gray-50 rounded-2xl border-2 border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-emerald-200 transition-all duration-300 group cursor-pointer"
-                    >
-                      <div className="flex items-center">
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mr-4 shadow-sm group-hover:scale-110 transition-transform duration-300 ${getStatusColor(atendimento.status).replace('text-', 'bg-')}`}>
-                          {atendimento.status === 'correcao' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          ) : atendimento.status === 'concluido' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : atendimento.status === 'em_andamento' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          ) : (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-800 text-base group-hover:text-emerald-700 transition-colors">{atendimento.nome}</p>
-                          <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-1">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {formatDate(atendimento.dia_atual)} • {atendimento.protocolo}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`status-badge font-semibold px-3 py-1.5 text-xs ${atendimento.status === 'correcao' ? 'status-error' :
-                          atendimento.status === 'concluido' ? 'status-completed' :
-                            atendimento.status === 'em_andamento' ? 'status-in-progress' :
-                              'status-pending'}`}>
-                          {atendimento.status === 'correcao' ? 'Correção' :
-                            atendimento.status === 'concluido' ? 'Concluído' :
-                              atendimento.status === 'em_andamento' ? 'Em andamento' :
-                                atendimento.status}
-                        </span>
-                        {/* Botão de navegação */}
-                        <button
-                          className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
-                          onClick={() => router.push(`/dashboard/atendimentos/${atendimento.id}/AtendimentoDetalhes`)}
-                        ></button>
-                        <button
-                          className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                          onClick={() => handleEditAtendimento(atendimento)}
-                          title="Editar atendimento"
-                        >
-                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <RecentAtendimentos atendimentos={recentAtendimentos} loading={loading} />
           </div>
-
-
         </div>
       </div>
     </>
-  );
-}
-
-// Funções de utilidade (movidas para fora do componente para serem acessíveis globalmente)
-const formatDate = (dateString: string) => {
-  try {
-    const date = new Date(dateString + 'T12:00:00Z');
-    return date.toLocaleDateString('pt-BR', {
-      timeZone: 'America/Fortaleza',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch (error) {
-    console.error('Erro ao formatar data:', error);
-    return dateString;
-  }
-};
-
-const formatTime = (timeString: string) => {
-  return timeString.substring(0, 5);
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pendente':
-      return 'text-yellow-600 bg-yellow-50';
-    case 'em_andamento':
-      return 'text-blue-600 bg-blue-50';
-    case 'concluido':
-      return 'text-green-600 bg-green-50';
-    case 'correcao':
-      return 'text-red-600 bg-red-50';
-    default:
-      return 'text-gray-600 bg-gray-50';
-  }
-};
-
-// 1. COMPONENTES INTERNOS
-
-// Modal de Entrega da CIN
-function EntregarCinModal({
-  show, onClose, atendimentos, onBuscar, busca, setBusca, buscando, loading, onSelect, selected, nomeRecebedor, setNomeRecebedor, cpfRecebedor, setCpfRecebedor, vinculo, setVinculo, outroVinculo, setOutroVinculo, gerandoComprovante, onGerarComprovante
-}: any) {
-  return show ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative border border-emerald-100">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-          onClick={onClose}
-          aria-label="Fechar"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="flex items-center mb-6">
-          <div className="bg-emerald-100 p-3 rounded-xl mr-4">
-            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19z" /></svg>
-          </div>
-          <h2 className="text-2xl font-bold text-emerald-700">Entregar CIN</h2>
-        </div>
-        {!selected ? (
-          <div>
-            <div className="mb-6">
-              <label htmlFor="busca" className="block text-sm font-medium text-gray-700 mb-2">Buscar atendimento por nome ou CPF</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  id="busca"
-                  className="block w-full border rounded-xl pl-10 pr-16 py-3 focus:ring-2 focus:ring-emerald-400"
-                  placeholder="Digite o nome ou CPF"
-                  value={busca}
-                  onChange={e => setBusca(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') onBuscar(); }}
-                  autoFocus
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center">
-                  <button
-                    onClick={onBuscar}
-                    disabled={!busca || buscando}
-                    className="h-full px-4 bg-emerald-600 text-white rounded-r-xl hover:bg-emerald-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    {buscando ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Buscando
-                      </>
-                    ) : 'Buscar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-            {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
-                  <p className="mt-3 text-sm text-gray-500">Buscando atendimentos...</p>
-                </div>
-              </div>
-            ) : atendimentos.length === 0 && busca ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                <svg className="h-16 w-16 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p>Nenhum atendimento encontrado</p>
-                <p className="text-sm mt-1">Tente buscar com outro nome ou CPF</p>
-              </div>
-            ) : atendimentos.length > 0 ? (
-              <div>
-                <p className="text-sm text-gray-500 mb-3">Encontrados {atendimentos.length} atendimentos</p>
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                  {atendimentos.map((a: any) => (
-                    <div
-                      key={a.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
-                      onClick={() => onSelect(a)}
-                    >
-                      <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${getStatusColor(a.status).replace('text-', 'bg-')}`}>
-                          {a.status === 'correcao' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          ) : a.status === 'concluido' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : a.status === 'em_andamento' ? (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          ) : (
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{a.nome}</p>
-                          <p className="text-sm text-gray-500">
-                            CPF: {a.cpf} | {formatDate(a.dia_atual)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <span className={`status-badge ${a.status === 'correcao' ? 'status-error' :
-                          a.status === 'concluido' ? 'status-completed' :
-                            a.status === 'em_andamento' ? 'status-in-progress' :
-                              'status-pending'}`}>
-                          {a.status === 'correcao' ? 'Correção' :
-                            a.status === 'concluido' ? 'Concluído' :
-                              a.status === 'em_andamento' ? 'Em andamento' :
-                                a.status}
-                        </span>
-                        <svg className="h-5 w-5 ml-3 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div>
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800">Dados do Atendimento</h3>
-              <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 shadow-sm">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Nome</p>
-                    <p className="font-medium text-gray-800">{selected.nome}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">CPF</p>
-                    <p className="font-medium text-gray-800">{selected.cpf}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Data</p>
-                    <p className="font-medium text-gray-800">{formatDate(selected.dia_atual)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Protocolo</p>
-                    <p className="font-medium text-gray-800">{selected.protocolo}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 flex items-center">
-                <svg className="h-5 w-5 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Dados do Recebedor
-              </h3>
-              <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                <div className="mb-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNomeRecebedor(selected.nome);
-                      setCpfRecebedor(selected.cpf);
-                      setVinculo('próprio');
-                    }}
-                    className="w-full py-2 px-4 bg-emerald-100 text-emerald-700 font-medium rounded-lg hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Marcar como o mesmo (próprio titular)
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="nomeRecebedor" className="block text-sm font-medium text-gray-700 mb-1">Nome do Recebedor</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        id="nomeRecebedor"
-                        value={nomeRecebedor}
-                        onChange={(e) => setNomeRecebedor(e.target.value)}
-                        className="block w-full border rounded-xl pl-10 pr-3 py-3 focus:ring-2 focus:ring-emerald-400"
-                        placeholder="Nome completo"
-                        autoFocus
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="cpfRecebedor" className="block text-sm font-medium text-gray-700 mb-1">CPF do Recebedor</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        id="cpfRecebedor"
-                        value={cpfRecebedor}
-                        onChange={(e) => setCpfRecebedor(e.target.value)}
-                        className="block w-full border rounded-xl pl-10 pr-3 py-3 focus:ring-2 focus:ring-emerald-400"
-                        placeholder="000.000.000-00"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="vinculo" className="block text-sm font-medium text-gray-700 mb-1">Vínculo com o titular</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </div>
-                    <select
-                      id="vinculo"
-                      value={vinculo}
-                      onChange={(e) => setVinculo(e.target.value)}
-                      className="block w-full border rounded-xl pl-10 pr-3 py-3 focus:ring-2 focus:ring-emerald-400 appearance-none bg-white"
-                      required
-                    >
-                      <option value="">Selecione</option>
-                      <option value="Próprio">Próprio (titular)</option>
-                      <option value="Mãe">Mãe</option>
-                      <option value="Pai">Pai</option>
-                      <option value="Irmã(o)">Irmã(o)</option>
-                      <option value="Filho(a)">Filho(a)</option>
-                      <option value="Tio(a)">Tio(a)</option>
-                      <option value="Avós">Avós</option>
-                      <option value="Outros">Outros</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {vinculo === 'outros' && (
-                  <div className="animate-fade-in">
-                    <label htmlFor="outroVinculo" className="block text-sm font-medium text-gray-700 mb-1">Especifique o Vínculo</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        id="outroVinculo"
-                        value={outroVinculo}
-                        onChange={(e) => setOutroVinculo(e.target.value)}
-                        className="block w-full border rounded-xl pl-10 pr-3 py-3 focus:ring-2 focus:ring-emerald-400"
-                        placeholder="Especifique o vínculo"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-8">
-              <button
-                className="px-4 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center gap-2"
-                onClick={() => onSelect(null)}
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Voltar
-              </button>
-              <button
-                className="px-4 py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
-                disabled={!nomeRecebedor || !cpfRecebedor || !vinculo || (vinculo === 'outros' && !outroVinculo) || gerandoComprovante}
-                onClick={onGerarComprovante}
-              >
-                {gerandoComprovante ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Gerar e Imprimir
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  ) : null;
-}
-
-// Modal de PDF
-function PdfModal({ url, onClose }: { url: string, onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-gray-100">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-          onClick={onClose}
-          aria-label="Fechar"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="flex items-center mb-6">
-          <div className="bg-emerald-100 p-3 rounded-xl mr-4 shadow-sm">
-            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Comprovante de Entrega</h2>
-            <p className="text-sm text-gray-500">Visualize e baixe o comprovante em PDF</p>
-          </div>
-        </div>
-        <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="mt-2 text-sm text-gray-600">Carregando PDF...</p>
-            </div>
-          </div>
-          <iframe src={url} className="w-full h-[70vh] relative z-10" title="Comprovante PDF"></iframe>
-        </div>
-        <div className="mt-6 flex justify-between items-center">
-          <div className="text-sm text-gray-500 flex items-center">
-            <svg className="h-5 w-5 mr-1 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            O PDF foi gerado automaticamente
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Fechar
-            </button>
-            <a
-              href={url}
-              download="comprovante-entrega-cin.pdf"
-              className="btn-primary flex items-center gap-2"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Baixar PDF
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Card de estatística
-function StatCard({ title, value, color }: { title: string, value: any, color: string }) {
-  // Mapeamento de cores e ícones por tipo de card
-  const cardConfig = {
-    'text-gray-900': { 
-      icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-      gradient: 'from-slate-600 to-slate-700',
-      bg: 'bg-gradient-to-br from-slate-50 to-slate-100/50',
-      border: 'border-slate-200',
-      shadow: 'shadow-slate-200/50'
-    },
-    'text-red-600': { 
-      icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-      gradient: 'from-red-500 to-red-600',
-      bg: 'bg-gradient-to-br from-red-50 to-red-100/50',
-      border: 'border-red-200',
-      shadow: 'shadow-red-200/50'
-    },
-    'text-blue-600': { 
-      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-      gradient: 'from-blue-500 to-blue-600',
-      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50',
-      border: 'border-blue-200',
-      shadow: 'shadow-blue-200/50'
-    },
-    'text-green-600': { 
-      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      gradient: 'from-green-500 to-green-600',
-      bg: 'bg-gradient-to-br from-green-50 to-green-100/50',
-      border: 'border-green-200',
-      shadow: 'shadow-green-200/50'
-    },
-    'text-gray-700': { 
-      icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
-      gradient: 'from-gray-600 to-gray-700',
-      bg: 'bg-gradient-to-br from-gray-50 to-gray-100/50',
-      border: 'border-gray-200',
-      shadow: 'shadow-gray-200/50'
-    },
-    'text-emerald-600': { 
-      icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-      gradient: 'from-emerald-500 to-emerald-600',
-      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
-      border: 'border-emerald-200',
-      shadow: 'shadow-emerald-200/50'
-    }
-  };
-
-  const config = cardConfig[color as keyof typeof cardConfig] || cardConfig['text-gray-900'];
-
-  return (
-    <div className={`group relative overflow-hidden rounded-2xl border-2 ${config.border} bg-white shadow-md backdrop-blur-sm transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-opacity-80 animate-slide-up`}>
-      {/* Efeito de brilho no hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-      {/* Barra superior colorida animada */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${config.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
-
-      {/* Círculo decorativo no canto */}
-      <div className={`absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br ${config.gradient} opacity-5 rounded-full group-hover:scale-150 transition-transform duration-500`}></div>
-
-      {/* Conteúdo principal */}
-      <div className="relative p-6">
-        {/* Layout horizontal para formato retangular */}
-        <div className="flex items-center justify-between">
-          {/* Lado esquerdo: título e valor */}
-          <div className="flex-1">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 group-hover:text-gray-600 transition-colors">{title}</h3>
-            <div className="mb-2">
-              <span className={`text-4xl font-extrabold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent transition-all duration-300 group-hover:scale-105 inline-block`}>
-                {value}
-              </span>
-            </div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Atendimentos
-            </p>
-          </div>
-
-          {/* Lado direito: ícone com animação */}
-          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg ml-4 transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-500`}>
-            <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
-            </svg>
-          </div>
-        </div>
-
-        {/* Indicador de progresso decorativo com animação */}
-        <div className="mt-5 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-          <div className={`h-1.5 rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-1000 ease-out shadow-sm`}
-               style={{ width: `${Math.min(100, (value / 100) * 10 + 20)}%` }}></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Card de ação rápida - Design moderno
-function QuickAction({ href, color, icon, children }: any) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center px-4 py-3.5 rounded-xl shadow-sm border-2 ${color.replace('text-', 'border-').replace('border-', 'border-')} bg-white hover:bg-gray-50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden`}
-    >
-      {/* Efeito de fundo gradiente no hover */}
-      <div className={`absolute inset-0 ${color.replace('text-', 'bg-').replace('-700', '-50')} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-
-      <div className={`${color.replace('text-', 'bg-').replace('-700', '-100')} p-2.5 rounded-xl mr-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-sm relative z-10`}>
-        {icon}
-      </div>
-      <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors relative z-10">{children}</span>
-      <svg className="h-5 w-5 ml-auto text-gray-400 group-hover:text-gray-600 group-hover:translate-x-2 transition-all duration-300 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    </Link>
-  );
-}
-
-// Modal de edição de atendimento
-function EditAtendimentoModal({
-  show,
-  onClose,
-  atendimento,
-  editingAtendimento,
-  onInputChange,
-  onSave,
-  onCancel,
-  saving,
-  validationErrors
-}: {
-  show: boolean;
-  onClose: () => void;
-  atendimento: Atendimento;
-  editingAtendimento: Partial<Atendimento>;
-  onInputChange: (field: keyof Atendimento, value: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  saving: boolean;
-  validationErrors: Record<string, string>;
-}) {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-emerald-100 max-h-[90vh] overflow-y-auto">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-          onClick={onClose}
-          aria-label="Fechar"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        
-        <div className="flex items-center mb-6">
-          <div className="bg-emerald-100 p-3 rounded-xl mr-4">
-            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-emerald-700">Editar Atendimento</h2>
-            <p className="text-sm text-gray-500">Protocolo: {atendimento.protocolo}</p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {/* Informações do Atendimento */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <svg className="h-5 w-5 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Dados do Atendimento
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome Completo *
-                </label>
-                <input
-                  type="text"
-                  value={editingAtendimento.nome || ''}
-                  onChange={(e) => onInputChange('nome', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.nome ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Nome completo"
-                />
-                {validationErrors.nome && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.nome}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CPF *
-                </label>
-                <input
-                  type="text"
-                  value={editingAtendimento.cpf || ''}
-                  onChange={(e) => onInputChange('cpf', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.cpf ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="000.000.000-00"
-                />
-                {validationErrors.cpf && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.cpf}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  E-mail *
-                </label>
-                <input
-                  type="email"
-                  value={editingAtendimento.email || ''}
-                  onChange={(e) => onInputChange('email', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.email ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="email@exemplo.com"
-                />
-                {validationErrors.email && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Solicitante *
-                </label>
-                <input
-                  type="text"
-                  value={editingAtendimento.solicitante || ''}
-                  onChange={(e) => onInputChange('solicitante', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.solicitante ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Nome do solicitante"
-                />
-                {validationErrors.solicitante && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.solicitante}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data do Atendimento *
-                </label>
-                <input
-                  type="date"
-                  value={editingAtendimento.dia_atual || ''}
-                  onChange={(e) => onInputChange('dia_atual', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.dia_atual ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                />
-                {validationErrors.dia_atual && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.dia_atual}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Horário *
-                </label>
-                <input
-                  type="time"
-                  value={editingAtendimento.horario || ''}
-                  onChange={(e) => onInputChange('horario', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.horario ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                />
-                {validationErrors.horario && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.horario}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status *
-                </label>
-                <select
-                  value={editingAtendimento.status || ''}
-                  onChange={(e) => onInputChange('status', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.status ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Selecione o status</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="em_andamento">Em Andamento</option>
-                  <option value="concluido">Concluído</option>
-                  <option value="correcao">Correção</option>
-                  <option value="bloqueado">Bloqueado</option>
-                  <option value="entregue">Entregue</option>
-                </select>
-                {validationErrors.status && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.status}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Protocolo *
-                </label>
-                <input
-                  type="text"
-                  value={editingAtendimento.protocolo || ''}
-                  onChange={(e) => onInputChange('protocolo', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 ${
-                    validationErrors.protocolo ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Número do protocolo"
-                />
-                {validationErrors.protocolo && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.protocolo}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Observações */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <svg className="h-5 w-5 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Observações
-            </h3>
-                           <textarea
-                 value={(editingAtendimento as any).observacoes || ''}
-                 onChange={(e) => onInputChange('observacoes' as keyof Atendimento, e.target.value)}
-                 rows={3}
-                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                 placeholder="Observações sobre o atendimento..."
-               />
-          </div>
-        </div>
-
-        {/* Botões de ação */}
-        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-            disabled={saving}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Cancelar
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Salvando...
-              </>
-            ) : (
-              <>
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Salvar Alterações
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
