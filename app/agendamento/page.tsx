@@ -12,33 +12,6 @@ const UNIDADE = "Sala Sensorial ALECE";
 const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
 const ENDERECO_COMPLETO = "Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238";
 
-// Gerar horários de 07:00 até 20:20 (intervalo de 5 minutos)
-const HORARIOS = (() => {
-  const horarios: string[] = [];
-  let hora = 7;
-  let minuto = 0;
-  const endHour = 20;
-  const endMinute = 20;
-
-  while (true) {
-    const horaStr = hora.toString().padStart(2, "0");
-    const minutoStr = minuto.toString().padStart(2, "0");
-    horarios.push(`${horaStr}:${minutoStr}`);
-
-    if (hora === endHour && minuto === endMinute) break;
-
-    minuto += 5;
-    if (minuto >= 60) {
-      minuto = 0;
-      hora += 1;
-    }
-
-    if (hora >= 24) break;
-  }
-
-  return horarios;
-})();
-
 function getMonthDays(year: number, month: number) {
   const days = [];
   const firstDay = new Date(year, month, 1);
@@ -413,57 +386,17 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
 async function getHorariosDisponiveis(data: Date) {
   try {
     const dataFormatada = formatDate(data);
+    const response = await fetch(`/api/agendamentos/disponibilidade?data=${dataFormatada}`);
 
-    // Busca todos os agendamentos para a data (confirmados e bloqueados)
-    const { data: agendamentos, error } = await supabase
-      .from("agendamentos")
-      .select("horario, status")
-      .eq("data", dataFormatada);
-
-    if (error) {
-      console.error("Erro ao buscar agendamentos:", error);
-      return [];
+    if (!response.ok) {
+      throw new Error('Falha ao buscar disponibilidade');
     }
 
-    // Verificar se é o dia atual
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const dataVerificar = new Date(data);
-    dataVerificar.setHours(0, 0, 0, 0);
-
-    // Filtrar horários disponíveis
-    const horariosDisponiveis = HORARIOS.filter(h => {
-      // Se for hoje, verificar se o horário já passou
-      if (dataVerificar.getTime() === hoje.getTime()) {
-        const [hora, minuto] = h.split(':');
-        const horarioAtual = new Date();
-        const horarioAgendamento = new Date();
-        horarioAgendamento.setHours(parseInt(hora), parseInt(minuto), 0, 0);
-
-        // Adicionar 15 minutos ao horário atual para criar uma margem
-        const horarioLimite = new Date(horarioAtual.getTime() + 15 * 60000);
-
-        if (horarioAgendamento <= horarioLimite) {
-          return false;
-        }
-      }
-
-      // Verificar se existe agendamento para este horário
-      const horarioCompleto = h + ':00';
-      const agendamentoExistente = agendamentos?.find((a: any) => a.horario === horarioCompleto);
-
-      // Um horário está disponível se:
-      // 1. Não existe agendamento OU
-      // 2. Não está bloqueado nem confirmado
-      return !agendamentoExistente || (agendamentoExistente.status !== 'bloqueado' && agendamentoExistente.status !== 'confirmado');
-    });
-
-    console.log("Horários disponíveis:", horariosDisponiveis);
-    return horariosDisponiveis;
+    const slots = await response.json();
+    return slots; // Retorna { manha: [], tarde: [] }
   } catch (err) {
     console.error("Erro ao buscar horários disponíveis:", err);
-    return [];
+    return { manha: [], tarde: [] };
   }
 }
 
@@ -502,7 +435,7 @@ function AgendamentoContent() {
   const [success, setSuccess] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
+  const [horariosDisponiveis, setHorariosDisponiveis] = useState<{ manha: string[], tarde: string[] }>({ manha: [], tarde: [] });
   const [availableDays, setAvailableDays] = useState<{ [key: string]: boolean }>({});
 
   // 2. Todos os useEffects
@@ -539,8 +472,8 @@ function AgendamentoContent() {
         if (currentCheckDate.getDay() !== 0 && currentCheckDate.getDay() !== 6) {
           const formattedDate = formatDate(currentCheckDate);
           try {
-            const horarios = await getHorariosDisponiveis(currentCheckDate);
-            availability[formattedDate] = horarios.length > 0;
+            const slots = await getHorariosDisponiveis(currentCheckDate);
+            availability[formattedDate] = slots.manha.length > 0 || slots.tarde.length > 0;
             daysChecked++;
           } catch (err) {
             console.error("Erro ao verificar disponibilidade:", err);
@@ -563,10 +496,12 @@ function AgendamentoContent() {
     if (selectedDate) {
       setLoading(true);
       getHorariosDisponiveis(selectedDate)
-        .then(horarios => {
-          console.log("Horários disponíveis:", horarios);
-          setHorariosDisponiveis(horarios);
-          if (horario && !horarios.includes(horario)) {
+        .then(slots => {
+          console.log("Horários disponíveis:", slots);
+          setHorariosDisponiveis(slots);
+
+          const allSlots = [...slots.manha, ...slots.tarde];
+          if (horario && !allSlots.includes(horario)) {
             setHorario("");
             showToast("Este horário não está mais disponível. Por favor, selecione outro horário.", 'error');
           }
@@ -578,7 +513,7 @@ function AgendamentoContent() {
           setLoading(false);
         });
     } else {
-      setHorariosDisponiveis([]);
+      setHorariosDisponiveis({ manha: [], tarde: [] });
     }
   }, [selectedDate]);
 
@@ -673,8 +608,9 @@ function AgendamentoContent() {
     }
 
     // Verificar se o horário ainda está disponível
-    const horariosDisponiveis = await getHorariosDisponiveis(selectedDate);
-    if (!horariosDisponiveis.includes(horario)) {
+    const slots = await getHorariosDisponiveis(selectedDate);
+    const allSlots = [...slots.manha, ...slots.tarde];
+    if (!allSlots.includes(horario)) {
       setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
       return;
     }
@@ -891,37 +827,69 @@ function AgendamentoContent() {
                 <div className="flex justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-700"></div>
                 </div>
-              ) : horariosDisponiveis.length === 0 ? (
+              ) : (horariosDisponiveis.manha.length === 0 && horariosDisponiveis.tarde.length === 0) ? (
                 <p className="text-gray-500">Não há horários disponíveis para este dia</p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {HORARIOS.map(h => {
-                    const isDisponivel = horariosDisponiveis.includes(h);
-                    return (
-                      <button
-                        key={h}
-                        type="button"
-                        className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
-                          ${!isDisponivel
-                            ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                            : horario === h
-                              ? "bg-emerald-700 text-white border-emerald-700"
-                              : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                          }`}
-                        onClick={() => isDisponivel && setHorario(h)}
-                        disabled={!isDisponivel}
-                        title={!isDisponivel ? "Horário indisponível" : "Clique para selecionar"}
-                      >
-                        {h}
-                      </button>
-                    );
-                  })}
+                <div className="space-y-6">
+                  {/* Manhã */}
+                  {horariosDisponiveis.manha.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                        Manhã
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {horariosDisponiveis.manha.map(h => (
+                          <button
+                            key={h}
+                            type="button"
+                            className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
+                              ${horario === h
+                                ? "bg-emerald-700 text-white border-emerald-700"
+                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                              }`}
+                            onClick={() => setHorario(h)}
+                            title="Clique para selecionar"
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tarde */}
+                  {horariosDisponiveis.tarde.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+                        Tarde
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {horariosDisponiveis.tarde.map(h => (
+                          <button
+                            key={h}
+                            type="button"
+                            className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
+                              ${horario === h
+                                ? "bg-emerald-700 text-white border-emerald-700"
+                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                              }`}
+                            onClick={() => setHorario(h)}
+                            title="Clique para selecionar"
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
             {error && <div className="mb-2 text-red-600">{error}</div>}
             {success && <div className="mb-2 text-green-600">{success}</div>}
-            {user && selectedDate && horario && horariosDisponiveis.includes(horario) && (
+            {user && selectedDate && horario && (horariosDisponiveis.manha.includes(horario) || horariosDisponiveis.tarde.includes(horario)) && (
               <form
                 className="space-y-4 mt-8"
                 onSubmit={e => { e.preventDefault(); handleAgendar(); }}
