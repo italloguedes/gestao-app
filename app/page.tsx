@@ -123,8 +123,8 @@ export default function Home() {
           setMessage('Verifique seu email para confirmar o cadastro');
         }
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({ 
-          email, 
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
           password
         });
 
@@ -133,7 +133,7 @@ export default function Home() {
         if (data.session) {
           // Força um refresh na sessão para atualizar o tempo de expiração
           await supabase.auth.refreshSession();
-          
+
           // Armazena o timestamp de quando a sessão deve expirar (2 horas)
           localStorage.setItem('session-expiry', String(Date.now() + 7200000)); // 2 horas em milissegundos
 
@@ -217,8 +217,8 @@ export default function Home() {
                   {isRecovering
                     ? 'Insira seu email para redefinir sua senha.'
                     : isRegistering
-                    ? 'Preencha os campos para criar sua conta.'
-                    : 'Acesse sua conta para continuar.'}
+                      ? 'Preencha os campos para criar sua conta.'
+                      : 'Acesse sua conta para continuar.'}
                 </p>
               </div>
             </div>
@@ -273,19 +273,18 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={isSubmitDisabled}
-                className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-cyan-300/50 ${
-                  isSubmitDisabled
+                className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-cyan-300/50 ${isSubmitDisabled
                     ? 'bg-slate-600 cursor-not-allowed'
                     : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:shadow-cyan-500/40 hover:-translate-y-0.5'
-                }`}
+                  }`}
               >
                 {loading
                   ? 'Processando...'
                   : isRecovering
-                  ? 'Enviar Email'
-                  : isRegistering
-                  ? 'Criar Conta'
-                  : 'Entrar'}
+                    ? 'Enviar Email'
+                    : isRegistering
+                      ? 'Criar Conta'
+                      : 'Entrar'}
               </button>
             </form>
 
@@ -346,17 +345,17 @@ export default function Home() {
 
         {/* Coluna da Direita: Destaque */}
         <div className="w-full lg:w-1/2 p-8 md:p-12 bg-slate-900/50 flex flex-col justify-center items-center text-center">
-           <div className="relative">
-              <div className="absolute -inset-3 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
-              <Image
-                src="/logoautismo.png"
-                alt="Logo CIADI"
-                width={130}
-                height={130}
-                className="object-contain relative z-10"
-                priority
-              />
-            </div>
+          <div className="relative">
+            <div className="absolute -inset-3 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
+            <Image
+              src="/logoautismo.png"
+              alt="Logo CIADI"
+              width={130}
+              height={130}
+              className="object-contain relative z-10"
+              priority
+            />
+          </div>
           <h3 className="text-3xl font-bold text-white mt-6">
             Sala Sensorial ALECE
           </h3>
@@ -374,8 +373,8 @@ export default function Home() {
               Desenvolvimento
             </span>
           </div>
-           <div className="w-full border-t border-dashed border-slate-700 my-8"></div>
-           <p className="text-slate-400 mb-4">Se você já tem um agendamento, pode consultar o status aqui:</p>
+          <div className="w-full border-t border-dashed border-slate-700 my-8"></div>
+          <p className="text-slate-400 mb-4">Se você já tem um atendimento, pode consultar o status aqui:</p>
           <Link
             href="/consulta"
             className="group flex items-center justify-center px-6 py-3 rounded-xl font-bold border-2 border-green-500 bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-all duration-300 w-full max-w-xs hover:scale-105 shadow-lg hover:shadow-green-500/30"

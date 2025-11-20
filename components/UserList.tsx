@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
 import UserForm from './UserForm';
 import { FiEdit2, FiTrash2, FiSearch, FiUserPlus, FiRefreshCw, FiShield, FiMail, FiUser } from 'react-icons/fi';
-import { Badge } from './ui/Badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function UserList() {
   const [users, setUsers] = useState<User[]>([]);
@@ -119,15 +121,15 @@ export default function UserList() {
   const getRoleBadgeStyle = (role: string) => {
     switch (role) {
       case 'superadmin':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'admin':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'atendente':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'user':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -155,27 +157,30 @@ export default function UserList() {
 
   if (error) {
     return (
-      <div className="rounded-2xl bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 p-6 shadow-lg">
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center">
-              <svg className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+      <Card className="border-red-200 bg-red-50">
+        <CardContent className="pt-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center">
+                <svg className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-bold text-red-900">Erro ao carregar</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <Button
+                variant="link"
+                onClick={() => fetchUsers()}
+                className="mt-2 p-0 text-red-600 hover:text-red-800 h-auto"
+              >
+                Tentar novamente
+              </Button>
             </div>
           </div>
-          <div className="ml-4">
-            <h3 className="text-lg font-bold text-red-900">Erro ao carregar</h3>
-            <p className="text-sm text-red-700 mt-1">{error}</p>
-            <button
-              onClick={() => fetchUsers()}
-              className="mt-3 text-sm font-semibold text-red-600 hover:text-red-800 underline"
-            >
-              Tentar novamente
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -204,38 +209,39 @@ export default function UserList() {
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <FiSearch className="h-5 w-5 text-emerald-500" />
           </div>
-          <input
+          <Input
             type="text"
             placeholder="Buscar por nome, email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-2xl leading-5 bg-white/80 backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all duration-300 shadow-sm hover:shadow-md"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            className="pl-12 py-6 rounded-2xl border-2 border-gray-200 bg-white/80 backdrop-blur-sm focus:border-emerald-500 focus:ring-emerald-100"
           />
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={handleRefresh}
-            className="group inline-flex items-center px-5 py-3.5 border-2 border-gray-200 shadow-sm text-sm font-semibold rounded-2xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-300"
             disabled={isRefreshing}
+            className="h-12 px-5 rounded-2xl border-2 hover:bg-gray-50"
           >
             <FiRefreshCw className={`h-5 w-5 mr-2 transition-transform duration-500 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'}`} />
             Atualizar
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setShowForm(true)}
-            className="group inline-flex items-center px-6 py-3.5 border-2 border-transparent text-sm font-bold rounded-2xl shadow-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-200 transition-all duration-300 hover:scale-105"
+            className="h-12 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
           >
-            <FiUserPlus className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-300" />
+            <FiUserPlus className="h-5 w-5 mr-2" />
             Novo Usuário
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Modern Stats Bar */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border-2 border-emerald-100">
-        <div className="flex items-center justify-between">
+      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-100 shadow-none">
+        <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md">
               <FiUser className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -248,10 +254,10 @@ export default function UserList() {
               <span className="font-semibold">{filteredUsers.length}</span> resultado{filteredUsers.length !== 1 ? 's' : ''} encontrado{filteredUsers.length !== 1 ? 's' : ''}
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white shadow-xl rounded-2xl overflow-hidden border-2 border-gray-100">
+      <Card className="shadow-xl border-2 border-gray-100 overflow-hidden">
         {filteredUsers.length === 0 ? (
           <div className="text-center py-16 px-4">
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 mb-4">
@@ -274,13 +280,14 @@ export default function UserList() {
               {searchTerm ? 'Tente uma busca diferente ou limpe os filtros' : 'Comece criando um novo usuário no sistema'}
             </p>
             {!searchTerm && (
-              <button
+              <Button
+                variant="outline"
                 onClick={() => setShowForm(true)}
-                className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 border-2 border-emerald-200 hover:border-emerald-300 rounded-xl transition-all duration-300"
+                className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
               >
                 <FiUserPlus className="mr-2" />
                 Criar Primeiro Usuário
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -296,20 +303,18 @@ export default function UserList() {
                     <div className="flex items-center space-x-4">
                       {/* Modern Avatar with Gradient */}
                       <div className="relative">
-                        <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${
-                          user.role === 'superadmin' ? 'from-red-400 to-rose-600' :
+                        <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${user.role === 'superadmin' ? 'from-red-400 to-rose-600' :
                           user.role === 'admin' ? 'from-purple-400 to-indigo-600' :
-                          user.role === 'atendente' ? 'from-blue-400 to-cyan-600' :
-                          'from-gray-400 to-slate-600'
-                        } flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                            user.role === 'atendente' ? 'from-blue-400 to-cyan-600' :
+                              'from-gray-400 to-slate-600'
+                          } flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                           <span className="text-white font-bold text-lg">
                             {user.name?.charAt(0).toUpperCase() || 'U'}
                           </span>
                         </div>
                         {/* Status Indicator */}
-                        <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
-                          user.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                        }`} />
+                        <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${user.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                          }`} />
                       </div>
 
                       {/* User Info */}
@@ -318,7 +323,7 @@ export default function UserList() {
                           <h4 className="text-base font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
                             {user.name}
                           </h4>
-                          <span className={`inline-flex items-center px-3 py-1 text-xs font-bold rounded-full shadow-sm ${getRoleBadgeStyle(user.role)}`}>
+                          <span className={`inline-flex items-center px-3 py-1 text-xs font-bold rounded-full shadow-sm border ${getRoleBadgeStyle(user.role)}`}>
                             {getRoleLabel(user.role)}
                           </span>
                         </div>
@@ -338,21 +343,25 @@ export default function UserList() {
 
                   {/* Actions */}
                   <div className="flex items-center space-x-3 ml-4">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setEditingUser(user)}
-                      className="group/edit inline-flex items-center px-4 py-2.5 border-2 border-indigo-200 text-sm font-semibold rounded-xl text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition-all duration-300 hover:scale-105"
+                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                     >
-                      <FiEdit2 className="h-4 w-4 mr-2 group-hover/edit:rotate-12 transition-transform duration-300" />
+                      <FiEdit2 className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
                       Editar
-                    </button>
+                    </Button>
                     {user.id && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(user.id!)}
-                        className="group/delete inline-flex items-center px-4 py-2.5 border-2 border-red-200 text-sm font-semibold rounded-xl text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-300 focus:outline-none focus:ring-4 focus:ring-red-100 transition-all duration-300 hover:scale-105"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
-                        <FiTrash2 className="h-4 w-4 mr-2 group-hover/delete:scale-110 transition-transform duration-300" />
+                        <FiTrash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                         Excluir
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -360,7 +369,7 @@ export default function UserList() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
     </div>
   );
 } 
