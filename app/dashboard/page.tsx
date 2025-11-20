@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
@@ -16,8 +15,10 @@ import QuickAction from '@/components/dashboard/QuickAction';
 import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
 import PdfModal from '@/components/dashboard/PdfModal';
 import { generateComprovantePDF } from '@/lib/pdf-utils';
-import { FiPlus, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { FiPlus, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle, FiSearch, FiBell, FiSettings } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 type ModoEntrega = 'impressao' | 'digital';
 
@@ -44,6 +45,7 @@ interface Atendimento {
   horario: string;
   status: string;
   observacoes?: string;
+  [key: string]: any;
 }
 
 interface AtendimentoEntrega extends Atendimento {
@@ -98,6 +100,9 @@ export default function DashboardPage() {
 
   // Estados para o modal de novo atendimento
   const [showNovoAtendimentoModal, setShowNovoAtendimentoModal] = useState(false);
+
+  // Estado para busca global
+  const [globalSearch, setGlobalSearch] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -300,35 +305,23 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <>
-        <DashboardHeader />
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white py-6 px-3 pt-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="animate-pulse space-y-5">
-              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[...Array(2)].map((_, i) => (
-                  <div key={i} className="h-64 bg-gray-200 rounded-xl"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const handleGlobalSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && globalSearch) {
+      // Redirect to atendimentos page with search query
+      router.push(`/dashboard/atendimentos?search=${encodeURIComponent(globalSearch)}`);
+    }
+  };
+
+  const handleEditAtendimento = (atendimento: Atendimento) => {
+    setSelectedAtendimentoForEdit(atendimento);
+    setShowEditAtendimentoModal(true);
+  };
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50/50">
       <DashboardHeader />
 
+      {/* Modals */}
       <EntregarCinModal
         show={showEntregarCinModal}
         onClose={() => setShowEntregarCinModal(false)}
@@ -402,93 +395,97 @@ export default function DashboardPage() {
         recipientName={nomeRecebedor}
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 py-8 px-4 pt-24">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Cabeçalho do Dashboard */}
-          <div className="text-left space-y-3 animate-in fade-in duration-500">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full"></div>
-              <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  Painel de Controle
-                </h1>
-                <p className="text-gray-500 mt-2 text-sm md:text-base font-medium flex items-center gap-2">
-                  Bem-vindo ao gerenciamento de atendimentos
-                </p>
-              </div>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+        {/* Header Section with Search */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Painel de Controle</h1>
+            <p className="text-gray-500 mt-1">Bem-vindo de volta, {user?.email}</p>
           </div>
 
-          {/* Cards de Estatísticas */}
-          <DashboardStats stats={stats} loading={loading} />
-
-          {/* Container para Ações Rápidas e Atendimentos Recentes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-            {/* Ações Rápidas */}
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-7 border-2 border-gray-100 hover:border-emerald-200 flex flex-col transition-all duration-300 hover:shadow-xl animate-in slide-in-from-bottom-8 duration-700">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
-                    <FiCheckCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-800">
-                    Ações Rápidas
-                  </h2>
-                </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="h-5 w-5 text-gray-400" />
               </div>
+              <Input
+                type="text"
+                placeholder="Buscar atendimento (Nome ou CPF)..."
+                className="pl-10 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl shadow-sm"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                onKeyDown={handleGlobalSearch}
+              />
+            </div>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm shadow-emerald-200" onClick={() => setShowNovoAtendimentoModal(true)}>
+              <FiPlus className="mr-2 h-5 w-5" />
+              Novo Atendimento
+            </Button>
+          </div>
+        </div>
 
-              <div className="flex flex-col space-y-3">
-                <button
-                  onClick={() => setShowNovoAtendimentoModal(true)}
-                  className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 text-emerald-700 bg-white/80 backdrop-blur-sm hover:bg-gray-50 hover:shadow-md transition-all duration-300 group w-full"
-                >
-                  <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                    <FiPlus className="h-5 w-5" />
-                  </div>
-                  <span className="font-medium">Novo Atendimento</span>
-                </button>
+        {/* Stats Grid */}
+        <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <DashboardStats stats={stats} loading={loading} />
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content Area - Recent Atendimentos */}
+          <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+            <RecentAtendimentos
+              atendimentos={recentAtendimentos}
+              loading={loading}
+              onEdit={handleEditAtendimento}
+            />
+          </div>
+
+          {/* Sidebar Area - Quick Actions */}
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <FiCheckCircle className="text-emerald-500" />
+                Ações Rápidas
+              </h2>
+              <div className="space-y-3">
                 <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<MdFingerprint className="h-5 w-5" />}>
-                  Fila de Coleta de Digitais
+                  Fila de Coleta
                 </QuickAction>
 
-                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700" icon={<FiRefreshCw className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700 bg-blue-50/50" icon={<FiRefreshCw className="h-5 w-5" />}>
                   Atualizar CIN
                 </QuickAction>
 
-                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700" icon={<FiAlertTriangle className="h-5 w-5" />}>
+                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700 bg-red-50/50" icon={<FiAlertTriangle className="h-5 w-5" />}>
                   Ver Correções
                 </QuickAction>
 
-                <QuickAction href="/dashboard/atendimentos/cancelados" color="border-orange-500 text-orange-700" icon={<FiXCircle className="h-5 w-5" />}>
-                  Atendimentos Cancelados
-                </QuickAction>
-
-                <QuickAction href="/dashboard/atendimentos/bloqueados" color="border-gray-500 text-gray-700" icon={<FiLock className="h-5 w-5" />}>
-                  Atendimentos Bloqueados
-                </QuickAction>
-
-                <QuickAction href="/admin/gestao" color="border-purple-500 text-purple-700" icon={<FiCalendar className="h-5 w-5" />}>
-                  Gestão de Agendamentos
-                </QuickAction>
-
-                <button
+                <Button
+                  className="w-full justify-start h-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl"
+                  variant="ghost"
                   onClick={() => setShowEntregarCinModal(true)}
-                  className="flex items-center px-4 py-3 rounded-xl shadow-sm border border-emerald-500 bg-white/80 backdrop-blur-sm hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-300 hover:shadow-md transition-all duration-300 group mt-2"
                 >
-                  <div className="bg-emerald-100 p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                    <FiCheckCircle className="h-5 w-5 text-emerald-700" />
+                  <div className="bg-emerald-200 p-1.5 rounded-lg mr-3">
+                    <FiCheckCircle className="h-5 w-5 text-emerald-800" />
                   </div>
-                  <span className="font-medium text-emerald-700">Entregar CIN</span>
-                </button>
+                  <span className="font-medium">Entregar CIN</span>
+                </Button>
               </div>
             </div>
 
-            {/* Atendimentos Recentes */}
-            <RecentAtendimentos atendimentos={recentAtendimentos} loading={loading} />
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold mb-2">Precisa de ajuda?</h3>
+                <p className="text-emerald-100 text-sm mb-4">Confira o manual do sistema ou entre em contato com o suporte.</p>
+                <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full">
+                  Ver Documentação
+                </Button>
+              </div>
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-emerald-400 opacity-20 rounded-full blur-xl"></div>
+            </div>
           </div>
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }

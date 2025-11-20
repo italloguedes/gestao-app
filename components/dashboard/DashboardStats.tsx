@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FiCheckCircle, FiClock, FiAlertCircle, FiUserCheck, FiCalendar, FiXCircle } from 'react-icons/fi';
+import { Card, CardContent } from '@/components/ui/card';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiXCircle, FiLock, FiCalendar, FiActivity } from 'react-icons/fi';
 
 interface DashboardStatsProps {
     stats: {
@@ -20,76 +20,91 @@ interface DashboardStatsProps {
 export default function DashboardStats({ stats, loading }: DashboardStatsProps) {
     if (loading) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <div className="h-4 w-24 bg-gray-200 rounded"></div>
-                            <div className="h-4 w-4 bg-gray-200 rounded-full"></div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-8 w-16 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-3 w-32 bg-gray-200 rounded"></div>
-                        </CardContent>
-                    </Card>
+                    <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse"></div>
                 ))}
             </div>
         );
     }
 
+    const statItems = [
+        {
+            title: 'Total de Atendimentos',
+            value: stats.total,
+            icon: <FiUsers className="w-6 h-6 text-white" />,
+            gradient: 'from-emerald-500 to-teal-600',
+            textColor: 'text-emerald-700',
+            bgColor: 'bg-emerald-50',
+        },
+        {
+            title: 'Atendimentos Hoje',
+            value: stats.hoje,
+            icon: <FiCalendar className="w-6 h-6 text-white" />,
+            gradient: 'from-blue-500 to-indigo-600',
+            textColor: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+        },
+        {
+            title: 'Em Andamento',
+            value: stats.emAndamento,
+            icon: <FiActivity className="w-6 h-6 text-white" />,
+            gradient: 'from-amber-500 to-orange-600',
+            textColor: 'text-amber-700',
+            bgColor: 'bg-amber-50',
+        },
+        {
+            title: 'Correções Pendentes',
+            value: stats.correcoes,
+            icon: <FiAlertCircle className="w-6 h-6 text-white" />,
+            gradient: 'from-red-500 to-pink-600',
+            textColor: 'text-red-700',
+            bgColor: 'bg-red-50',
+        },
+    ];
+
+    const secondaryStats = [
+        { label: 'Concluídos', value: stats.concluidos, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+        { label: 'Bloqueados', value: stats.bloqueados, color: 'text-gray-600', bg: 'bg-gray-100' },
+        { label: 'Agend. Pendentes', value: stats.agendamentosPendentes, color: 'text-purple-600', bg: 'bg-purple-100' },
+        { label: 'Agend. Confirmados', value: stats.agendamentosConfirmados, color: 'text-blue-600', bg: 'bg-blue-100' },
+    ];
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card className="bg-gradient-to-br from-blue-50 to-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-blue-700">Total Atendimentos</CardTitle>
-                    <FiUserCheck className="h-4 w-4 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
-                    <p className="text-xs text-blue-600 mt-1">
-                        <span className="font-semibold">{stats.hoje}</span> hoje
-                    </p>
-                </CardContent>
-            </Card>
+        <div className="space-y-6">
+            {/* Primary Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {statItems.map((item, index) => (
+                    <div
+                        key={index}
+                        className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group"
+                    >
+                        <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${item.gradient} opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110`}></div>
 
-            <Card className="bg-gradient-to-br from-emerald-50 to-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-emerald-700">Concluídos</CardTitle>
-                    <FiCheckCircle className="h-4 w-4 text-emerald-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-emerald-900">{stats.concluidos}</div>
-                    <p className="text-xs text-emerald-600 mt-1">
-                        Entregues e finalizados
-                    </p>
-                </CardContent>
-            </Card>
+                        <div className="flex items-start justify-between relative z-10">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500 mb-1">{item.title}</p>
+                                <h3 className="text-3xl font-bold text-gray-800">{item.value}</h3>
+                            </div>
+                            <div className={`p-3 rounded-xl bg-gradient-to-br ${item.gradient} shadow-lg shadow-gray-200 group-hover:scale-110 transition-transform duration-300`}>
+                                {item.icon}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
 
-            <Card className="bg-gradient-to-br from-amber-50 to-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-amber-700">Em Andamento</CardTitle>
-                    <FiClock className="h-4 w-4 text-amber-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-amber-900">{stats.emAndamento}</div>
-                    <p className="text-xs text-amber-600 mt-1">
-                        Aguardando processamento
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-red-50 to-white border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-red-700">Pendências</CardTitle>
-                    <FiAlertCircle className="h-4 w-4 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-red-900">{stats.correcoes + stats.bloqueados}</div>
-                    <p className="text-xs text-red-600 mt-1">
-                        Correções ou bloqueios
-                    </p>
-                </CardContent>
-            </Card>
+            {/* Secondary Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {secondaryStats.map((stat, index) => (
+                    <div key={index} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-500">{stat.label}</span>
+                        <span className={`text-lg font-bold ${stat.color} px-2.5 py-0.5 rounded-lg ${stat.bg}`}>
+                            {stat.value}
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
