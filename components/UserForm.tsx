@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink, FiPhone, FiLock, FiCheck, FiSave, FiX } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink, FiPhone, FiLock, FiCheck, FiSave, FiX, FiUserPlus } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
