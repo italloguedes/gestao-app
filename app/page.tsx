@@ -8,16 +8,17 @@ import { validatePassword, validateEmail, handleAuthError } from '../lib/auth-ut
 import { supabase, checkSupabaseConnection, handleSupabaseError } from '../lib/supabase-client';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
+import { FaPuzzlePiece, FaHandsHelping, FaInfinity } from 'react-icons/fa';
 
-// Campo de input reutilizável
+// Campo de input reutilizável com design acessível
 function InputField({
   id, label, type, value, onChange, required = true, autoComplete, placeholder,
 }: React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
 }) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-bold text-gray-700 mb-2">
+    <div className="mb-4">
+      <label htmlFor={id} className="block text-sm font-semibold text-slate-600 mb-2 pl-1">
         {label}
       </label>
       <div className="relative">
@@ -29,7 +30,7 @@ function InputField({
           required={required}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white"
+          className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 focus:border-teal-400 focus:ring-4 focus:ring-teal-100 transition-all duration-300 bg-slate-50 text-slate-700 placeholder-slate-400 shadow-sm hover:border-teal-200"
         />
       </div>
     </div>
@@ -195,35 +196,39 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full animated-gradient flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-slate-800/50 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
-        {/* Coluna da Esquerda: Formulário de Login */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 lg:p-8">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/50">
+        
+        {/* Left Column: Login Form */}
+        <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center bg-white/40">
           <div className="w-full max-w-md mx-auto">
-            <div className="flex flex-col items-center mb-6">
-              <Image
-                src="/logoautismo.png"
-                alt="Logo CIADI"
-                width={80}
-                height={80}
-                className="object-contain mb-4"
-                priority
-              />
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-white">
-                  {isRecovering ? 'Recuperar Senha' : isRegistering ? 'Criar Conta' : 'Bem-vindo de volta'}
+            <div className="flex flex-col items-center mb-8">
+              <div className="relative w-24 h-24 mb-6 p-4 bg-white rounded-full shadow-lg flex items-center justify-center">
+                 <Image
+                  src="/logoautismo.png"
+                  alt="Logo CIADI"
+                  width={80}
+                  height={80}
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
+                  {isRecovering ? 'Recuperar Acesso' : isRegistering ? 'Criar Conta' : 'Bem-vindo'}
                 </h2>
-                <p className="text-slate-400 mt-2">
+                <p className="text-slate-500 text-lg">
                   {isRecovering
-                    ? 'Insira seu email para redefinir sua senha.'
+                    ? 'Vamos ajudar você a recuperar sua senha.'
                     : isRegistering
-                      ? 'Preencha os campos para criar sua conta.'
-                      : 'Acesse sua conta para continuar.'}
+                      ? 'Junte-se a nós neste espaço seguro.'
+                      : 'Você está em um espaço seguro.'}
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleAuth} className="w-full space-y-4">
+            <form onSubmit={handleAuth} className="w-full space-y-5">
               <InputField
                 id="email"
                 type="email"
@@ -231,7 +236,7 @@ export default function Home() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                placeholder="seu.email@provedor.com"
+                placeholder="seu.email@exemplo.com"
               />
 
               {!isRecovering && (
@@ -259,74 +264,72 @@ export default function Home() {
               )}
 
               {error && (
-                <div className="bg-red-500/20 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg text-sm">
-                  {error}
+                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center">
+                  <span className="mr-2">⚠️</span> {error}
                 </div>
               )}
 
               {message && (
-                <div className="bg-green-500/20 border border-green-500/30 text-green-300 px-4 py-3 rounded-lg text-sm">
-                  {message}
+                <div className="bg-teal-50 border border-teal-100 text-teal-700 px-4 py-3 rounded-xl text-sm flex items-center">
+                  <span className="mr-2">✅</span> {message}
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={isSubmitDisabled}
-                className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-cyan-300/50 ${isSubmitDisabled
-                  ? 'bg-slate-600 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:shadow-cyan-500/40 hover:-translate-y-0.5'
+                className={`w-full py-4 rounded-xl text-white font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-teal-200 ${isSubmitDisabled
+                  ? 'bg-slate-300 cursor-not-allowed shadow-none transform-none'
+                  : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600'
                   }`}
               >
                 {loading
                   ? 'Processando...'
                   : isRecovering
-                    ? 'Enviar Email'
+                    ? 'Enviar Instruções'
                     : isRegistering
-                      ? 'Criar Conta'
-                      : 'Entrar'}
+                      ? 'Criar Minha Conta'
+                      : 'Entrar no Sistema'}
               </button>
             </form>
 
             {!isRecovering && !isRegistering && (
               <>
-                <div className="flex items-center my-6">
-                  <div className="flex-1 border-t border-slate-700"></div>
-                  <span className="px-4 text-xs font-semibold text-slate-400">OU</span>
-                  <div className="flex-1 border-t border-slate-700"></div>
+                <div className="flex items-center my-8">
+                  <div className="flex-1 border-t border-slate-200"></div>
+                  <span className="px-4 text-sm font-medium text-slate-400">OU</span>
+                  <div className="flex-1 border-t border-slate-200"></div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-slate-700/50 border border-slate-600 hover:bg-slate-700 transition-all duration-300 shadow-md flex items-center justify-center space-x-3 disabled:opacity-50"
+                  className="w-full py-3.5 rounded-xl bg-white border-2 border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all duration-300 text-slate-600 font-semibold flex items-center justify-center space-x-3 group"
                 >
-                  <FcGoogle className="text-xl" />
-                  <span className="font-semibold text-white">
-                    Continuar com Google
-                  </span>
+                  <FcGoogle className="text-2xl group-hover:scale-110 transition-transform" />
+                  <span>Continuar com Google</span>
                 </button>
               </>
             )}
 
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center space-y-4">
               {!isRecovering && (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm">
                   <button
                     type="button"
                     onClick={() => { setIsRegistering(!isRegistering); setError(null); setMessage(null); }}
-                    className="font-semibold text-cyan-400 hover:text-cyan-300 hover:underline"
+                    className="font-semibold text-teal-600 hover:text-teal-700 hover:underline transition-colors"
                   >
-                    {isRegistering ? 'Já tem conta? Entre' : 'Criar nova conta'}
+                    {isRegistering ? 'Já tenho uma conta' : 'Criar nova conta'}
                   </button>
-                  <span className="hidden sm:inline text-slate-600">•</span>
+                  <span className="hidden sm:inline text-slate-300">•</span>
                   <button
                     type="button"
                     onClick={() => { setIsRecovering(true); setError(null); setMessage(null); }}
-                    className="font-semibold text-slate-400 hover:text-slate-300 hover:underline"
+                    className="font-medium text-slate-500 hover:text-slate-700 hover:underline transition-colors"
                   >
-                    Esqueceu a senha?
+                    Esqueci minha senha
                   </button>
                 </div>
               )}
@@ -334,72 +337,84 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setIsRecovering(false); setError(null); setMessage(null); }}
-                  className="font-semibold text-cyan-400 hover:text-cyan-300 hover:underline"
+                  className="font-semibold text-teal-600 hover:text-teal-700 hover:underline transition-colors"
                 >
-                  Voltar ao login
+                  Voltar para o login
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Coluna da Direita: Destaque */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 bg-slate-900/50 flex flex-col justify-center items-center text-center">
-          <div className="relative">
-            <div className="absolute -inset-3 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
-            <Image
-              src="/logoautismo.png"
-              alt="Logo CIADI"
-              width={130}
-              height={130}
-              className="object-contain relative z-10"
-              priority
-            />
+        {/* Right Column: Feature/Welcome */}
+        <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16 bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50 flex flex-col justify-center items-center text-center relative overflow-hidden">
+          {/* Decorative Background Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-200/30 rounded-full blur-3xl -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-200/30 rounded-full blur-3xl -ml-16 -mb-16"></div>
+          
+          <div className="relative z-10 max-w-md">
+            <div className="mb-8 flex justify-center space-x-4">
+               <div className="p-3 bg-white rounded-2xl shadow-sm text-teal-500">
+                 <FaPuzzlePiece size={32} />
+               </div>
+               <div className="p-3 bg-white rounded-2xl shadow-sm text-blue-500">
+                 <FaHandsHelping size={32} />
+               </div>
+               <div className="p-3 bg-white rounded-2xl shadow-sm text-purple-500">
+                 <FaInfinity size={32} />
+               </div>
+            </div>
+
+            <h3 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 leading-tight">
+              Sala Sensorial <span className="text-teal-600">ALECE</span>
+            </h3>
+            
+            <p className="text-slate-600 text-lg mb-8 leading-relaxed">
+              Um ambiente projetado com carinho para o desenvolvimento e acolhimento de crianças com autismo, síndrome de Down e TDAH.
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+              <span className="px-4 py-2 bg-white/60 backdrop-blur-sm text-teal-700 rounded-full text-sm font-bold border border-teal-100 shadow-sm">
+                💙 Inclusão
+              </span>
+              <span className="px-4 py-2 bg-white/60 backdrop-blur-sm text-blue-700 rounded-full text-sm font-bold border border-blue-100 shadow-sm">
+                🤝 Acolhimento
+              </span>
+              <span className="px-4 py-2 bg-white/60 backdrop-blur-sm text-purple-700 rounded-full text-sm font-bold border border-purple-100 shadow-sm">
+                ✨ Desenvolvimento
+              </span>
+            </div>
+
+            <div className="w-full border-t border-dashed border-slate-300 my-8"></div>
+            
+            <div className="bg-white/50 backdrop-blur-sm p-6 rounded-2xl border border-white/60 shadow-sm">
+              <p className="text-slate-600 mb-4 font-medium">Já realizou um atendimento?</p>
+              <Link
+                href="/consulta"
+                className="flex items-center justify-center px-6 py-3.5 rounded-xl font-bold bg-white text-teal-600 border-2 border-teal-100 hover:border-teal-300 hover:bg-teal-50 transition-all duration-300 shadow-sm hover:shadow-md group"
+              >
+                <svg
+                  className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Consultar Status do Atendimento
+              </Link>
+            </div>
           </div>
-          <h3 className="text-3xl font-bold text-white mt-6">
-            Sala Sensorial ALECE
-          </h3>
-          <p className="text-slate-300 mt-4 leading-relaxed">
-            Um espaço de acolhimento e desenvolvimento para crianças com autismo, síndrome de Down e TDAH.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <span className="px-4 py-2 bg-cyan-500/20 text-cyan-300 rounded-full text-sm font-semibold border border-cyan-500/30">
-              Inclusão
-            </span>
-            <span className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-full text-sm font-semibold border border-purple-500/30">
-              Acolhimento
-            </span>
-            <span className="px-4 py-2 bg-pink-500/20 text-pink-300 rounded-full text-sm font-semibold border border-pink-500/30">
-              Desenvolvimento
-            </span>
-          </div>
-          <div className="w-full border-t border-dashed border-slate-700 my-8"></div>
-          <p className="text-slate-400 mb-4">Se você já fez um atendimento, pode consultar o status aqui:</p>
-          <Link
-            href="/consulta"
-            className="group flex items-center justify-center px-6 py-3 rounded-xl font-bold border-2 border-green-500 bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-all duration-300 w-full max-w-xs hover:scale-105 shadow-lg hover:shadow-green-500/30"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            Consultar Documento
-          </Link>
         </div>
       </div>
-      <footer className="w-full py-4 text-center text-xs text-slate-400 absolute bottom-0 z-10">
-        <p>
-          © {new Date().getFullYear()} Roar Projects | Desenvolvido por Itallo Guedes
-        </p>
+      
+      <footer className="fixed bottom-4 w-full text-center text-xs text-slate-400 pointer-events-none">
+        <p>© {new Date().getFullYear()} Roar Projects | Desenvolvido por Itallo Guedes</p>
       </footer>
     </div>
   );

@@ -4,7 +4,8 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
+    /* Soft blue-white */
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,11 +14,12 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 151 80% 39%;
-    /* Emerald 600 #059669 */
+    --primary: 180 40% 40%;
+    /* Calming Teal */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
+    --secondary: 260 30% 96%;
+    /* Soft Lilac */
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
@@ -31,16 +33,16 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 151 80% 39%;
+    --ring: 180 40% 40%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.05) 0px, transparent 50%);
+      radial-gradient(circle at 10% 20%, rgba(100, 200, 200, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(180, 160, 220, 0.1) 0%, transparent 40%);
     background-attachment: fixed;
   }
 }
