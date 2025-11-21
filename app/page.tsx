@@ -274,8 +274,8 @@ export default function Home() {
                 type="submit"
                 disabled={isSubmitDisabled}
                 className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-cyan-300/50 ${isSubmitDisabled
-                    ? 'bg-slate-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:shadow-cyan-500/40 hover:-translate-y-0.5'
+                  ? 'bg-slate-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:shadow-cyan-500/40 hover:-translate-y-0.5'
                   }`}
               >
                 {loading
@@ -374,7 +374,7 @@ export default function Home() {
             </span>
           </div>
           <div className="w-full border-t border-dashed border-slate-700 my-8"></div>
-          <p className="text-slate-400 mb-4">Se você já tem um atendimento, pode consultar o status aqui:</p>
+          <p className="text-slate-400 mb-4">Se você já fez um atendimento, pode consultar o status aqui:</p>
           <Link
             href="/consulta"
             className="group flex items-center justify-center px-6 py-3 rounded-xl font-bold border-2 border-green-500 bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-all duration-300 w-full max-w-xs hover:scale-105 shadow-lg hover:shadow-green-500/30"
