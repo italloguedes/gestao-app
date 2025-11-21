@@ -57,6 +57,10 @@ interface AtendimentoEntrega extends Atendimento {
   vinculo?: string;
 }
 
+import TodayStats from './components/TodayStats';
+
+// ... existing imports
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -71,6 +75,14 @@ export default function DashboardPage() {
     agendamentosConfirmados: 0,
     agendamentosCancelados: 0,
   });
+
+  const [todayStats, setTodayStats] = useState({
+    total: 0,
+    confirmados: 0,
+    concluidos: 0,
+    preferenciais: 0
+  });
+
   const [loading, setLoading] = useState(true);
   const [recentAtendimentos, setRecentAtendimentos] = useState<Atendimento[]>([]);
 
@@ -135,7 +147,8 @@ export default function DashboardPage() {
       const [
         atendimentosData,
         agendamentosData,
-        recentAtendimentosData
+        recentAtendimentosData,
+        todayAgendamentosData
       ] = await Promise.all([
         supabase.rpc('get_atendimentos_stats', { data_atual: today }),
         supabase.rpc('get_agendamentos_stats'),
@@ -144,7 +157,11 @@ export default function DashboardPage() {
           .select('*')
           .order('dia_atual', { ascending: false })
           .order('horario', { ascending: false })
-          .limit(5)
+          .limit(5),
+        supabase
+          .from('agendamentos')
+          .select('status, atendimento_preferencial')
+          .eq('data', today)
       ]);
 
       if (atendimentosData.error) throw atendimentosData.error;
@@ -164,6 +181,15 @@ export default function DashboardPage() {
         agendamentosPendentes: agendamentosStats.pendentes || 0,
         agendamentosConfirmados: agendamentosStats.confirmados || 0,
         agendamentosCancelados: agendamentosStats.cancelados || 0,
+      });
+
+      // Calculate today's stats from agendamentos
+      const todayAppointments = todayAgendamentosData.data || [];
+      setTodayStats({
+        total: todayAppointments.length,
+        confirmados: todayAppointments.filter((a: any) => a.status === 'confirmado' || a.status === 'agendado').length,
+        concluidos: todayAppointments.filter((a: any) => a.status === 'concluido' || a.status === 'realizado').length,
+        preferenciais: todayAppointments.filter((a: any) => a.atendimento_preferencial).length
       });
 
       setRecentAtendimentos(recentAtendimentosData.data || []);
@@ -426,6 +452,13 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <TodayStats
+            total={todayStats.total}
+            confirmados={todayStats.confirmados}
+            concluidos={todayStats.concluidos}
+            preferenciais={todayStats.preferenciais}
+            loading={loading}
+          />
           <DashboardStats stats={stats} loading={loading} />
         </div>
 
