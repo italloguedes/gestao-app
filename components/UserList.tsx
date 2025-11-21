@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
 import UserForm from './UserForm';
-import { FiEdit2, FiTrash2, FiSearch, FiUserPlus, FiRefreshCw, FiShield, FiMail, FiUser } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiSearch, FiUserPlus, FiRefreshCw, FiShield, FiMail, FiUser, FiMoreVertical, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UserList() {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,8 +22,6 @@ export default function UserList() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-
-      // Obter token de autenticação
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
@@ -31,7 +30,6 @@ export default function UserList() {
         return;
       }
 
-      // Chamar API protegida
       const response = await fetch('/api/users', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -42,7 +40,7 @@ export default function UserList() {
         if (response.status === 401) {
           setError('Sessão expirada. Faça login novamente.');
         } else if (response.status === 403) {
-          setError('Você não tem permissão para visualizar usuários. Apenas administradores.');
+          setError('Acesso negado. Permissão insuficiente.');
         } else {
           setError('Erro ao carregar usuários');
         }
@@ -68,15 +66,9 @@ export default function UserList() {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
-      // Obter token de autenticação
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      if (!session) {
-        setError('Você precisa estar logado para excluir usuários.');
-        return;
-      }
-
-      // Chamar API protegida
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -85,56 +77,40 @@ export default function UserList() {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          setError('Sessão expirada. Faça login novamente.');
-        } else if (response.status === 403) {
-          setError('Você não tem permissão para excluir usuários. Apenas super administradores.');
-        } else {
-          const errorData = await response.json();
-          setError(errorData.error || 'Erro ao excluir usuário');
-        }
+        const errorData = await response.json();
+        alert(errorData.error || 'Erro ao excluir usuário');
         return;
       }
 
       setUsers(users.filter(user => user.id !== userId));
     } catch (error) {
       console.error('Error deleting user:', error);
-      setError('Erro ao excluir usuário');
+      alert('Erro ao excluir usuário');
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'superadmin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Administrador';
-      case 'atendente':
-        return 'Atendente';
-      case 'user':
-        return 'Usuário';
-      default:
-        return role;
+      case 'superadmin': return 'Super Admin';
+      case 'admin': return 'Administrador';
+      case 'atendente': return 'Atendente';
+      case 'user': return 'Usuário';
+      default: return role;
     }
   };
 
   const getRoleBadgeStyle = (role: string) => {
     switch (role) {
-      case 'superadmin':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'admin':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'atendente':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'user':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'superadmin': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'admin': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      case 'atendente': return 'bg-blue-100 text-blue-700 border-blue-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
   const filteredUsers = users.filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleRefresh = async () => {
@@ -142,47 +118,6 @@ export default function UserList() {
     await fetchUsers();
     setIsRefreshing(false);
   };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-[400px] space-y-4">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200"></div>
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-emerald-600 absolute top-0 left-0"></div>
-        </div>
-        <p className="text-gray-600 font-medium animate-pulse">Carregando usuários...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center">
-                <svg className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div className="ml-4">
-              <h3 className="text-lg font-bold text-red-900">Erro ao carregar</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-              <Button
-                variant="link"
-                onClick={() => fetchUsers()}
-                className="mt-2 p-0 text-red-600 hover:text-red-800 h-auto"
-              >
-                Tentar novamente
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (editingUser !== undefined || showForm) {
     return (
@@ -202,19 +137,19 @@ export default function UserList() {
   }
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      {/* Modern Header with Gradient */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Controls Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="relative flex-1 max-w-md group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <FiSearch className="h-5 w-5 text-emerald-500" />
+            <FiSearch className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <Input
             type="text"
-            placeholder="Buscar por nome, email..."
+            placeholder="Buscar por nome ou email..."
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-            className="pl-12 py-6 rounded-2xl border-2 border-gray-200 bg-white/80 backdrop-blur-sm focus:border-emerald-500 focus:ring-emerald-100"
+            className="pl-11 h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-blue-100 transition-all"
           />
         </div>
         <div className="flex gap-3">
@@ -222,14 +157,14 @@ export default function UserList() {
             variant="outline"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="h-12 px-5 rounded-2xl border-2 hover:bg-gray-50"
+            className="h-12 px-5 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors"
           >
-            <FiRefreshCw className={`h-5 w-5 mr-2 transition-transform duration-500 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'}`} />
+            <FiRefreshCw className={`h-5 w-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
           <Button
             onClick={() => setShowForm(true)}
-            className="h-12 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+            className="h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all duration-300"
           >
             <FiUserPlus className="h-5 w-5 mr-2" />
             Novo Usuário
@@ -237,139 +172,129 @@ export default function UserList() {
         </div>
       </div>
 
-      {/* Modern Stats Bar */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-100 shadow-none">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md">
-              <FiUser className="h-5 w-5 text-white" />
+      {/* Users List */}
+      <div className="space-y-4">
+        {loading ? (
+          // Skeleton Loading
+          [...Array(3)].map((_, i) => (
+            <Card key={i} className="border-slate-100 shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-10 w-24 rounded-lg" />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : error ? (
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiXCircle className="h-8 w-8 text-red-500" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total de Usuários</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredUsers.length}</p>
-            </div>
+            <h3 className="text-lg font-bold text-red-900 mb-2">Erro ao carregar usuários</h3>
+            <p className="text-red-600 mb-6">{error}</p>
+            <Button onClick={() => fetchUsers()} variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
+              Tentar Novamente
+            </Button>
           </div>
-          {searchTerm && (
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold">{filteredUsers.length}</span> resultado{filteredUsers.length !== 1 ? 's' : ''} encontrado{filteredUsers.length !== 1 ? 's' : ''}
+        ) : filteredUsers.length === 0 ? (
+          <div className="bg-white border border-slate-100 rounded-3xl p-16 text-center shadow-sm">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FiUser className="h-10 w-10 text-slate-300" />
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-xl border-2 border-gray-100 overflow-hidden">
-        {filteredUsers.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 mb-4">
-              <svg
-                className="h-10 w-10 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum usuário encontrado</h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm ? 'Tente uma busca diferente ou limpe os filtros' : 'Comece criando um novo usuário no sistema'}
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Nenhum usuário encontrado</h3>
+            <p className="text-slate-500 mb-8 max-w-md mx-auto">
+              {searchTerm ? 'Não encontramos ninguém com esses termos. Tente buscar por outra coisa.' : 'Comece adicionando o primeiro usuário ao sistema.'}
             </p>
             {!searchTerm && (
-              <Button
-                variant="outline"
-                onClick={() => setShowForm(true)}
-                className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-              >
-                <FiUserPlus className="mr-2" />
-                Criar Primeiro Usuário
+              <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 py-6 h-auto text-lg shadow-lg shadow-blue-200">
+                <FiUserPlus className="mr-2 h-5 w-5" />
+                Adicionar Usuário
               </Button>
             )}
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {filteredUsers.map((user, index) => (
-              <li
+          <div className="grid gap-4">
+            {filteredUsers.map((user) => (
+              <Card
                 key={user.id}
-                className="group px-6 py-5 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-teal-50/50 transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="group border-transparent hover:border-blue-100 shadow-sm hover:shadow-md transition-all duration-300 bg-white overflow-hidden"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-4">
-                      {/* Modern Avatar with Gradient */}
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                      {/* Avatar */}
                       <div className="relative">
-                        <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${user.role === 'superadmin' ? 'from-red-400 to-rose-600' :
-                          user.role === 'admin' ? 'from-purple-400 to-indigo-600' :
-                            user.role === 'atendente' ? 'from-blue-400 to-cyan-600' :
-                              'from-gray-400 to-slate-600'
-                          } flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                          <span className="text-white font-bold text-lg">
-                            {user.name?.charAt(0).toUpperCase() || 'U'}
-                          </span>
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-lg transition-transform group-hover:scale-105 ${user.role === 'superadmin' ? 'bg-gradient-to-br from-purple-500 to-purple-700 shadow-purple-200' :
+                            user.role === 'admin' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-200' :
+                              user.role === 'atendente' ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-200' :
+                                'bg-gradient-to-br from-slate-400 to-slate-600 shadow-slate-200'
+                          }`}>
+                          {user.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
-                        {/* Status Indicator */}
-                        <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${user.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                          }`} />
+                        <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${user.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'
+                          }`} title={user.status === 'active' ? 'Ativo' : 'Inativo'} />
                       </div>
 
-                      {/* User Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3">
-                          <h4 className="text-base font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
+                      {/* Info */}
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
                             {user.name}
-                          </h4>
-                          <span className={`inline-flex items-center px-3 py-1 text-xs font-bold rounded-full shadow-sm border ${getRoleBadgeStyle(user.role)}`}>
+                          </h3>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getRoleBadgeStyle(user.role)}`}>
                             {getRoleLabel(user.role)}
                           </span>
                         </div>
-                        <div className="flex items-center mt-1 space-x-2">
-                          <FiMail className="h-3.5 w-3.5 text-gray-400" />
-                          <p className="text-sm text-gray-600 truncate">{user.email}</p>
-                        </div>
-                        {user.auth_id && (
-                          <div className="flex items-center mt-1 space-x-2">
-                            <FiShield className="h-3.5 w-3.5 text-gray-400" />
-                            <p className="text-xs text-gray-400 font-mono truncate">Auth ID: {user.auth_id.substring(0, 8)}...</p>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            <FiMail className="h-3.5 w-3.5" />
+                            {user.email}
                           </div>
-                        )}
+                          {user.auth_id && (
+                            <div className="flex items-center gap-1.5 text-xs bg-slate-50 px-2 py-0.5 rounded border border-slate-100" title="Usuário vinculado ao Auth">
+                              <FiShield className="h-3 w-3 text-slate-400" />
+                              <span className="font-mono text-slate-400">Auth Linked</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center space-x-3 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingUser(user)}
-                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                    >
-                      <FiEdit2 className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      Editar
-                    </Button>
-                    {user.id && (
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(user.id!)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setEditingUser(user)}
+                        className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                        title="Editar"
                       >
-                        <FiTrash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                        Excluir
+                        <FiEdit2 className="h-4 w-4" />
                       </Button>
-                    )}
+                      {user.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(user.id!)}
+                          className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-red-600 hover:bg-red-50"
+                          title="Excluir"
+                        >
+                          <FiTrash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </li>
+                </CardContent>
+              </Card>
             ))}
-          </ul>
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 } 
