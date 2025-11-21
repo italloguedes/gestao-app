@@ -460,6 +460,20 @@ function AgendamentoContent() {
     const [horariosDisponiveis, setHorariosDisponiveis] = useState<{ manha: string[], tarde: string[] }>({ manha: [], tarde: [] });
     const [availableDays, setAvailableDays] = useState<{ [key: string]: boolean }>({});
 
+    // Inicialização dos estados
+    useEffect(() => {
+        const today = new Date();
+        setCurrentDate(today);
+        setCurrentMonth(today.getMonth());
+        setCurrentYear(today.getFullYear());
+
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+    }, []);
+
     // 2. Todos os useEffects
     useEffect(() => {
         const today = new Date();
