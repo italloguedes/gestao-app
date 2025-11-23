@@ -342,105 +342,9 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
                   <li>O agendamento é gratuito, pessoal e intransferível</li>
                   <li>A apresentação da documentação completa é obrigatória</li>
                   <li>Documentos rasurados, danificados ou ilegíveis não serão aceitos</li>
-                  <li>O comprovante de agendamento deve ser apresentado impresso ou no celular</li>
-                  <li>A tolerância máxima para ativação da senha é de 15 minutos</li>
-                </ul>
-              </div>
-            </div>
-          </div>
 
-          <div class="footer">
-            <p>Emitido em: ${new Date().toLocaleString('pt-BR')}</p>
-            <p>Centro Inclusivo para Atendimento e Desenvolvimento Infantil</p>
-          </div>
-        </body>
-      </html>
-    `);
-        win!.print();
-    };
-
-    if (!open) return null;
-    return (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
-                <button className="absolute top-2 right-2 text-gray-500 hover:text-red-600 text-2xl" onClick={onClose}>&times;</button>
-                <h2 className="text-xl font-bold mb-4 text-emerald-700">Meus Agendamentos</h2>
-                {loading ? (
-                    <p>Carregando...</p>
-                ) : error ? (
-                    <p className="text-red-600">{error}</p>
-                ) : agendamentos.length === 0 ? (
-                    <p>Nenhum agendamento encontrado.</p>
-                ) : (
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                        {agendamentos.map(a => (
-                            <div key={a.id} className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-emerald-50">
-                                <div>
-                                    <div><b>Data:</b> {a.data} <b>Horário:</b> {a.horario.slice(0, 5)}</div>
-                                    <div><b>Nome:</b> {a.nome}</div>
-                                    <div><b>Telefone:</b> {a.telefone}</div>
-                                </div>
-                                <div className="flex gap-2 mt-2 md:mt-0">
-                                    <button
-                                        className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                                        onClick={() => handleCancelar(a.id)}
-                                        disabled={loading}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        className="px-3 py-1 rounded bg-emerald-700 text-white hover:bg-emerald-800"
-                                        onClick={() => handleImprimir(a)}
-                                    >
-                                        Imprimir
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {success && <div className="mt-2 text-green-600">{success}</div>}
-            </div>
-        </div>
-    );
-}
-// Adicionar esta função para verificar horários disponíveis
-async function getHorariosDisponiveis(data: Date): Promise<{ manha: string[], tarde: string[] }> {
-    try {
-        const dataFormatada = formatDate(data);
-        const response = await fetch(`/api/agendamentos/disponibilidade?data=${dataFormatada}`);
-
-        if (!response.ok) {
-            throw new Error('Falha ao buscar disponibilidade');
-        }
-
-        const slots = await response.json();
-        return slots; // Retorna { manha: [], tarde: [] }
-    } catch (err) {
-        console.error("Erro ao buscar horários disponíveis:", err);
-        return { manha: [], tarde: [] };
-    }
-}
-
-// Adicionar estas funções de feedback
-function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-emerald-600' :
-        type === 'error' ? 'bg-red-600' :
-            'bg-blue-600'
-        }`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
-
-// Componente principal que só será renderizado no cliente
 function AgendamentoContent() {
     const router = useRouter();
-
-    // 1. Todos os estados
     const [user, setUser] = useState<User | null>(null);
     const [currentDate, setCurrentDate] = useState<Date | null>(null);
     const [currentMonth, setCurrentMonth] = useState<number | null>(null);
@@ -460,13 +364,11 @@ function AgendamentoContent() {
     const [horariosDisponiveis, setHorariosDisponiveis] = useState<{ manha: string[], tarde: string[] }>({ manha: [], tarde: [] });
     const [availableDays, setAvailableDays] = useState<{ [key: string]: boolean }>({});
 
-    // Inicialização dos estados
     useEffect(() => {
         const today = new Date();
         setCurrentDate(today);
         setCurrentMonth(today.getMonth());
         setCurrentYear(today.getFullYear());
-
         const getUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
@@ -474,22 +376,15 @@ function AgendamentoContent() {
         getUser();
     }, []);
 
-    // 2. Todos os useEffects
     useEffect(() => {
         const today = new Date();
         const checkAvailability = async () => {
             const availability: { [key: string]: boolean } = {};
-
-            // Começar do dia atual
             const startDate = new Date();
             startDate.setHours(0, 0, 0, 0);
-
-            // Verificar disponibilidade para os próximos 10 dias úteis
             let daysChecked = 0;
             let currentCheckDate = new Date(startDate);
-
-            while (daysChecked < 10) {
-                // Pular fins de semana
+            while (daysChecked < 15) {
                 if (currentCheckDate.getDay() !== 0 && currentCheckDate.getDay() !== 6) {
                     const formattedDate = formatDate(currentCheckDate);
                     try {
@@ -501,26 +396,19 @@ function AgendamentoContent() {
                         availability[formattedDate] = false;
                     }
                 }
-
-                // Avançar para o próximo dia
                 currentCheckDate.setDate(currentCheckDate.getDate() + 1);
             }
-
             setAvailableDays(availability);
         };
-
         checkAvailability();
     }, [currentDate, currentMonth, currentYear]);
 
-    // Verificar horários disponíveis quando a data é selecionada
     useEffect(() => {
         if (selectedDate) {
             setLoading(true);
             getHorariosDisponiveis(selectedDate)
                 .then(slots => {
-                    console.log("Horários disponíveis:", slots);
                     setHorariosDisponiveis(slots);
-
                     const allSlots = [...slots.manha, ...slots.tarde];
                     if (horario && !allSlots.includes(horario)) {
                         setHorario("");
@@ -538,7 +426,6 @@ function AgendamentoContent() {
         }
     }, [selectedDate]);
 
-    // 3. Loading state check
     if (currentDate === null || currentMonth === null || currentYear === null) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -547,35 +434,24 @@ function AgendamentoContent() {
         );
     }
 
-    // 4. Funções auxiliares
     const isDateAllowed = (date: Date) => {
         if (!currentDate) return false;
-
-        // Não permitir datas no passado
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
         const dateToCheck = new Date(date);
         dateToCheck.setHours(0, 0, 0, 0);
-
         if (dateToCheck < today) return false;
-
-        // Não permitir fins de semana
         if (date.getDay() === 0 || date.getDay() === 6) return false;
-
-        // Permitir agendamentos até 10 dias úteis à frente
         const maxDate = new Date(today);
-        let daysToAdd = 14; // 2 semanas para garantir 10 dias úteis
+        let daysToAdd = 21; 
         maxDate.setDate(today.getDate() + daysToAdd);
         maxDate.setHours(23, 59, 59, 999);
-
         return dateToCheck <= maxDate;
     };
 
     const prevMonth = () => {
         if (!currentDate || !currentMonth || !currentYear) return;
         if (currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear()) return;
-
         if (currentMonth === 0) {
             setCurrentMonth(11);
             setCurrentYear(currentYear - 1);
@@ -586,18 +462,12 @@ function AgendamentoContent() {
 
     const nextMonth = () => {
         if (!currentDate || !currentMonth || !currentYear) return;
-
-        const currentDay = new Date(currentDate);
-        const daysSinceMonday = currentDay.getDay() === 0 ? 6 : currentDay.getDay() - 1;
-        const thisWeekStart = new Date(currentDay);
-        thisWeekStart.setDate(currentDay.getDate() - daysSinceMonday);
-
-        const nextWeekEnd = new Date(thisWeekStart);
-        nextWeekEnd.setDate(thisWeekStart.getDate() + 11);
-
         const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
-        if (nextMonthDate > nextWeekEnd) return;
-
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() + 21);
+        if (nextMonthDate > maxDate) return;
         if (currentMonth === 11) {
             setCurrentMonth(0);
             setCurrentYear(currentYear + 1);
@@ -613,8 +483,6 @@ function AgendamentoContent() {
     const handleAgendar = async () => {
         setError("");
         setSuccess("");
-
-        // Validações básicas
         if (!user) {
             setError("Você precisa estar autenticado para agendar.");
             return;
@@ -627,34 +495,25 @@ function AgendamentoContent() {
             setError("Preencha todos os campos obrigatórios.");
             return;
         }
-
-        // Verificar se o horário ainda está disponível
         const slots = await getHorariosDisponiveis(selectedDate);
         const allSlots = [...slots.manha, ...slots.tarde];
         if (!allSlots.includes(horario)) {
             setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
             return;
         }
-
         setLoading(true);
         try {
-            // Verificar novamente se o horário está disponível antes de inserir
             const { data: verificaHorario, error: verificaError } = await supabase
                 .from("agendamentos")
                 .select("horario")
                 .eq("data", formatDate(selectedDate))
                 .eq("horario", horario + ":00");
-
-            if (verificaError) {
-                throw verificaError;
-            }
-
+            if (verificaError) throw verificaError;
             if (verificaHorario && verificaHorario.length > 0) {
                 setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
                 setLoading(false);
                 return;
             }
-
             const { error: insertError, data: newAgendamento } = await supabase.from("agendamentos").insert({
                 user_id: user.id,
                 nome,
@@ -666,7 +525,6 @@ function AgendamentoContent() {
                 horario: horario + ":00",
                 status: 'confirmado'
             }).select().single();
-
             if (insertError) {
                 console.error("Erro ao agendar:", insertError);
                 setError("Erro ao agendar: " + insertError.message);
@@ -674,16 +532,11 @@ function AgendamentoContent() {
             } else {
                 setSuccess("Agendamento realizado com sucesso!");
                 showToast("Agendamento realizado com sucesso!", 'success');
-
-                // Enviar email de confirmação
                 try {
                     await sendEmailConfirmation(newAgendamento);
-                    console.log("Email de confirmação enviado com sucesso");
                 } catch (emailError) {
                     console.error("Erro ao enviar email de confirmação:", emailError);
                 }
-
-                // Atualiza a lista de agendamentos
                 if (modalOpen) {
                     const { data: agendamentos } = await supabase
                         .from("agendamentos")
@@ -693,8 +546,6 @@ function AgendamentoContent() {
                         .order("horario", { ascending: true });
                     setAgendamentos(agendamentos || []);
                 }
-
-                // Limpa os campos
                 setSelectedDate(null);
                 setHorario("");
                 setNome("");
@@ -711,7 +562,7 @@ function AgendamentoContent() {
             setLoading(false);
         }
     };
-    // 5. Render
+
     return (
         <Fragment>
             <Header onOpenAgendamentos={() => setModalOpen(true)} />
@@ -758,7 +609,7 @@ function AgendamentoContent() {
                             <div className="flex items-center justify-between mb-2">
                                 <button
                                     onClick={prevMonth}
-                                    className={`rounded-full p-1 border ${currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-50'}`}
+                                    className={`rounded - full p - 1 border ${ currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-50' } `}
                                     disabled={currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear()}
                                     aria-label="Mês anterior"
                                 >
@@ -797,11 +648,13 @@ function AgendamentoContent() {
                                     return (
                                         <button
                                             key={date.toISOString()}
-                                            className={`w-10 h-10 rounded flex items-center justify-center font-semibold transition-all relative
-                        ${isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
-                                                    isSelected ? 'bg-orange-500 text-white' :
-                                                        hasAvailableTimes ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-200 text-gray-500'}
-                      `}
+                                            className={`w - 10 h - 10 rounded flex items - center justify - center font - semibold transition - all relative
+                        ${
+        isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
+            isSelected ? 'bg-orange-500 text-white' :
+                hasAvailableTimes ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-200 text-gray-500'
+    }
+    `}
                                             disabled={isDisabled || !hasAvailableTimes}
                                             onClick={() => setSelectedDate(date)}
                                             title={isDisabled ? (isAfter4PM ? "Horário de agendamento encerrado para hoje" : "Data indisponível") : hasAvailableTimes ? "Clique para ver horários disponíveis" : "Sem horários disponíveis"}
@@ -863,11 +716,12 @@ function AgendamentoContent() {
                                                     <button
                                                         key={h}
                                                         type="button"
-                                                        className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
-                              ${horario === h
-                                                                ? "bg-emerald-700 text-white border-emerald-700"
-                                                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                                                            }`}
+                                                        className={`text - lg px - 4 py - 2 rounded - lg font - semibold border transition - all
+                              ${
+        horario === h
+            ? "bg-emerald-700 text-white border-emerald-700"
+            : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+    } `}
                                                         onClick={() => setHorario(h)}
                                                         title="Clique para selecionar"
                                                     >
@@ -890,11 +744,12 @@ function AgendamentoContent() {
                                                     <button
                                                         key={h}
                                                         type="button"
-                                                        className={`text-lg px-4 py-2 rounded-lg font-semibold border transition-all
-                              ${horario === h
-                                                                ? "bg-emerald-700 text-white border-emerald-700"
-                                                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                                                            }`}
+                                                        className={`text - lg px - 4 py - 2 rounded - lg font - semibold border transition - all
+                              ${
+        horario === h
+            ? "bg-emerald-700 text-white border-emerald-700"
+            : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+    } `}
                                                         onClick={() => setHorario(h)}
                                                         title="Clique para selecionar"
                                                     >
@@ -925,12 +780,10 @@ function AgendamentoContent() {
                                             className="input border rounded px-3 py-2 w-full"
                                             value={nome}
                                             onChange={e => setNome(e.target.value)}
-                                            maxLength={100}
                                             required
                                             placeholder="Digite seu nome completo"
                                         />
-                                        <div className="text-xs text-gray-500 text-right">{nome.length}/100</div>
-                                        <div className="absolute right-2 top-8 text-gray-400" title="Nome completo é obrigatório">
+                                        <div className="absolute right-2 top-8 text-gray-400" title="Nome é obrigatório">
                                             <FiInfo />
                                         </div>
                                     </div>
@@ -960,12 +813,14 @@ function AgendamentoContent() {
                                             type="text"
                                             className="input border rounded px-3 py-2 w-full"
                                             value={cpf}
-                                            onChange={e => setCpf(formatCPF(e.target.value))}
-                                            maxLength={14}
+                                            onChange={e => {
+                                                const formatted = formatCPF(e.target.value);
+                                                setCpf(formatted);
+                                            }}
                                             required
                                             placeholder="000.000.000-00"
                                         />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="CPF é obrigatório e deve ser válido">
+                                        <div className="absolute right-2 top-8 text-gray-400" title="CPF é obrigatório">
                                             <FiInfo />
                                         </div>
                                     </div>
@@ -978,8 +833,10 @@ function AgendamentoContent() {
                                             type="tel"
                                             className="input border rounded px-3 py-2 w-full"
                                             value={telefone}
-                                            onChange={e => setTelefone(formatPhone(e.target.value))}
-                                            maxLength={15}
+                                            onChange={e => {
+                                                const formatted = formatPhone(e.target.value);
+                                                setTelefone(formatted);
+                                            }}
                                             required
                                             placeholder="(00) 00000-0000"
                                         />
@@ -1047,21 +904,18 @@ function AgendamentoContent() {
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
             <AgendamentosModal open={modalOpen} onClose={() => setModalOpen(false)} user={user} />
             <DocumentosInfo />
-        </Fragment>
+        </Fragment >
     );
 }
 
-// Componente wrapper que evita problemas de hidratação
 export default function AgendamentoPage() {
     const [isMounted, setIsMounted] = useState(false);
-
     useEffect(() => {
         setIsMounted(true);
     }, []);
-
     if (!isMounted) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -1069,6 +923,5 @@ export default function AgendamentoPage() {
             </div>
         );
     }
-
     return <AgendamentoContent />;
 }
