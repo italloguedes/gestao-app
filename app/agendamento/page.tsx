@@ -12,6 +12,16 @@ const UNIDADE = "Sala Sensorial ALECE";
 const ENDERECO = "Prédio da Assembleia Legislativa Anexo III, Sala Sensorial";
 const ENDERECO_COMPLETO = "Av. Pontes Vieira, 2300 - São João do Tauape, Fortaleza - CE, 60135-238";
 
+const showToast = (message: string, type: 'success' | 'error') => {
+    if (type === 'success') {
+        console.log(`✅ ${message}`);
+    } else {
+        console.error(`❌ ${message}`);
+    }
+    // Fallback to alert for now since no toast library is found
+    // alert(message); 
+};
+
 interface User {
     id: string;
     email?: string;
@@ -602,23 +612,6 @@ function AgendamentoContent() {
                                                 síndrome de Down e TDAH.
                                             </p>
                                         </div>
-                                    </div>
-
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between mb-2">
-                                <button
-                                    onClick={prevMonth}
-                                    className={`rounded - full p - 1 border ${ currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-50' } `}
-                                    disabled={currentMonth === currentDate?.getMonth() && currentYear === currentDate?.getFullYear()}
-                                    aria-label="Mês anterior"
-                                >
-                                    <span className="text-2xl text-emerald-700">&#8592;</span>
-                                </button>
-                                <span className="font-bold text-gray-700">{new Date(currentYear, currentMonth).toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
-                                <button
-                                    onClick={nextMonth}
-                                    className="rounded-full p-1 border hover:bg-emerald-50"
                                     aria-label="Próximo mês"
                                 >
                                     <span className="text-2xl text-emerald-700">&#8594;</span>
@@ -641,33 +634,6 @@ function AgendamentoContent() {
                                         date.getFullYear() === today.getFullYear();
                                     const isAfter4PM = isToday && today.getHours() >= 16;
                                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                                    const isDisabled = isPast || isWeekend || isAfter4PM || !isDateAllowed(date);
-                                    const isSelected = selectedDate && formatDate(date) === formatDate(selectedDate);
-                                    const hasAvailableTimes = !isDisabled && availableDays[formatDate(date)];
-
-                                    return (
-                                        <button
-                                            key={date.toISOString()}
-                                            className={`w - 10 h - 10 rounded flex items - center justify - center font - semibold transition - all relative
-                        ${
-        isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
-            isSelected ? 'bg-orange-500 text-white' :
-                hasAvailableTimes ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-200 text-gray-500'
-    }
-    `}
-                                            disabled={isDisabled || !hasAvailableTimes}
-                                            onClick={() => setSelectedDate(date)}
-                                            title={isDisabled ? (isAfter4PM ? "Horário de agendamento encerrado para hoje" : "Data indisponível") : hasAvailableTimes ? "Clique para ver horários disponíveis" : "Sem horários disponíveis"}
-                                        >
-                                            {date.getDate()}
-                                            {hasAvailableTimes && !isDisabled && (
-                                                <span className="absolute bottom-1 w-2 h-2 rounded-full bg-white opacity-75"></span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
                     </div>
                     {/* Horários */}
                     <div className="flex-1 bg-white rounded-2xl shadow-xl border-2 border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
@@ -708,58 +674,10 @@ function AgendamentoContent() {
                                     {horariosDisponiveis.manha.length > 0 && (
                                         <div>
                                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                                                Manhã
-                                            </h4>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                {horariosDisponiveis.manha.map(h => (
-                                                    <button
-                                                        key={h}
-                                                        type="button"
-                                                        className={`text - lg px - 4 py - 2 rounded - lg font - semibold border transition - all
-                              ${
-        horario === h
-            ? "bg-emerald-700 text-white border-emerald-700"
-            : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-    } `}
-                                                        onClick={() => setHorario(h)}
-                                                        title="Clique para selecionar"
-                                                    >
-                                                        {h}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* Tarde */}
                                     {horariosDisponiveis.tarde.length > 0 && (
                                         <div>
                                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                                                Tarde
-                                            </h4>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                {horariosDisponiveis.tarde.map(h => (
-                                                    <button
-                                                        key={h}
-                                                        type="button"
-                                                        className={`text - lg px - 4 py - 2 rounded - lg font - semibold border transition - all
-                              ${
-        horario === h
-            ? "bg-emerald-700 text-white border-emerald-700"
-            : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-    } `}
-                                                        onClick={() => setHorario(h)}
-                                                        title="Clique para selecionar"
-                                                    >
-                                                        {h}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
                             )}
                         </div>
                         {error && <div className="mb-2 text-red-600">{error}</div>}
