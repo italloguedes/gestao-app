@@ -4,7 +4,7 @@ import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import DocumentosInfo from '@/components/DocumentosInfo';
-import { FiInfo } from "react-icons/fi";
+import { FiInfo, FiX, FiPrinter, FiTrash2 } from "react-icons/fi";
 import { sendEmailConfirmation } from '@/lib/emailService';
 import Header from './Header';
 
@@ -352,6 +352,115 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
                   <li>O agendamento é gratuito, pessoal e intransferível</li>
                   <li>A apresentação da documentação completa é obrigatória</li>
                   <li>Documentos rasurados, danificados ou ilegíveis não serão aceitos</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Agendamento realizado em ${new Date().toLocaleString('pt-BR')}</p>
+            <button class="no-print" onclick="window.print()" style="padding: 10px 20px; background-color: #047857; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Imprimir</button>
+          </div>
+        </body>
+      </html>
+    `);
+        win!.document.close();
+    };
+
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+                    <h2 className="text-2xl font-bold text-gray-800">Meus Agendamentos</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                        <FiX className="h-6 w-6 text-gray-500" />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+                    {loading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12 text-red-600 bg-red-50 rounded-xl border border-red-100">
+                            <p className="font-medium">{error}</p>
+                        </div>
+                    ) : agendamentos.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                            <p className="text-gray-500 text-lg">Nenhum agendamento encontrado.</p>
+                            <p className="text-sm text-gray-400 mt-2">Seus agendamentos futuros aparecerão aqui.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {agendamentos.map((agendamento) => (
+                                <div key={agendamento.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider rounded-full">
+                                                Confirmado
+                                            </span>
+                                            <span className="text-sm text-gray-400">#{agendamento.id}</span>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                            {new Date(agendamento.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </h3>
+                                        <p className="text-gray-600 flex items-center gap-2">
+                                            <span className="font-medium text-emerald-700">{agendamento.horario.slice(0, 5)}</span>
+                                            <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                            <span>{agendamento.nome}</span>
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 w-full md:w-auto">
+                                        <button
+                                            onClick={() => handleImprimir(agendamento)}
+                                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium transition-colors"
+                                            title="Imprimir Comprovante"
+                                        >
+                                            <FiPrinter className="h-4 w-4" />
+                                            <span className="md:hidden">Imprimir</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleCancelar(agendamento.id)}
+                                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition-colors"
+                                            title="Cancelar Agendamento"
+                                        >
+                                            <FiTrash2 className="h-4 w-4" />
+                                            <span className="md:hidden">Cancelar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+async function getHorariosDisponiveis(date: Date) {
+    const dateStr = formatDate(date);
+    const { data, error } = await supabase
+        .from('agendamentos')
+        .select('horario')
+        .eq('data', dateStr)
+        .eq('status', 'confirmado');
+
+    if (error) throw error;
+
+    const agendados = data.map(a => a.horario.slice(0, 5));
+
+    // Horários fixos
+    const manhaSlots = ["08:00", "08:40", "09:20", "10:00", "10:40", "11:20"];
+    const tardeSlots = ["13:00", "13:40", "14:20", "15:00", "15:40", "16:20"];
+
+    return {
+        manha: manhaSlots.filter(h => !agendados.includes(h)),
+        tarde: tardeSlots.filter(h => !agendados.includes(h))
+    };
+}
 
 function AgendamentoContent() {
     const router = useRouter();
@@ -387,26 +496,29 @@ function AgendamentoContent() {
     }, []);
 
     useEffect(() => {
-        const today = new Date();
+        if (currentDate === null || currentMonth === null || currentYear === null) return;
+
         const checkAvailability = async () => {
             const availability: { [key: string]: boolean } = {};
             const startDate = new Date();
             startDate.setHours(0, 0, 0, 0);
             let daysChecked = 0;
             let currentCheckDate = new Date(startDate);
-            while (daysChecked < 15) {
+
+            // Limit check to avoid infinite loops if something goes wrong
+            while (daysChecked < 30) {
                 if (currentCheckDate.getDay() !== 0 && currentCheckDate.getDay() !== 6) {
                     const formattedDate = formatDate(currentCheckDate);
                     try {
                         const slots = await getHorariosDisponiveis(currentCheckDate);
                         availability[formattedDate] = slots.manha.length > 0 || slots.tarde.length > 0;
-                        daysChecked++;
                     } catch (err) {
                         console.error("Erro ao verificar disponibilidade:", err);
                         availability[formattedDate] = false;
                     }
                 }
                 currentCheckDate.setDate(currentCheckDate.getDate() + 1);
+                daysChecked++;
             }
             setAvailableDays(availability);
         };
@@ -450,12 +562,15 @@ function AgendamentoContent() {
         today.setHours(0, 0, 0, 0);
         const dateToCheck = new Date(date);
         dateToCheck.setHours(0, 0, 0, 0);
+
         if (dateToCheck < today) return false;
         if (date.getDay() === 0 || date.getDay() === 6) return false;
+
         const maxDate = new Date(today);
-        let daysToAdd = 21; 
+        let daysToAdd = 21;
         maxDate.setDate(today.getDate() + daysToAdd);
         maxDate.setHours(23, 59, 59, 999);
+
         return dateToCheck <= maxDate;
     };
 
@@ -477,7 +592,9 @@ function AgendamentoContent() {
         today.setHours(0, 0, 0, 0);
         const maxDate = new Date(today);
         maxDate.setDate(today.getDate() + 21);
+
         if (nextMonthDate > maxDate) return;
+
         if (currentMonth === 11) {
             setCurrentMonth(0);
             setCurrentYear(currentYear + 1);
@@ -505,25 +622,32 @@ function AgendamentoContent() {
             setError("Preencha todos os campos obrigatórios.");
             return;
         }
-        const slots = await getHorariosDisponiveis(selectedDate);
-        const allSlots = [...slots.manha, ...slots.tarde];
-        if (!allSlots.includes(horario)) {
-            setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
-            return;
-        }
+
         setLoading(true);
+
         try {
+            const slots = await getHorariosDisponiveis(selectedDate);
+            const allSlots = [...slots.manha, ...slots.tarde];
+            if (!allSlots.includes(horario)) {
+                setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
+                setLoading(false);
+                return;
+            }
+
             const { data: verificaHorario, error: verificaError } = await supabase
                 .from("agendamentos")
                 .select("horario")
                 .eq("data", formatDate(selectedDate))
                 .eq("horario", horario + ":00");
+
             if (verificaError) throw verificaError;
+
             if (verificaHorario && verificaHorario.length > 0) {
                 setError("Este horário não está mais disponível. Por favor, selecione outro horário.");
                 setLoading(false);
                 return;
             }
+
             const { error: insertError, data: newAgendamento } = await supabase.from("agendamentos").insert({
                 user_id: user.id,
                 nome,
@@ -535,6 +659,7 @@ function AgendamentoContent() {
                 horario: horario + ":00",
                 status: 'confirmado'
             }).select().single();
+
             if (insertError) {
                 console.error("Erro ao agendar:", insertError);
                 setError("Erro ao agendar: " + insertError.message);
@@ -612,8 +737,18 @@ function AgendamentoContent() {
                                                 síndrome de Down e TDAH.
                                             </p>
                                         </div>
-                                    aria-label="Próximo mês"
-                                >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center mb-4">
+                                <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Mês anterior">
+                                    <span className="text-2xl text-emerald-700">&#8592;</span>
+                                </button>
+                                <h3 className="text-lg font-bold text-gray-800 capitalize">
+                                    {currentDate && currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                                </h3>
+                                <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Próximo mês">
                                     <span className="text-2xl text-emerald-700">&#8594;</span>
                                 </button>
                             </div>
@@ -626,15 +761,41 @@ function AgendamentoContent() {
                                 {Array(firstDayOfWeek).fill(null).map((_, i) => (
                                     <div key={i}></div>
                                 ))}
-                                {days.map((date) => {
+                                {days.map((date, index) => {
                                     const today = new Date();
-                                    const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                                    const isToday = date.getDate() === today.getDate() &&
-                                        date.getMonth() === today.getMonth() &&
-                                        date.getFullYear() === today.getFullYear();
-                                    const isAfter4PM = isToday && today.getHours() >= 16;
+                                    today.setHours(0, 0, 0, 0);
+                                    const dateObj = new Date(date);
+                                    dateObj.setHours(0, 0, 0, 0);
+
+                                    const isPast = dateObj < today;
+                                    const isToday = dateObj.getTime() === today.getTime();
                                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                                    // Disable if past or weekend
+                                    const isDisabled = isPast || isWeekend;
+                                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => !isDisabled && setSelectedDate(date)}
+                                            disabled={isDisabled}
+                                            className={`
+                                                h-10 w-full rounded-lg flex items-center justify-center text-sm font-medium transition-all
+                                                ${isSelected ? 'bg-emerald-600 text-white shadow-md' : ''}
+                                                ${!isSelected && !isDisabled ? 'hover:bg-emerald-50 text-gray-700 hover:text-emerald-700' : ''}
+                                                ${isDisabled ? 'text-gray-300 cursor-not-allowed' : ''}
+                                                ${isToday && !isSelected ? 'border border-emerald-500 text-emerald-700' : ''}
+                                            `}
+                                        >
+                                            {date.getDate()}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
+
                     {/* Horários */}
                     <div className="flex-1 bg-white rounded-2xl shadow-xl border-2 border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
                         <div className="flex items-start space-x-3 mb-6">
@@ -651,6 +812,7 @@ function AgendamentoContent() {
                                 </div>
                             </div>
                         </div>
+
                         <div className="mt-4">
                             <h3 className="text-lg font-semibold text-emerald-700 mb-2">
                                 Horários disponíveis
@@ -674,157 +836,203 @@ function AgendamentoContent() {
                                     {horariosDisponiveis.manha.length > 0 && (
                                         <div>
                                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <FiInfo className="h-4 w-4" />
+                                                Manhã
+                                            </h4>
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                {horariosDisponiveis.manha.map((h) => (
+                                                    <button
+                                                        key={h}
+                                                        type="button"
+                                                        onClick={() => setHorario(h)}
+                                                        className={`text-sm px-4 py-2 rounded-lg font-semibold border transition-all
+                                                            ${horario === h
+                                                                ? "bg-emerald-700 text-white border-emerald-700"
+                                                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                                            } `}
+                                                    >
+                                                        {h}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Tarde */}
                                     {horariosDisponiveis.tarde.length > 0 && (
                                         <div>
                                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <FiInfo className="h-4 w-4" />
+                                                Tarde
+                                            </h4>
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                {horariosDisponiveis.tarde.map((h) => (
+                                                    <button
+                                                        key={h}
+                                                        type="button"
+                                                        onClick={() => setHorario(h)}
+                                                        className={`text-sm px-4 py-2 rounded-lg font-semibold border transition-all
+                                                            ${horario === h
+                                                                ? "bg-emerald-700 text-white border-emerald-700"
+                                                                : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                                            } `}
+                                                    >
+                                                        {h}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {error && <div className="mb-2 text-red-600">{error}</div>}
+                            {success && <div className="mb-2 text-green-600">{success}</div>}
+
+                            {user && selectedDate && horario && (horariosDisponiveis.manha.includes(horario) || horariosDisponiveis.tarde.includes(horario)) && (
+                                <form
+                                    className="space-y-4 mt-8"
+                                    onSubmit={e => { e.preventDefault(); handleAgendar(); }}
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Nome completo
+                                                <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input border rounded px-3 py-2 w-full"
+                                                value={nome}
+                                                onChange={e => setNome(e.target.value)}
+                                                required
+                                                placeholder="Digite seu nome completo"
+                                            />
+                                            <div className="absolute right-2 top-8 text-gray-400" title="Nome é obrigatório">
+                                                <FiInfo />
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                E-mail
+                                                <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                className="input border rounded px-3 py-2 w-full"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                required
+                                                placeholder="seu@email.com"
+                                            />
+                                            <div className="absolute right-2 top-8 text-gray-400" title="E-mail é obrigatório">
+                                                <FiInfo />
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                CPF
+                                                <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input border rounded px-3 py-2 w-full"
+                                                value={cpf}
+                                                onChange={e => {
+                                                    const formatted = formatCPF(e.target.value);
+                                                    setCpf(formatted);
+                                                }}
+                                                required
+                                                placeholder="000.000.000-00"
+                                            />
+                                            <div className="absolute right-2 top-8 text-gray-400" title="CPF é obrigatório">
+                                                <FiInfo />
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Telefone
+                                                <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                className="input border rounded px-3 py-2 w-full"
+                                                value={telefone}
+                                                onChange={e => {
+                                                    const formatted = formatPhone(e.target.value);
+                                                    setTelefone(formatted);
+                                                }}
+                                                required
+                                                placeholder="(00) 00000-0000"
+                                            />
+                                            <div className="absolute right-2 top-8 text-gray-400" title="Telefone é obrigatório">
+                                                <FiInfo />
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Data de nascimento
+                                                <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="input border rounded px-3 py-2 w-full"
+                                                value={dataNascimento}
+                                                onChange={e => setDataNascimento(e.target.value)}
+                                                required
+                                                max={new Date().toISOString().split('T')[0]}
+                                            />
+                                            <div className="absolute right-2 top-8 text-gray-400" title="Data de nascimento é obrigatória">
+                                                <FiInfo />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="group w-full mt-4 py-4 px-4 text-lg bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 text-white rounded-2xl hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 font-bold disabled:opacity-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 relative overflow-hidden"
+                                        disabled={loading}
+                                    >
+                                        {!loading && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                                        )}
+                                        <span className="relative z-10 flex items-center justify-center">
+                                            {loading ? (
+                                                <>
+                                                    <svg className="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Agendando...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Confirmar Agendamento
+                                                </>
+                                            )}
+                                        </span>
+                                    </button>
+                                </form>
+                            )}
+                            {!user && (
+                                <div className="mt-8 text-center">
+                                    <p className="mb-2 text-gray-700">Você precisa estar autenticado para agendar.</p>
+                                    <button
+                                        className="py-2 px-4 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-bold"
+                                        onClick={() => router.push("/")}
+                                    >
+                                        Fazer Login
+                                    </button>
+                                </div>
                             )}
                         </div>
-                        {error && <div className="mb-2 text-red-600">{error}</div>}
-                        {success && <div className="mb-2 text-green-600">{success}</div>}
-                        {user && selectedDate && horario && (horariosDisponiveis.manha.includes(horario) || horariosDisponiveis.tarde.includes(horario)) && (
-                            <form
-                                className="space-y-4 mt-8"
-                                onSubmit={e => { e.preventDefault(); handleAgendar(); }}
-                            >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Nome completo
-                                            <span className="text-red-500 ml-1">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="input border rounded px-3 py-2 w-full"
-                                            value={nome}
-                                            onChange={e => setNome(e.target.value)}
-                                            required
-                                            placeholder="Digite seu nome completo"
-                                        />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="Nome é obrigatório">
-                                            <FiInfo />
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            E-mail
-                                            <span className="text-red-500 ml-1">*</span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            className="input border rounded px-3 py-2 w-full"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            required
-                                            placeholder="seu@email.com"
-                                        />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="E-mail é obrigatório">
-                                            <FiInfo />
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            CPF
-                                            <span className="text-red-500 ml-1">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="input border rounded px-3 py-2 w-full"
-                                            value={cpf}
-                                            onChange={e => {
-                                                const formatted = formatCPF(e.target.value);
-                                                setCpf(formatted);
-                                            }}
-                                            required
-                                            placeholder="000.000.000-00"
-                                        />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="CPF é obrigatório">
-                                            <FiInfo />
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Telefone
-                                            <span className="text-red-500 ml-1">*</span>
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            className="input border rounded px-3 py-2 w-full"
-                                            value={telefone}
-                                            onChange={e => {
-                                                const formatted = formatPhone(e.target.value);
-                                                setTelefone(formatted);
-                                            }}
-                                            required
-                                            placeholder="(00) 00000-0000"
-                                        />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="Telefone é obrigatório">
-                                            <FiInfo />
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Data de nascimento
-                                            <span className="text-red-500 ml-1">*</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            className="input border rounded px-3 py-2 w-full"
-                                            value={dataNascimento}
-                                            onChange={e => setDataNascimento(e.target.value)}
-                                            required
-                                            max={new Date().toISOString().split('T')[0]}
-                                        />
-                                        <div className="absolute right-2 top-8 text-gray-400" title="Data de nascimento é obrigatória">
-                                            <FiInfo />
-                                        </div>
-                                    </div>
-                                </div>
-                                <button
-                                    type="submit"
-                                    className="group w-full mt-4 py-4 px-4 text-lg bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-600 text-white rounded-2xl hover:from-emerald-700 hover:via-emerald-800 hover:to-teal-700 font-bold disabled:opacity-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 relative overflow-hidden"
-                                    disabled={loading}
-                                >
-                                    {!loading && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                                    )}
-                                    <span className="relative z-10 flex items-center justify-center">
-                                        {loading ? (
-                                            <>
-                                                <svg className="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Agendando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                Confirmar Agendamento
-                                            </>
-                                        )}
-                                    </span>
-                                </button>
-                            </form>
-                        )}
-                        {!user && (
-                            <div className="mt-8 text-center">
-                                <p className="mb-2 text-gray-700">Você precisa estar autenticado para agendar.</p>
-                                <button
-                                    className="py-2 px-4 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-bold"
-                                    onClick={() => router.push("/")}
-                                >
-                                    Fazer Login
-                                </button>
-                            </div>
-                        )}
                     </div>
-                </div>
+                </div >
+                <AgendamentosModal open={modalOpen} onClose={() => setModalOpen(false)} user={user} />
+                <DocumentosInfo />
             </div >
-            <AgendamentosModal open={modalOpen} onClose={() => setModalOpen(false)} user={user} />
-            <DocumentosInfo />
         </Fragment >
     );
 }
