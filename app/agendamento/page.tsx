@@ -450,7 +450,7 @@ async function getHorariosDisponiveis(date: Date) {
 
     if (error) throw error;
 
-    const agendados = data.map(a => a.horario.slice(0, 5));
+    const agendados = data.map((a: { horario: string }) => a.horario.slice(0, 5));
 
     // Horários fixos
     const manhaSlots = ["08:00", "08:40", "09:20", "10:00", "10:40", "11:20"];
