@@ -132,7 +132,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const { id, status } = await request.json();
+    const { id, status, startAttendance } = await request.json();
 
     if (!id || !status) {
       return NextResponse.json(
@@ -163,10 +163,64 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Atualizar o status
+    // Verificar se está tentando iniciar um atendimento (startAttendance flag ou mudança de confirmado para concluido)
+    const isStartingAttendance = startAttendance || 
+      (existingAgendamento.status === 'confirmado' && status === 'concluido');
+
+    // Se está iniciando atendimento, verificar se já está bloqueado
+    if (isStartingAttendance && existingAgendamento.atendente_atual_id) {
+      return NextResponse.json(
+        { 
+          error: `Este atendimento já está sendo realizado por ${existingAgendamento.atendente_atual_nome}`,
+          locked: true,
+          attendant: existingAgendamento.atendente_atual_nome,
+          started_at: existingAgendamento.horario_inicio_atendimento
+        },
+        { status: 409 }
+      );
+    }
+
+    // Preparar dados de atualização
+    let updateData: any = { status };
+
+    // Se está iniciando atendimento, adicionar campos de bloqueio
+    if (isStartingAttendance) {
+      // Buscar nome do atendente
+      let atendenteNome = 'Não identificado';
+      if (authCheck.user?.id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('auth_id', authCheck.user.id)
+          .single();
+        
+        if (userData?.name) {
+          atendenteNome = userData.name;
+        }
+      }
+
+      updateData = {
+        ...updateData,
+        atendente_atual_id: authCheck.user?.id || null,
+        atendente_atual_nome: atendenteNome,
+        horario_inicio_atendimento: new Date().toISOString()
+      };
+    }
+
+    // Se está finalizando atendimento (concluido, ausente, cancelado), limpar campos de bloqueio
+    if (['concluido', 'ausente', 'cancelado'].includes(status) && !isStartingAttendance) {
+      updateData = {
+        ...updateData,
+        atendente_atual_id: null,
+        atendente_atual_nome: null,
+        horario_inicio_atendimento: null
+      };
+    }
+
+    // Atualizar o agendamento
     const { data, error } = await supabase
       .from('agendamentos')
-      .update({ status })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

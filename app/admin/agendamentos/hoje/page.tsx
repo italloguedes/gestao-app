@@ -54,6 +54,9 @@ interface Agendamento {
   data_nascimento: string;
   tipo_cancelamento?: string;
   atendimento_preferencial?: boolean;
+  atendente_atual_id?: string;
+  atendente_atual_nome?: string;
+  horario_inicio_atendimento?: string;
 }
 
 // Gerar horários de 07:00 até 20:20 (intervalo de 5 minutos)
@@ -171,7 +174,7 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, atendente_atual_id, atendente_atual_nome, horario_inicio_atendimento")
         .eq("data", selectedDate)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
@@ -199,6 +202,15 @@ export default function AgendamentosHojePage() {
       const { data, error } = await apiClient.put('/api/agendamentos', { id, status: newStatus });
 
       if (error) {
+        // Verificar se é erro de bloqueio (409 Conflict)
+        if (error.includes('já está sendo realizado')) {
+          alert(error);
+          // Recarregar agendamentos para atualizar a interface
+          await loadAgendamentos();
+          setIsModalOpen(false);
+          setSelectedAppointment(null);
+          return;
+        }
         throw new Error(error);
       }
 
@@ -415,7 +427,7 @@ export default function AgendamentosHojePage() {
         const cpf = (a.cpf || '').toString().replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         const statusLabel = (a.status || '').charAt(0).toUpperCase() + (a.status || '').slice(1).toLowerCase();
         const observacoesText = extractObservacoes(a.observacoes || '');
-        
+
         return [
           (a.horario || '').substring(0, 5),
           nomeShort,
@@ -492,11 +504,11 @@ export default function AgendamentosHojePage() {
 
       const fileName = `Agendamentos_${selectedDate.replace(/-/g, '_')}.pdf`;
       doc.save(fileName);
-  } catch (err) {
+    } catch (err) {
       alert('Erro ao gerar relatório. Tente novamente.');
-  } finally {
+    } finally {
       setActionLoading(false);
-  }
+    }
   };
 
   const getStatusBadge = useCallback((status: AppointmentStatus): ReactElement | null => {
@@ -686,11 +698,10 @@ export default function AgendamentosHojePage() {
 
                   <button
                     onClick={() => setShowEmptySlots(!showEmptySlots)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${
-                      showEmptySlots
-                        ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
-                        : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
-                    }`}
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showEmptySlots
+                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
+                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                      }`}
                   >
                     {showEmptySlots ? <FiEye className="w-4 h-4 mr-1.5" /> : <FiEyeOff className="w-4 h-4 mr-1.5" />}
                     {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
@@ -698,11 +709,10 @@ export default function AgendamentosHojePage() {
 
                   <button
                     onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${
-                      showOnlyPreferential
-                        ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
-                        : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
-                    }`}
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showOnlyPreferential
+                      ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
+                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                      }`}
                   >
                     <FiStar className="w-4 h-4 mr-1.5" />
                     {showOnlyPreferential ? 'Todos' : 'Preferenciais'}
@@ -774,26 +784,24 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${
-                      agendamentosHorario.length > 0
-                        ? hasPreferential
-                          ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
-                          : hasConcluded
-                            ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
-                            : "bg-white border-slate-300 hover:border-emerald-400"
-                        : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
-                    }`}
+                    className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${agendamentosHorario.length > 0
+                      ? hasPreferential
+                        ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
+                        : hasConcluded
+                          ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
+                          : "bg-white border-slate-300 hover:border-emerald-400"
+                      : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
+                      }`}
                   >
                     <div className="p-5 h-full flex flex-col">
                       <div className="flex items-center justify-between mb-4">
                         <div
-                          className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${
-                            isPassedTime
-                              ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
-                              : isEmpty
+                          className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${isPassedTime
+                            ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
+                            : isEmpty
                               ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
                               : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
-                          }`}
+                            }`}
                         >
                           <FiClock className="w-4 h-4 mr-2" />
                           <span>{horario}</span>
@@ -818,6 +826,19 @@ export default function AgendamentosHojePage() {
                                   </div>
                                 )}
                               </div>
+
+                              {/* Indicador de bloqueio - atendimento em andamento */}
+                              {agendamento.atendente_atual_id && (
+                                <div className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 mb-3">
+                                  <div className="flex items-center text-orange-800">
+                                    <FiLock className="w-4 h-4 mr-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-xs font-bold">Em Atendimento</p>
+                                      <p className="text-xs">por: {agendamento.atendente_atual_nome}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="space-y-2 mb-3">
                                 <div className="flex items-center text-slate-800">
@@ -849,11 +870,19 @@ export default function AgendamentosHojePage() {
                                   <div className="space-y-2">
                                     <button
                                       onClick={() => {
+                                        if (agendamento.atendente_atual_id) {
+                                          alert(`Este atendimento já está sendo realizado por ${agendamento.atendente_atual_nome}`);
+                                          return;
+                                        }
                                         setSelectedAppointment(agendamento);
                                         setModalAction("iniciar");
                                         setIsModalOpen(true);
                                       }}
-                                      className="w-full px-3 py-2.5 text-sm rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      disabled={!!agendamento.atendente_atual_id}
+                                      className={`w-full px-3 py-2.5 text-sm rounded-lg text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md ${agendamento.atendente_atual_id
+                                          ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                                          : 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600'
+                                        }`}
                                     >
                                       <FiCheckCircle className="w-4 h-4 mr-2" />
                                       Iniciar Atendimento
