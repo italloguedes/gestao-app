@@ -508,62 +508,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             {/* Ações com motivo - Ausente e Cancelado */}
             {(action === 'ausente' || action === 'cancelar') && (
               <div className="space-y-4">
-                <div className={`border rounded-lg p-4 ${
-                  action === 'ausente' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
-                }`}>
-                  <div className={`text-lg font-semibold mb-2 ${
-                    action === 'ausente' ? 'text-rose-800' : 'text-amber-800'
+                <div className={`border rounded-lg p-4 ${action === 'ausente' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
                   }`}>
+                  <div className={`text-lg font-semibold mb-2 ${action === 'ausente' ? 'text-rose-800' : 'text-amber-800'
+                    }`}>
                     {action === 'ausente' ? 'Marcar como Ausente' : 'Cancelar Atendimento'}
                   </div>
-                  <div className={`${
-                    action === 'ausente' ? 'text-rose-700' : 'text-amber-700'
-                  }`}>
-                    {action === 'ausente' 
+                  <div className={`${action === 'ausente' ? 'text-rose-700' : 'text-amber-700'
+                    }`}>
+                    {action === 'ausente'
                       ? `Confirme que ${appointment.nome} não compareceu ao atendimento.`
                       : `Confirme o cancelamento do atendimento de ${appointment.nome}.`
-                    }
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {action === 'ausente' ? 'Motivo da Ausência' : 'Motivo do Cancelamento'} *
-                  </label>
-                  <textarea
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder={action === 'ausente' 
-                      ? 'Ex: Cliente não compareceu, não atendeu o telefone...'
-                      : 'Ex: Cliente solicitou cancelamento, reagendamento...'
-                  <input
-                    type="text"
-                    name="nome"
-                    defaultValue={appointment.nome}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Nome completo do cliente"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    defaultValue={appointment.email}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="email@exemplo.com"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    CPF * 
+                    CPF *
                     <span className="ml-2 text-xs text-blue-600 font-normal">
                       (F8 para copiar)
                     </span>
