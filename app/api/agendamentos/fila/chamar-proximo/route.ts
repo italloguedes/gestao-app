@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Filtrar apenas os que não estão sendo atendidos
-        const naFila = agendamentos.filter(a => !a.atendente_atual_id);
+        const naFila = agendamentos.filter((a: any) => !a.atendente_atual_id);
 
         if (naFila.length === 0) {
             return NextResponse.json(
@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Separar preferenciais e normais
-        const preferenciais = naFila.filter(a => a.atendimento_preferencial);
-        const normais = naFila.filter(a => !a.atendimento_preferencial);
+        const preferenciais = naFila.filter((a: any) => a.atendimento_preferencial);
+        const normais = naFila.filter((a: any) => !a.atendimento_preferencial);
 
         // Contar quantos já foram chamados hoje
-        const chamadosHoje = agendamentos.filter(a => a.data_hora_chamada);
-        const preferenciaisChamados = chamadosHoje.filter(a => a.atendimento_preferencial).length;
-        const normaisChamados = chamadosHoje.filter(a => !a.atendimento_preferencial).length;
+        const chamadosHoje = agendamentos.filter((a: any) => a.data_hora_chamada);
+        const preferenciaisChamados = chamadosHoje.filter((a: any) => a.atendimento_preferencial).length;
+        const normaisChamados = chamadosHoje.filter((a: any) => !a.atendimento_preferencial).length;
 
         // Determinar qual tipo chamar
         let proximoAgendamento = null;
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             agendamento: agendamentoAtualizado,
             tipo: proximoAgendamento.atendimento_preferencial ? 'preferencial' : 'normal',
-            posicaoAnterior: naFila.findIndex(a => a.id === proximoAgendamento.id) + 1,
+            posicaoAnterior: naFila.findIndex((a: any) => a.id === proximoAgendamento.id) + 1,
             totalNaFila: naFila.length - 1
         }, { status: 200 });
     } catch (error) {
