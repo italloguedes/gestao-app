@@ -3,13 +3,13 @@ import { FiCalendar, FiCheckCircle, FiStar, FiClock } from 'react-icons/fi';
 
 interface TodayStatsProps {
     total: number;
-    confirmados: number;
+    pendentes: number;
     concluidos: number;
     preferenciais: number;
     loading?: boolean;
 }
 
-export default function TodayStats({ total, confirmados, concluidos, preferenciais, loading = false }: TodayStatsProps) {
+export default function TodayStats({ total, pendentes, concluidos, preferenciais, loading = false }: TodayStatsProps) {
     const today = new Date().toLocaleDateString('pt-BR');
 
     if (loading) {
@@ -32,8 +32,8 @@ export default function TodayStats({ total, confirmados, concluidos, preferencia
                 </div>
 
                 <div className="flex items-center gap-2 bg-emerald-500/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-400/30 flex-1 md:flex-none justify-center min-w-[140px]">
-                    <span className="font-bold text-lg">{confirmados}</span>
-                    <span className="text-emerald-100 font-medium">confirmados</span>
+                    <span className="font-bold text-lg">{pendentes}</span>
+                    <span className="text-emerald-100 font-medium">pendentes</span>
                 </div>
 
                 <div className="flex items-center gap-2 bg-emerald-500/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-400/30 flex-1 md:flex-none justify-center min-w-[140px]">
