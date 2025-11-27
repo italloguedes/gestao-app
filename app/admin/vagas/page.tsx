@@ -120,7 +120,7 @@ export default function GestaoVagas() {
         const horarioCompleto = horario + ':00';
         const agendamento = agendamentos?.find((a: any) => a.horario === horarioCompleto);
 
-        const isBooked = agendamento && agendamento.status === 'confirmado';
+        const isBooked = agendamento && agendamento.status === 'pendente';
         const isBlocked = agendamento && agendamento.status === 'bloqueado';
 
         let status: 'livre' | 'ocupado' | 'bloqueado' = 'livre';

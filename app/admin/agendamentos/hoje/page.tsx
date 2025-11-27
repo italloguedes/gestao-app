@@ -318,6 +318,42 @@ export default function AgendamentosHojePage() {
     }
   };
 
+  const handleAusente = async () => {
+    if (!agendamentoChamado) return;
+
+    if (!confirm('Tem certeza que deseja marcar este agendamento como AUSENTE?')) return;
+
+    setActionLoading(true);
+    try {
+      await handleStatusChange(agendamentoChamado.id, 'ausente');
+      setIsChamarModalOpen(false);
+      setAgendamentoChamado(null);
+      await loadAgendamentos();
+    } catch (err) {
+      console.error('Erro ao marcar como ausente:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelar = async () => {
+    if (!agendamentoChamado) return;
+
+    if (!confirm('Tem certeza que deseja CANCELAR este agendamento?')) return;
+
+    setActionLoading(true);
+    try {
+      await handleStatusChange(agendamentoChamado.id, 'cancelado');
+      setIsChamarModalOpen(false);
+      setAgendamentoChamado(null);
+      await loadAgendamentos();
+    } catch (err) {
+      console.error('Erro ao cancelar agendamento:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleStatusChange = async (id: number, newStatus: string) => {
     setActionLoading(true);
 
@@ -983,7 +1019,7 @@ export default function AgendamentosHojePage() {
                                   Editar
                                 </button>
 
-                                {agendamento.status === "confirmado" && (
+                                {agendamento.status === "pendente" && (
                                   <div className="space-y-2">
                                     <button
                                       onClick={() => {
@@ -1077,6 +1113,8 @@ export default function AgendamentosHojePage() {
         agendamento={agendamentoChamado}
         onIniciarAtendimento={handleIniciarAtendimento}
         onLiberar={handleLiberarAgendamento}
+        onAusente={handleAusente}
+        onCancelar={handleCancelar}
         loading={actionLoading}
       />
     </>

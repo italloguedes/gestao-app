@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useAuth } from "@/contexts/AuthContext";
-import apiClient from "@/lib/apiClient";
+import { apiClient } from "@/lib/apiClient";
 import FilaControlePanel from "@/components/FilaControlePanel";
 import ChamarProximoModal from "@/components/ChamarProximoModal";
 import { FiClock, FiUser, FiAlertCircle } from "react-icons/fi";

@@ -13,7 +13,7 @@ interface ChamarProximoModalProps {
         cpf: string;
         horario: string;
         atendimento_preferencial?: boolean;
-        data_hora_chamada: string;
+        data_hora_chamada?: string;
     } | null;
     onIniciarAtendimento: () => void;
     onLiberar: () => void;
@@ -38,6 +38,7 @@ export default function ChamarProximoModal({
         if (!agendamento?.data_hora_chamada) return;
 
         const updateTempo = () => {
+            if (!agendamento.data_hora_chamada) return;
             const agora = new Date();
             const chamada = new Date(agendamento.data_hora_chamada);
             const diffMs = agora.getTime() - chamada.getTime();

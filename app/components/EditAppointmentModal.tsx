@@ -76,7 +76,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         await navigator.clipboard.writeText(text);
         setMessage(`✅ Copiado: ${text}`);
         setTimeout(() => setMessage(''), 3000);
-        
+
         // Mostra notificação se disponível
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Dados Copiados!', {
@@ -87,7 +87,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
         return;
       }
-      
+
       // Fallback para navegadores mais antigos ou contextos não seguros
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -97,14 +97,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      
+
       const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
-      
+
       if (successful) {
         setMessage(`✅ Copiado: ${text}`);
         setTimeout(() => setMessage(''), 3000);
-        
+
         // Mostra notificação se disponível
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Dados Copiados!', {
@@ -149,7 +149,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
       if (action === 'iniciar') {
         console.log('🔄 EditAppointmentModal: Iniciando atendimento...');
-        
+
         if (!protocolo.trim()) {
           setMessage('Por favor, informe o número de protocolo.');
           setLoading(false);
@@ -298,18 +298,18 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         console.log('✅ EditAppointmentModal: Atendimento criado e concluído');
       } else if (action === 'ausente') {
         console.log('🔄 EditAppointmentModal: Marcando como ausente...');
-        
+
         if (!motivo.trim()) {
           setMessage('Por favor, informe o motivo da ausência.');
           setLoading(false);
           return;
         }
-        
+
         try {
           // Atualizar status e motivo
           const { error: updateError } = await supabase
             .from('agendamentos')
-            .update({ 
+            .update({
               status: 'ausente',
               tipo_cancelamento: motivo,
               observacoes: `Ausente - Motivo: ${motivo}`
@@ -325,14 +325,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           onStatusChange(appointment.id, 'ausente');
 
           console.log('✅ EditAppointmentModal: Status atualizado para ausente');
-        setMessage('Atendimento marcado como ausente com sucesso!');
+          setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
           throw error;
         }
       } else if (action === 'concluido') {
         console.log('🔄 EditAppointmentModal: Concluindo atendimento...');
-        
+
         // Apenas atualizar o status do agendamento para 'concluido'
         const { error: updateError } = await supabase
           .from('agendamentos')
@@ -351,23 +351,23 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
         console.log('🔄 EditAppointmentModal: Cancelando atendimento...');
-        
+
         if (!motivo.trim()) {
           setMessage('Por favor, informe o motivo do cancelamento.');
           setLoading(false);
           return;
         }
-        
+
         try {
           // Atualizar status e motivo
-        const { error: updateError } = await supabase
-          .from('agendamentos')
-            .update({ 
+          const { error: updateError } = await supabase
+            .from('agendamentos')
+            .update({
               status: 'cancelado',
               tipo_cancelamento: motivo,
               observacoes: `Cancelado - Motivo: ${motivo}`
             })
-          .eq('id', appointment.id);
+            .eq('id', appointment.id);
 
           if (updateError) {
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
@@ -378,7 +378,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           onStatusChange(appointment.id, 'cancelado');
 
           console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
-        setMessage('Atendimento cancelado com sucesso!');
+          setMessage('Atendimento cancelado com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
           throw error;
@@ -392,7 +392,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
 
         if (error) throw error;
-        
+
         onSave(updatedAppointment);
         setMessage('Agendamento atualizado com sucesso!');
       } else if (action === 'delete') {
@@ -423,10 +423,10 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           <h2 className="text-xl font-semibold text-slate-800">
             {action === 'iniciar' ? 'Iniciar Atendimento' :
               action === 'ausente' ? 'Marcar Ausente' :
-              action === 'concluido' ? 'Concluir Atendimento' :
-              action === 'edit' ? 'Editar Agendamento' :
-              action === 'delete' ? 'Excluir Agendamento' :
-              'Cancelar Atendimento'}
+                action === 'concluido' ? 'Concluir Atendimento' :
+                  action === 'edit' ? 'Editar Agendamento' :
+                    action === 'delete' ? 'Excluir Agendamento' :
+                      'Cancelar Atendimento'}
           </h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
             <FiX className="w-6 h-6" />
@@ -450,14 +450,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 <h3 className="text-red-800 font-medium">Confirmar Exclusão</h3>
               </div>
               <p className="text-red-700 mt-2">
-                Tem certeza que deseja excluir o agendamento de <strong>{appointment.nome}</strong> 
+                Tem certeza que deseja excluir o agendamento de <strong>{appointment.nome}</strong>
                 para o dia <strong>{appointment.data}</strong> às <strong>{appointment.horario.substring(0, 5)}</strong>?
               </p>
               <p className="text-red-600 text-sm mt-2">
                 Esta ação não pode ser desfeita.
               </p>
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
@@ -468,7 +468,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 Cancelar
               </button>
               <button
-                onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+                onClick={() => handleSubmit({ preventDefault: () => { } } as React.FormEvent)}
                 className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center"
                 disabled={loading}
               >
@@ -508,18 +508,15 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             {/* Ações com motivo - Ausente e Cancelado */}
             {(action === 'ausente' || action === 'cancelar') && (
               <div className="space-y-4">
-                <div className={`border rounded-lg p-4 ${
-                  action === 'ausente' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
-                }`}>
-                  <div className={`text-lg font-semibold mb-2 ${
-                    action === 'ausente' ? 'text-rose-800' : 'text-amber-800'
+                <div className={`border rounded-lg p-4 ${action === 'ausente' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
                   }`}>
+                  <div className={`text-lg font-semibold mb-2 ${action === 'ausente' ? 'text-rose-800' : 'text-amber-800'
+                    }`}>
                     {action === 'ausente' ? 'Marcar como Ausente' : 'Cancelar Atendimento'}
                   </div>
-                  <div className={`${
-                    action === 'ausente' ? 'text-rose-700' : 'text-amber-700'
-                  }`}>
-                    {action === 'ausente' 
+                  <div className={`${action === 'ausente' ? 'text-rose-700' : 'text-amber-700'
+                    }`}>
+                    {action === 'ausente'
                       ? `Confirme que ${appointment.nome} não compareceu ao atendimento.`
                       : `Confirme o cancelamento do atendimento de ${appointment.nome}.`
                     }
@@ -535,7 +532,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                     onChange={(e) => setMotivo(e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder={action === 'ausente' 
+                    placeholder={action === 'ausente'
                       ? 'Ex: Cliente não compareceu, não atendeu o telefone...'
                       : 'Ex: Cliente solicitou cancelamento, reagendamento...'
                     }
@@ -545,271 +542,271 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               </div>
             )}
 
-          {action === 'iniciar' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <div className="text-blue-800 text-base font-semibold mb-3">
-                📋 Dados do Cliente (Editáveis)
+            {action === 'iniciar' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="text-blue-800 text-base font-semibold mb-3">
+                  📋 Dados do Cliente (Editáveis)
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-700">Nome:</span>
+                    <span className="ml-1 text-blue-600">{appointment.nome}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">CPF:</span>
+                    <span className="ml-1 text-blue-600">{appointment.cpf}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">Email:</span>
+                    <span className="ml-1 text-blue-600">{appointment.email}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">Telefone:</span>
+                    <span className="ml-1 text-blue-600">{appointment.telefone}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  💡 Você pode editar os dados do cliente nos campos abaixo se necessário
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="font-medium text-blue-700">Nome:</span>
-                  <span className="ml-1 text-blue-600">{appointment.nome}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-700">CPF:</span>
-                  <span className="ml-1 text-blue-600">{appointment.cpf}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-700">Email:</span>
-                  <span className="ml-1 text-blue-600">{appointment.email}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-700">Telefone:</span>
-                  <span className="ml-1 text-blue-600">{appointment.telefone}</span>
-                </div>
-              </div>
-              <p className="text-xs text-blue-600 mt-2">
-                💡 Você pode editar os dados do cliente nos campos abaixo se necessário
-              </p>
-            </div>
-          )}
+            )}
 
-          {action === 'iniciar' && (
-            <div className="space-y-4">
-              {/* Campos editáveis do cliente */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {action === 'iniciar' && (
+              <div className="space-y-4">
+                {/* Campos editáveis do cliente */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome *</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      defaultValue={appointment.nome}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="Nome completo do cliente"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      defaultValue={appointment.email}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="email@exemplo.com"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      CPF *
+                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                        (F8 para copiar)
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="cpf"
+                        defaultValue={appointment.cpf}
+                        className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                        placeholder="Apenas números"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyCPF()}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                        title="Copiar CPF (F8)"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Telefone
+                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                        (F7 para copiar)
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        name="telefone"
+                        defaultValue={appointment.telefone}
+                        className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                        placeholder="(85) 99999-9999"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyPhone()}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                        title="Copiar Telefone (F7)"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Campos específicos do atendimento */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
+                    <input
+                      type="text"
+                      name="solicitante"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="Nome do solicitante"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <span className="text-red-600">*</span> Número de Protocolo
+                    </label>
+                    <input
+                      type="text"
+                      value={protocolo}
+                      onChange={(e) => setProtocolo(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50"
+                      placeholder="Digite o número do protocolo"
+                      required
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600">
+                  Este número será usado para rastreamento do atendimento
+                </p>
+              </div>
+            )}
+
+            {action === 'edit' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Data e Horário */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
+                  <input
+                    type="date"
+                    name="data"
+                    defaultValue={appointment.data}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Horário</label>
+                  <input
+                    type="time"
+                    name="horario"
+                    defaultValue={appointment.horario.substring(0, 5)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={appointment.status}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  >
+                    <option value="pendente">Pendente</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="ausente">Ausente</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
+                </div>
+
+                {/* Nome e Contatos */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
                   <input
                     type="text"
                     name="nome"
                     defaultValue={appointment.nome}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Nome completo do cliente"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    defaultValue={appointment.telefone}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    required
+                  />
+                </div>
+
+                {/* Email e CPF */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                   <input
                     type="email"
                     name="email"
                     defaultValue={appointment.email}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="email@exemplo.com"
                     required
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    CPF * 
-                    <span className="ml-2 text-xs text-blue-600 font-normal">
-                      (F8 para copiar)
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="cpf"
-                      defaultValue={appointment.cpf}
-                      className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      placeholder="Apenas números"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyCPF()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
-                      title="Copiar CPF (F8)"
-                    >
-                      📋
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Telefone
-                    <span className="ml-2 text-xs text-blue-600 font-normal">
-                      (F7 para copiar)
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      name="telefone"
-                      defaultValue={appointment.telefone}
-                      className="w-full px-3 py-2 pr-16 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      placeholder="(85) 99999-9999"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyPhone()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
-                      title="Copiar Telefone (F7)"
-                    >
-                      📋
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Campos específicos do atendimento */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Solicitante</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
                   <input
                     type="text"
-                    name="solicitante"
+                    name="cpf"
+                    defaultValue={appointment.cpf}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    placeholder="Nome do solicitante"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    <span className="text-red-600">*</span> Número de Protocolo
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
                   <input
-                    type="text"
-                    value={protocolo}
-                    onChange={(e) => setProtocolo(e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50"
-                    placeholder="Digite o número do protocolo"
+                    type="date"
+                    name="data_nascimento"
+                    defaultValue={appointment.data_nascimento}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                     required
                   />
                 </div>
-              </div>
-              <p className="text-xs text-blue-600">
-                Este número será usado para rastreamento do atendimento
-              </p>
-            </div>
-          )}
 
-          {action === 'edit' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Data e Horário */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
-                <input
-                  type="date"
-                  name="data"
-                  defaultValue={appointment.data}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Horário</label>
-                <input
-                  type="time"
-                  name="horario"
-                  defaultValue={appointment.horario.substring(0, 5)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                <select
-                  name="status"
-                  defaultValue={appointment.status}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                >
-                  <option value="confirmado">Confirmado</option>
-                  <option value="cancelado">Cancelado</option>
-                  <option value="ausente">Ausente</option>
-                  <option value="concluido">Concluído</option>
-                  <option value="bloqueado">Bloqueado</option>
-                </select>
-              </div>
-
-              {/* Nome e Contatos */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
-                <input
-                  type="text"
-                  name="nome"
-                  defaultValue={appointment.nome}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
-                <input
-                  type="tel"
-                  name="telefone"
-                  defaultValue={appointment.telefone}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-
-              {/* Email e CPF */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  defaultValue={appointment.email}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
-                <input
-                  type="text"
-                  name="cpf"
-                  defaultValue={appointment.cpf}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
-                <input
-                  type="date"
-                  name="data_nascimento"
-                  defaultValue={appointment.data_nascimento}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  required
-                />
-              </div>
-
-              {/* Atendimento Preferencial */}
-              <div className="md:col-span-2 lg:col-span-3">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="atendimento_preferencial"
-                    defaultChecked={appointment.atendimento_preferencial || false}
-                    className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-slate-700">
-                    Atendimento Preferencial
-                  </label>
+                {/* Atendimento Preferencial */}
+                <div className="md:col-span-2 lg:col-span-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="atendimento_preferencial"
+                      defaultChecked={appointment.atendimento_preferencial || false}
+                      className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                    />
+                    <label className="ml-2 block text-sm text-slate-700">
+                      Atendimento Preferencial
+                    </label>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {action === 'edit' && (
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
-              <textarea
-                name="observacoes"
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                placeholder="Observações sobre o atendimento"
-                defaultValue={appointment.observacoes}
-              />
-            </div>
-          )}
+            {action === 'edit' && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
+                <textarea
+                  name="observacoes"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  placeholder="Observações sobre o atendimento"
+                  defaultValue={appointment.observacoes}
+                />
+              </div>
+            )}
 
             <div className="flex justify-between items-center mt-6">
               {action === 'edit' && onDelete && (
@@ -823,7 +820,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   Excluir
                 </button>
               )}
-              
+
               <div className="flex space-x-3 ml-auto">
                 <button
                   type="button"
@@ -833,7 +830,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 >
                   Cancelar
                 </button>
-                
+
                 {/* Botão de submit - sempre visível exceto para ações simples */}
                 <button
                   type="submit"

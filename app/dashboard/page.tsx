@@ -30,7 +30,7 @@ interface DashboardStatsData {
   bloqueados: number;
   hoje: number;
   agendamentosPendentes: number;
-  agendamentosConfirmados: number;
+
   agendamentosCancelados: number;
 }
 
@@ -72,13 +72,13 @@ export default function DashboardPage() {
     bloqueados: 0,
     hoje: 0,
     agendamentosPendentes: 0,
-    agendamentosConfirmados: 0,
+
     agendamentosCancelados: 0,
   });
 
   const [todayStats, setTodayStats] = useState({
     total: 0,
-    confirmados: 0,
+    pendentes: 0,
     concluidos: 0,
     preferenciais: 0
   });
@@ -179,7 +179,7 @@ export default function DashboardPage() {
         bloqueados: atendimentosStats.bloqueados || 0,
         hoje: atendimentosStats.hoje || 0,
         agendamentosPendentes: agendamentosStats.pendentes || 0,
-        agendamentosConfirmados: agendamentosStats.confirmados || 0,
+
         agendamentosCancelados: agendamentosStats.cancelados || 0,
       });
 
@@ -187,7 +187,7 @@ export default function DashboardPage() {
       const todayAppointments = todayAgendamentosData.data || [];
       setTodayStats({
         total: todayAppointments.length,
-        confirmados: todayAppointments.filter((a: any) => a.status === 'confirmado' || a.status === 'agendado').length,
+        pendentes: todayAppointments.filter((a: any) => a.status === 'pendente' || a.status === 'agendado').length,
         concluidos: todayAppointments.filter((a: any) => a.status === 'concluido' || a.status === 'realizado').length,
         preferenciais: todayAppointments.filter((a: any) => a.atendimento_preferencial).length
       });
@@ -454,7 +454,7 @@ export default function DashboardPage() {
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
           <TodayStats
             total={todayStats.total}
-            confirmados={todayStats.confirmados}
+            pendentes={todayStats.pendentes}
             concluidos={todayStats.concluidos}
             preferenciais={todayStats.preferenciais}
             loading={loading}

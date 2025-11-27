@@ -11,7 +11,7 @@ interface DashboardStatsProps {
         bloqueados: number;
         hoje: number;
         agendamentosPendentes: number;
-        agendamentosConfirmados: number;
+
         agendamentosCancelados: number;
     };
     loading: boolean;
@@ -67,7 +67,7 @@ export default function DashboardStats({ stats, loading }: DashboardStatsProps) 
         { label: 'Concluídos', value: stats.concluidos, color: 'text-emerald-600', bg: 'bg-emerald-100' },
         { label: 'Bloqueados', value: stats.bloqueados, color: 'text-gray-600', bg: 'bg-gray-100' },
         { label: 'Agend. Pendentes', value: stats.agendamentosPendentes, color: 'text-purple-600', bg: 'bg-purple-100' },
-        { label: 'Agend. Confirmados', value: stats.agendamentosConfirmados, color: 'text-blue-600', bg: 'bg-blue-100' },
+        { label: 'Agend. Cancelados', value: stats.agendamentosCancelados, color: 'text-red-600', bg: 'bg-red-100' },
     ];
 
     return (

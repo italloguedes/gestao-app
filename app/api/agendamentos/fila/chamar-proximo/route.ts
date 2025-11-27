@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
             .from('agendamentos')
             .select('*')
             .eq('data', hoje)
-            .eq('status', 'confirmado')
+            .eq('status', 'pendente')
             .order('horario', { ascending: true });
 
         if (fetchError) {
@@ -59,28 +59,12 @@ export async function POST(request: NextRequest) {
         const preferenciais = naFila.filter((a: any) => a.atendimento_preferencial);
         const normais = naFila.filter((a: any) => !a.atendimento_preferencial);
 
-        // Contar quantos já foram chamados hoje
-        const chamadosHoje = agendamentos.filter((a: any) => a.data_hora_chamada);
-        const preferenciaisChamados = chamadosHoje.filter((a: any) => a.atendimento_preferencial).length;
-        const normaisChamados = chamadosHoje.filter((a: any) => !a.atendimento_preferencial).length;
-
-        // Determinar qual tipo chamar
+        // Lógica de Prioridade Estrita: Sempre chamar preferencial se houver
         let proximoAgendamento = null;
 
-        if (preferenciais.length > 0 && normais.length > 0) {
-            // Se há ambos tipos, alternar: 1 pref, 1 normal
-            if (normaisChamados > preferenciaisChamados) {
-                // Chamar preferencial
-                proximoAgendamento = preferenciais[0];
-            } else {
-                // Chamar normal
-                proximoAgendamento = normais[0];
-            }
-        } else if (preferenciais.length > 0) {
-            // Só há preferenciais
+        if (preferenciais.length > 0) {
             proximoAgendamento = preferenciais[0];
-        } else {
-            // Só há normais
+        } else if (normais.length > 0) {
             proximoAgendamento = normais[0];
         }
 
@@ -91,7 +75,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Atualizar o agendamento com os dados do atendente
+        // Atualizar o agendamento com os dados do atendente (Optimistic Locking)
+        // Garante que ninguém pegou o agendamento entre o SELECT e o UPDATE
         const { data: agendamentoAtualizado, error: updateError } = await supabase
             .from('agendamentos')
             .update({
@@ -100,6 +85,7 @@ export async function POST(request: NextRequest) {
                 data_hora_chamada: new Date().toISOString()
             })
             .eq('id', proximoAgendamento.id)
+            .is('atendente_atual_id', null) // Concurrency check
             .select()
             .single();
 

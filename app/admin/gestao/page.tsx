@@ -36,7 +36,7 @@ export default function GestaoPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      
+
       if (user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -49,7 +49,7 @@ export default function GestaoPage() {
           setIsAdmin(false);
           return;
         }
-        
+
         setIsAdmin(userData?.role === 'admin' || userData?.role === 'superadmin');
       }
     } catch (err) {
@@ -61,19 +61,19 @@ export default function GestaoPage() {
   const loadStats = async () => {
     try {
       const hoje = new Date().toISOString().split('T')[0];
-      
+
       // Total de agendamentos confirmados
       const { data: totalAgendamentos } = await supabase
         .from('agendamentos')
         .select('count')
-        .eq('status', 'confirmado');
+        .eq('status', 'pendente');
 
       // Agendamentos para hoje
       const { data: agendamentosHoje } = await supabase
         .from('agendamentos')
         .select('count')
         .eq('data', hoje)
-        .eq('status', 'confirmado');
+        .eq('status', 'pendente');
 
       // Vagas bloqueadas
       const { data: vagasBloqueadas } = await supabase

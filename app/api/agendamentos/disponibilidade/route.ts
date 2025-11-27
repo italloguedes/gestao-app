@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
             .from('agendamentos')
             .select('horario, status')
             .eq('data', data)
-            .in('status', ['confirmado', 'bloqueado']);
+            .in('status', ['pendente', 'bloqueado']);
 
         if (error) {
             console.error('Erro ao buscar agendamentos:', error);

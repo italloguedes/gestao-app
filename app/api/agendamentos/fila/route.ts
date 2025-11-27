@@ -49,18 +49,10 @@ export async function GET(request: NextRequest) {
         const preferenciaisChamados = chamadosHoje.filter((a: any) => a.atendimento_preferencial).length;
         const normaisChamados = chamadosHoje.filter((a: any) => !a.atendimento_preferencial).length;
 
-        // Determinar próximo tipo a ser chamado
+        // Determinar próximo tipo a ser chamado (Lógica de Prioridade Estrita)
         let proximoTipo: 'preferencial' | 'normal' | null = null;
 
-        if (preferenciais > 0 && normais > 0) {
-            // Se há ambos tipos, alternar: 1 pref, 1 normal
-            // Se o último chamado foi normal (ou nenhum foi chamado), chamar preferencial
-            if (normaisChamados > preferenciaisChamados) {
-                proximoTipo = 'preferencial';
-            } else {
-                proximoTipo = 'normal';
-            }
-        } else if (preferenciais > 0) {
+        if (preferenciais > 0) {
             proximoTipo = 'preferencial';
         } else if (normais > 0) {
             proximoTipo = 'normal';

@@ -28,7 +28,7 @@ export default function AgendamentosPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('confirmado');
+  const [statusFilter, setStatusFilter] = useState('pendente');
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -127,7 +127,7 @@ export default function AgendamentosPage() {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       await loadAgendamentos();
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
@@ -190,8 +190,8 @@ export default function AgendamentosPage() {
     link.click();
   };
 
-  const filteredAgendamentos = useMemo(() => 
-    agendamentos.filter(a => 
+  const filteredAgendamentos = useMemo(() =>
+    agendamentos.filter(a =>
       a.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.cpf.includes(searchTerm)
@@ -247,7 +247,7 @@ export default function AgendamentosPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
@@ -290,7 +290,7 @@ export default function AgendamentosPage() {
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                       >
-                        <option value="confirmado">Confirmado</option>
+                        <option value="pendente">Pendente</option>
                         <option value="cancelado">Cancelado</option>
                         <option value="bloqueado">Bloqueado</option>
                       </select>
@@ -306,7 +306,7 @@ export default function AgendamentosPage() {
                       {selectedItems.length} item(s) selecionado(s)
                     </span>
                     <button
-                      onClick={() => handleBulkAction('confirmado')}
+                      onClick={() => handleBulkAction('pendente')}
                       className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
                       disabled={actionLoading}
                     >
@@ -423,9 +423,9 @@ export default function AgendamentosPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${agendamento.status === 'confirmado' ? 'bg-green-100 text-green-800' :
+                            ${agendamento.status === 'pendente' ? 'bg-green-100 text-green-800' :
                               agendamento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'}`}
+                                'bg-gray-100 text-gray-800'}`}
                           >
                             {agendamento.status}
                           </span>
@@ -433,7 +433,7 @@ export default function AgendamentosPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleStatusChange(agendamento.id, 'confirmado')}
+                              onClick={() => handleStatusChange(agendamento.id, 'pendente')}
                               className="text-green-600 hover:text-green-900 disabled:opacity-50"
                               title="Confirmar"
                               disabled={actionLoading}
