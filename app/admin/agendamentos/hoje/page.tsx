@@ -31,6 +31,8 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 import CreateAppointmentModal from "@/components/CreateAppointmentModal";
+import FilaControlePanel from "@/components/FilaControlePanel";
+import ChamarProximoModal from "@/components/ChamarProximoModal";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
 
@@ -54,6 +56,9 @@ interface Agendamento {
   data_nascimento: string;
   tipo_cancelamento?: string;
   atendimento_preferencial?: boolean;
+  atendente_atual_id?: string;
+  atendente_atual_nome?: string;
+  data_hora_chamada?: string;
 }
 
 // Gerar horários de 07:00 até 20:20 (intervalo de 5 minutos)
@@ -99,6 +104,12 @@ export default function AgendamentosHojePage() {
   const [showEmptySlots, setShowEmptySlots] = useState(true);
   const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
+
+  // Queue management states
+  const [filaStats, setFilaStats] = useState({ total: 0, preferenciais: 0, normais: 0, proximoTipo: null as 'preferencial' | 'normal' | null });
+  const [agendamentoChamado, setAgendamentoChamado] = useState<Agendamento | null>(null);
+  const [isChamarModalOpen, setIsChamarModalOpen] = useState(false);
+  const [filaLoading, setFilaLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -171,17 +182,139 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, atendente_atual_id, atendente_atual_nome, data_hora_chamada")
         .eq("data", selectedDate)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
 
       if (error) throw error;
       setAgendamentos(data || []);
+
+      // Load queue stats and check for current appointment
+      if (user) {
+        await loadFilaStats();
+        const meuAgendamento = (data || []).find((a: any) =>
+          a.atendente_atual_id === user.id && a.status === 'confirmado'
+        );
+        setAgendamentoChamado(meuAgendamento || null);
+        if (meuAgendamento) {
+          setIsChamarModalOpen(true);
+        }
+      }
     } catch (err) {
       console.error("Erro ao carregar agendamentos:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFilaStats = async () => {
+    try {
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) return;
+
+      const { data, error } = await apiClient.get('/api/agendamentos/fila');
+
+      if (error) {
+        console.error('Erro ao carregar estatísticas da fila:', error);
+        return;
+      }
+
+      setFilaStats(data);
+    } catch (err) {
+      console.error('Erro ao carregar estatísticas da fila:', err);
+    }
+  };
+
+  const handleChamarProximo = async () => {
+    if (!user) return;
+
+    setFilaLoading(true);
+    try {
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
+      }
+
+      // Get user name
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      const nomeUsuario = userData?.name || user.user_metadata?.name || user.user_metadata?.full_name || 'Atendente';
+
+      const { data, error } = await apiClient.post('/api/agendamentos/fila/chamar-proximo', {
+        userId: user.id,
+        userName: nomeUsuario
+      });
+
+      if (error) {
+        alert(`Erro ao chamar próximo agendamento: ${error}`);
+        return;
+      }
+
+      setAgendamentoChamado(data.agendamento);
+      setIsChamarModalOpen(true);
+      await loadAgendamentos();
+    } catch (err) {
+      console.error('Erro ao chamar próximo:', err);
+      alert('Erro ao chamar próximo agendamento. Tente novamente.');
+    } finally {
+      setFilaLoading(false);
+    }
+  };
+
+  const handleIniciarAtendimento = async () => {
+    if (!agendamentoChamado) return;
+
+    setActionLoading(true);
+    try {
+      await handleStatusChange(agendamentoChamado.id, 'concluido');
+      setIsChamarModalOpen(false);
+      setAgendamentoChamado(null);
+      await loadAgendamentos();
+    } catch (err) {
+      console.error('Erro ao iniciar atendimento:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLiberarAgendamento = async () => {
+    if (!agendamentoChamado || !user) return;
+
+    setActionLoading(true);
+    try {
+      const sessionValid = await ensureValidSession();
+      if (!sessionValid) {
+        alert('Sua sessão expirou. Por favor, faça login novamente.');
+        router.push('/?session_expired=true');
+        return;
+      }
+
+      const { error } = await apiClient.post('/api/agendamentos/fila/liberar', {
+        agendamentoId: agendamentoChamado.id,
+        userId: user.id
+      });
+
+      if (error) {
+        alert(`Erro ao liberar agendamento: ${error}`);
+        return;
+      }
+
+      setIsChamarModalOpen(false);
+      setAgendamentoChamado(null);
+      await loadAgendamentos();
+      alert('Agendamento liberado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao liberar agendamento:', err);
+      alert('Erro ao liberar agendamento. Tente novamente.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -415,7 +548,7 @@ export default function AgendamentosHojePage() {
         const cpf = (a.cpf || '').toString().replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         const statusLabel = (a.status || '').charAt(0).toUpperCase() + (a.status || '').slice(1).toLowerCase();
         const observacoesText = extractObservacoes(a.observacoes || '');
-        
+
         return [
           (a.horario || '').substring(0, 5),
           nomeShort,
@@ -492,11 +625,11 @@ export default function AgendamentosHojePage() {
 
       const fileName = `Agendamentos_${selectedDate.replace(/-/g, '_')}.pdf`;
       doc.save(fileName);
-  } catch (err) {
+    } catch (err) {
       alert('Erro ao gerar relatório. Tente novamente.');
-  } finally {
+    } finally {
       setActionLoading(false);
-  }
+    }
   };
 
   const getStatusBadge = useCallback((status: AppointmentStatus): ReactElement | null => {
@@ -600,6 +733,15 @@ export default function AgendamentosHojePage() {
   return (
     <>
       <DashboardHeader />
+
+      {/* Painel de Controle da Fila */}
+      <FilaControlePanel
+        stats={filaStats}
+        onChamarProximo={handleChamarProximo}
+        loading={filaLoading}
+        agendamentoAtual={agendamentoChamado}
+      />
+
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-[1920px] mx-auto px-4 py-6 sm:px-6 lg:px-8 pt-20">
           {/* Header Principal com Gradiente */}
@@ -686,11 +828,10 @@ export default function AgendamentosHojePage() {
 
                   <button
                     onClick={() => setShowEmptySlots(!showEmptySlots)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${
-                      showEmptySlots
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showEmptySlots
                         ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
                         : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     {showEmptySlots ? <FiEye className="w-4 h-4 mr-1.5" /> : <FiEyeOff className="w-4 h-4 mr-1.5" />}
                     {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
@@ -698,11 +839,10 @@ export default function AgendamentosHojePage() {
 
                   <button
                     onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${
-                      showOnlyPreferential
+                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showOnlyPreferential
                         ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
                         : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <FiStar className="w-4 h-4 mr-1.5" />
                     {showOnlyPreferential ? 'Todos' : 'Preferenciais'}
@@ -774,26 +914,24 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${
-                      agendamentosHorario.length > 0
+                    className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${agendamentosHorario.length > 0
                         ? hasPreferential
                           ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
                           : hasConcluded
                             ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
                             : "bg-white border-slate-300 hover:border-emerald-400"
                         : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
-                    }`}
+                      }`}
                   >
                     <div className="p-5 h-full flex flex-col">
                       <div className="flex items-center justify-between mb-4">
                         <div
-                          className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${
-                            isPassedTime
+                          className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${isPassedTime
                               ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
                               : isEmpty
-                              ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
-                              : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
-                          }`}
+                                ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
+                                : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
+                            }`}
                         >
                           <FiClock className="w-4 h-4 mr-2" />
                           <span>{horario}</span>
@@ -930,6 +1068,16 @@ export default function AgendamentosHojePage() {
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
         existingAppointments={existingAppointments}
+      />
+
+      {/* Modal de Chamar Próximo */}
+      <ChamarProximoModal
+        isOpen={isChamarModalOpen}
+        onClose={() => setIsChamarModalOpen(false)}
+        agendamento={agendamentoChamado}
+        onIniciarAtendimento={handleIniciarAtendimento}
+        onLiberar={handleLiberarAgendamento}
+        loading={actionLoading}
       />
     </>
   );
