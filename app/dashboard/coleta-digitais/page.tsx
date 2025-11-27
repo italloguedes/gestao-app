@@ -141,11 +141,13 @@ export default function ColetaDigitaisPage() {
           dia_atual,
           horario,
           status,
-          fotos_coletadas
+          fotos_coletadas,
+          atendimento_preferencial
         `)
         .eq('dia_atual', hoje)
         .eq('status', 'em_andamento')  // Status correto quando atendimento é criado
         .eq('fotos_coletadas', false)
+        .order('atendimento_preferencial', { ascending: false })
         .order('horario', { ascending: true });
 
       if (error) throw error;
@@ -162,7 +164,7 @@ export default function ColetaDigitaisPage() {
         horario: atendimento.horario,
         status: atendimento.status,
         fotos_coletadas: atendimento.fotos_coletadas || false,
-        atendimento_preferencial: false  // Tabela atendimentos não tem preferencial
+        atendimento_preferencial: atendimento.atendimento_preferencial || false
       }));
 
       setFila(atendimentosMapeados);
@@ -245,7 +247,7 @@ export default function ColetaDigitaisPage() {
         protocolo: atendimento.protocolo || '',
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
-        preferencial: false,  // Tabela atendimentos não tem preferencial
+        preferencial: atendimento.atendimento_preferencial || false,
         atendente_id: user?.id || '',
         atendente_nome: 'Atendente'
       };

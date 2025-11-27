@@ -210,18 +210,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           {
             nome: formData.get('nome') || appointment.nome,
             cpf: formData.get('cpf') || appointment.cpf,
-            email: formData.get('email') || appointment.email,
-            solicitante: formData.get('solicitante') || '',
-            horario,
-            dia_atual: diaAtual,
-            usuario_id: appointment.usuario_id || appointment.user_id,
-            protocolo,
-            status: 'em_andamento',
-          },
-        ]);
-
-        if (atendimentoError) {
-          console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
           throw atendimentoError;
         }
 
