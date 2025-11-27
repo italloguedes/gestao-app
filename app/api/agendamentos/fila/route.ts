@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
             .from('agendamentos')
             .select('id, atendimento_preferencial, atendente_atual_id, data_hora_chamada')
             .eq('data', hoje)
-            .eq('status', 'confirmado')
+            .eq('status', 'pendente')
             .order('horario', { ascending: true });
 
         if (error) {

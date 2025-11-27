@@ -34,7 +34,7 @@ import CreateAppointmentModal from "@/components/CreateAppointmentModal";
 import FilaControlePanel from "@/components/FilaControlePanel";
 import ChamarProximoModal from "@/components/ChamarProximoModal";
 
-type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado';
+type AppointmentStatus = 'concluido' | 'ausente' | 'pendente' | 'bloqueado' | 'cancelado';
 
 interface StatusConfig {
   icon: ReactElement;
@@ -184,7 +184,7 @@ export default function AgendamentosHojePage() {
         .from("agendamentos")
         .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, atendente_atual_id, atendente_atual_nome, data_hora_chamada")
         .eq("data", selectedDate)
-        .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente"])
+        .in("status", ["pendente", "cancelado", "bloqueado", "concluido", "ausente"])
         .order("horario", { ascending: true });
 
       if (error) throw error;
@@ -194,7 +194,7 @@ export default function AgendamentosHojePage() {
       if (user) {
         await loadFilaStats();
         const meuAgendamento = (data || []).find((a: any) =>
-          a.atendente_atual_id === user.id && a.status === 'confirmado'
+          a.atendente_atual_id === user.id && a.status === 'pendente'
         );
         setAgendamentoChamado(meuAgendamento || null);
         if (meuAgendamento) {
@@ -644,9 +644,9 @@ export default function AgendamentosHojePage() {
         text: "Ausente",
         className: "bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-md",
       },
-      confirmado: {
+      pendente: {
         icon: <FiCalendar className="w-3.5 h-3.5" />,
-        text: "Confirmado",
+        text: "Pendente",
         className: "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md",
       },
       bloqueado: {
@@ -673,7 +673,7 @@ export default function AgendamentosHojePage() {
   // Memoize statistics
   const stats = useMemo(() => ({
     total: agendamentos.length,
-    confirmados: agendamentos.filter(a => a.status === 'confirmado').length,
+    confirmados: agendamentos.filter(a => a.status === 'pendente').length,
     concluidos: agendamentos.filter(a => a.status === 'concluido').length,
     ausentes: agendamentos.filter(a => a.status === 'ausente').length,
     cancelados: agendamentos.filter(a => a.status === 'cancelado').length,
@@ -761,7 +761,7 @@ export default function AgendamentosHojePage() {
                         {stats.total} total
                       </span>
                       <span className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-white/30">
-                        {stats.confirmados} confirmados
+                        {stats.confirmados} pendentes
                       </span>
                       <span className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-white/30">
                         {stats.concluidos} concluídos
@@ -829,8 +829,8 @@ export default function AgendamentosHojePage() {
                   <button
                     onClick={() => setShowEmptySlots(!showEmptySlots)}
                     className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showEmptySlots
-                        ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
-                        : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
+                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     {showEmptySlots ? <FiEye className="w-4 h-4 mr-1.5" /> : <FiEyeOff className="w-4 h-4 mr-1.5" />}
@@ -840,8 +840,8 @@ export default function AgendamentosHojePage() {
                   <button
                     onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
                     className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showOnlyPreferential
-                        ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
-                        : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                      ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
+                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <FiStar className="w-4 h-4 mr-1.5" />
@@ -915,22 +915,22 @@ export default function AgendamentosHojePage() {
                   <div
                     key={horario}
                     className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${agendamentosHorario.length > 0
-                        ? hasPreferential
-                          ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
-                          : hasConcluded
-                            ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
-                            : "bg-white border-slate-300 hover:border-emerald-400"
-                        : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
+                      ? hasPreferential
+                        ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
+                        : hasConcluded
+                          ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
+                          : "bg-white border-slate-300 hover:border-emerald-400"
+                      : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
                       }`}
                   >
                     <div className="p-5 h-full flex flex-col">
                       <div className="flex items-center justify-between mb-4">
                         <div
                           className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${isPassedTime
-                              ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
-                              : isEmpty
-                                ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
-                                : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
+                            ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
+                            : isEmpty
+                              ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
+                              : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
                             }`}
                         >
                           <FiClock className="w-4 h-4 mr-2" />

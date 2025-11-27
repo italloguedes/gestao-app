@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       .select('id, nome')
       .eq('cpf', cpf)
       .eq('data', data)
-      .in('status', ['confirmado', 'bloqueado', 'concluido', 'ausente']);
+      .in('status', ['pendente', 'bloqueado', 'concluido', 'ausente']);
 
     if (cpfCheckError) {
       console.error('Erro ao verificar CPF duplicado:', cpfCheckError);
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('data', data)
       .eq('horario', horario)
-      .in('status', ['confirmado', 'bloqueado']);
+      .in('status', ['pendente', 'bloqueado']);
 
     if (checkError) {
       console.error('Erro ao verificar agendamentos existentes:', checkError);
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         horario,
         data_nascimento,
         atendimento_preferencial: atendimento_preferencial || false,
-        status: 'confirmado'
+        status: 'pendente'
       })
       .select()
       .single();

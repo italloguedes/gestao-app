@@ -17,6 +17,8 @@ interface ChamarProximoModalProps {
     } | null;
     onIniciarAtendimento: () => void;
     onLiberar: () => void;
+    onAusente?: () => void;
+    onCancelar?: () => void;
     loading: boolean;
 }
 
@@ -26,6 +28,8 @@ export default function ChamarProximoModal({
     agendamento,
     onIniciarAtendimento,
     onLiberar,
+    onAusente,
+    onCancelar,
     loading
 }: ChamarProximoModalProps) {
     const [tempoDecorrido, setTempoDecorrido] = useState('');
@@ -161,6 +165,29 @@ export default function ChamarProximoModal({
                             {loading ? 'Liberando...' : 'Liberar'}
                         </button>
                     </div>
+
+                    {(onAusente || onCancelar) && (
+                        <div className="flex flex-col sm:flex-row gap-3 mt-3">
+                            {onAusente && (
+                                <button
+                                    onClick={onAusente}
+                                    disabled={loading}
+                                    className="flex-1 py-3 px-6 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl font-bold text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    Ausente
+                                </button>
+                            )}
+                            {onCancelar && (
+                                <button
+                                    onClick={onCancelar}
+                                    disabled={loading}
+                                    className="flex-1 py-3 px-6 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl font-bold text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    Cancelar
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     <p className="text-center text-slate-500 text-sm mt-4">
                         Clique em "Iniciar Atendimento" para marcar como concluído ou "Liberar" para devolver à fila

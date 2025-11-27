@@ -664,7 +664,7 @@ function AgendamentoContent() {
                 data_nascimento: dataNascimento,
                 data: formatDate(selectedDate),
                 horario: horario + ":00",
-                status: 'confirmado'
+                status: 'pendente'
             }).select().single();
 
             if (insertError) {
