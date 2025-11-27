@@ -16,8 +16,8 @@ interface FilaControlePanelProps {
         id: number;
         nome: string;
         horario: string;
-        atendimento_preferencial: boolean;
-        data_hora_chamada: string;
+        atendimento_preferencial?: boolean;
+        data_hora_chamada?: string;
     } | null;
 }
 
@@ -92,8 +92,8 @@ export default function FilaControlePanel({
                     {/* Próximo Tipo */}
                     {stats.proximoTipo && (
                         <div className={`rounded-xl p-4 border-2 ${stats.proximoTipo === 'preferencial'
-                                ? 'bg-amber-50 border-amber-300'
-                                : 'bg-blue-50 border-blue-300'
+                            ? 'bg-amber-50 border-amber-300'
+                            : 'bg-blue-50 border-blue-300'
                             }`}>
                             <p className="text-sm font-semibold text-slate-700 mb-1">Próximo a ser chamado:</p>
                             <p className={`text-lg font-bold ${stats.proximoTipo === 'preferencial' ? 'text-amber-700' : 'text-blue-700'
@@ -115,7 +115,7 @@ export default function FilaControlePanel({
                                 <div>
                                     <p className="text-white/90 text-sm font-semibold">Atendimento Atual</p>
                                     <p className="text-white text-xs">
-                                        Chamado {getTempoDecorrido(agendamentoAtual.data_hora_chamada)}
+                                        Chamado {agendamentoAtual.data_hora_chamada ? getTempoDecorrido(agendamentoAtual.data_hora_chamada) : 'recentemente'}
                                     </p>
                                 </div>
                             </div>
@@ -148,8 +148,8 @@ export default function FilaControlePanel({
                                 onClick={onChamarProximo}
                                 disabled={loading || stats.total === 0}
                                 className={`w-full py-8 rounded-2xl font-bold text-2xl transition-all duration-300 shadow-2xl ${stats.total === 0
-                                        ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-slate-600 cursor-not-allowed'
-                                        : 'bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white transform hover:scale-105 hover:shadow-3xl'
+                                    ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-slate-600 cursor-not-allowed'
+                                    : 'bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white transform hover:scale-105 hover:shadow-3xl'
                                     }`}
                             >
                                 {loading ? (

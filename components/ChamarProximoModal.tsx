@@ -12,7 +12,7 @@ interface ChamarProximoModalProps {
         telefone: string;
         cpf: string;
         horario: string;
-        atendimento_preferencial: boolean;
+        atendimento_preferencial?: boolean;
         data_hora_chamada: string;
     } | null;
     onIniciarAtendimento: () => void;
@@ -62,8 +62,8 @@ export default function ChamarProximoModal({
             <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Header */}
                 <div className={`p-6 ${agendamento.atendimento_preferencial
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                        : 'bg-gradient-to-r from-emerald-500 to-green-600'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                    : 'bg-gradient-to-r from-emerald-500 to-green-600'
                     }`}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
