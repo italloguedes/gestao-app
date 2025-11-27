@@ -38,16 +38,16 @@ export async function GET(request: NextRequest) {
         }
 
         // Filtrar apenas os que não estão sendo atendidos
-        const naFila = agendamentos.filter(a => !a.atendente_atual_id);
+        const naFila = agendamentos.filter((a: any) => !a.atendente_atual_id);
 
         // Contar preferenciais e normais na fila
-        const preferenciais = naFila.filter(a => a.atendimento_preferencial).length;
-        const normais = naFila.filter(a => !a.atendimento_preferencial).length;
+        const preferenciais = naFila.filter((a: any) => a.atendimento_preferencial).length;
+        const normais = naFila.filter((a: any) => !a.atendimento_preferencial).length;
 
         // Contar quantos já foram chamados hoje (para determinar próximo tipo)
-        const chamadosHoje = agendamentos.filter(a => a.data_hora_chamada);
-        const preferenciaisChamados = chamadosHoje.filter(a => a.atendimento_preferencial).length;
-        const normaisChamados = chamadosHoje.filter(a => !a.atendimento_preferencial).length;
+        const chamadosHoje = agendamentos.filter((a: any) => a.data_hora_chamada);
+        const preferenciaisChamados = chamadosHoje.filter((a: any) => a.atendimento_preferencial).length;
+        const normaisChamados = chamadosHoje.filter((a: any) => !a.atendimento_preferencial).length;
 
         // Determinar próximo tipo a ser chamado
         let proximoTipo: 'preferencial' | 'normal' | null = null;
