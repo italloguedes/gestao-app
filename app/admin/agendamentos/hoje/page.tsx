@@ -4,6 +4,7 @@ import React, { ReactElement, useEffect, useState, useMemo, useCallback } from "
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   FiCheck,
   FiX,
@@ -65,7 +66,8 @@ const HORARIOS = [
 
 export default function AgendamentosHojePage() {
   const router = useRouter();
-  const { user, hasAccess } = useAuth();
+  const { user } = useAuth();
+  const { hasAccessToDashboard, loading: permissionsLoading } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -151,9 +153,6 @@ export default function AgendamentosHojePage() {
 
   const handleCreateAppointment = async (newAppointment: any) => {
     try {
-      // Use the API route to bypass RLS for creation if needed, or direct Supabase if allowed
-      // Using direct supabase for now as per previous context, or API if RLS blocks it.
-      // The previous context mentioned using API for creation.
       const response = await fetch("/api/agendamentos", {
         method: "POST",
         headers: {
@@ -234,12 +233,13 @@ export default function AgendamentosHojePage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      if (!user && !hasAccess("atendente")) {
+      if (permissionsLoading) return;
+      if (!user || !hasAccessToDashboard) {
         router.push("/admin/login");
       }
     };
     checkUser();
-  }, [user, hasAccess, router]);
+  }, [user, hasAccessToDashboard, permissionsLoading, router]);
 
   useEffect(() => {
     loadAgendamentos();
@@ -334,7 +334,16 @@ export default function AgendamentosHojePage() {
     [agendamentos]
   );
 
-  if (!user || !hasAccess) {
+  if (!user || !hasAccessToDashboard) {
+    // Show loading state while checking permissions
+    if (permissionsLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center bg-white p-12 rounded-3xl shadow-2xl border border-slate-200">
