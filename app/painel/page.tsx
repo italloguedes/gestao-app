@@ -53,7 +53,7 @@ export default function PainelPage() {
                     table: 'agendamentos',
                     filter: "status=eq.chamando"
                 },
-                async (payload) => {
+                async (payload: any) => {
                     const newCall = payload.new as Chamada;
 
                     // Fetch attendant name
@@ -151,16 +151,16 @@ export default function PainelPage() {
                             >
                                 {/* Background Glow */}
                                 <div className={`absolute inset-0 rounded-full blur-[100px] opacity-30 ${chamadaAtual.tipo === 'preferencial' || chamadaAtual.atendimento_preferencial
-                                        ? 'bg-amber-500'
-                                        : 'bg-blue-500'
+                                    ? 'bg-amber-500'
+                                    : 'bg-blue-500'
                                     }`} />
 
                                 <div className="relative z-10 bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-2xl flex-1">
 
                                     <div className="mb-8">
                                         <span className={`px-6 py-2 rounded-full text-lg font-bold tracking-widest uppercase ${chamadaAtual.tipo === 'preferencial' || chamadaAtual.atendimento_preferencial
-                                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                                             }`}>
                                             {chamadaAtual.tipo === 'preferencial' || chamadaAtual.atendimento_preferencial ? 'Preferencial' : 'Normal'}
                                         </span>
