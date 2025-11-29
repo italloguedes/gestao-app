@@ -113,11 +113,11 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: AppointmentStatus) => {
+  const handleStatusChange = async (id: number, newStatus: string) => {
     try {
       const { error } = await supabase
         .from("agendamentos")
-        .update({ status: newStatus })
+        .update({ status: newStatus as AppointmentStatus })
         .eq("id", id);
 
       if (error) throw error;
