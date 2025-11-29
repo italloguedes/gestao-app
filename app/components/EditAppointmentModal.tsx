@@ -230,6 +230,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
             atendente_nome: atendenteNome,
             protocolo,
             status: 'em_andamento',
+            atendimento_preferencial: appointment.atendimento_preferencial || false,
           },
         ]);
 
