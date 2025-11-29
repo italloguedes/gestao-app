@@ -4,7 +4,6 @@ import React, { ReactElement, useEffect, useState, useMemo, useCallback } from "
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiClient } from "@/lib/apiClient";
 import {
   FiCheck,
   FiX,
@@ -31,6 +30,8 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
 import CreateAppointmentModal from "@/components/CreateAppointmentModal";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type AppointmentStatus = 'concluido' | 'ausente' | 'confirmado' | 'bloqueado' | 'cancelado' | 'chamando';
 
@@ -54,14 +55,42 @@ interface Agendamento {
   data_nascimento: string;
   tipo_cancelamento?: string;
   atendimento_preferencial?: boolean;
+  observacoes?: string;
 }
 
-// ... (HORARIOS constant remains unchanged)
+const HORARIOS = [
+  "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40",
+  "13:00", "13:20", "13:40", "14:00", "14:20", "14:40", "15:00", "15:20", "15:40", "16:00", "16:20", "16:40"
+];
 
 export default function AgendamentosHojePage() {
-  // ... (hooks remain unchanged)
+  const router = useRouter();
+  const { user, hasAccess } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    return now.toLocaleDateString('en-CA');
+  });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // ... (checkUser and formatDate remain unchanged)
+  // Modal states
+  const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<"edit" | "iniciar" | "ausente" | "cancelar" | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Filter states
+  const [showEmptySlots, setShowEmptySlots] = useState(true);
+  const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   const loadAgendamentos = async () => {
     setLoading(true);
@@ -82,7 +111,139 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  // ... (handleStatusChange, handleEditAppointment, handleCreateAppointment, handleDeleteAppointment, generateReport remain unchanged)
+  const handleStatusChange = async (id: number, newStatus: AppointmentStatus) => {
+    try {
+      const { error } = await supabase
+        .from("agendamentos")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+      await loadAgendamentos();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      alert("Erro ao atualizar status do agendamento.");
+    }
+  };
+
+  const handleEditAppointment = async (updatedAppointment: Agendamento) => {
+    try {
+      const { error } = await supabase
+        .from("agendamentos")
+        .update({
+          nome: updatedAppointment.nome,
+          telefone: updatedAppointment.telefone,
+          data_nascimento: updatedAppointment.data_nascimento,
+          observacoes: updatedAppointment.observacoes,
+          atendimento_preferencial: updatedAppointment.atendimento_preferencial
+        })
+        .eq("id", updatedAppointment.id);
+
+      if (error) throw error;
+      await loadAgendamentos();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao editar agendamento:", error);
+      alert("Erro ao editar agendamento.");
+    }
+  };
+
+  const handleCreateAppointment = async (newAppointment: any) => {
+    try {
+      // Use the API route to bypass RLS for creation if needed, or direct Supabase if allowed
+      // Using direct supabase for now as per previous context, or API if RLS blocks it.
+      // The previous context mentioned using API for creation.
+      const response = await fetch("/api/agendamentos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAppointment),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao criar agendamento");
+      }
+
+      await loadAgendamentos();
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao criar agendamento:", error);
+      alert("Erro ao criar agendamento.");
+    }
+  };
+
+  const handleDeleteAppointment = async (id: number) => {
+    if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("agendamentos")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      await loadAgendamentos();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao excluir agendamento:", error);
+      alert("Erro ao excluir agendamento.");
+    }
+  };
+
+  const generateReport = () => {
+    setActionLoading(true);
+    try {
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.text(`Relatório de Agendamentos - ${formatDate(selectedDate)}`, 14, 20);
+
+      const tableData = agendamentos.map(a => [
+        a.horario,
+        a.nome,
+        a.telefone,
+        a.status,
+        a.atendimento_preferencial ? "Sim" : "Não"
+      ]);
+
+      autoTable(doc, {
+        head: [["Horário", "Nome", "Telefone", "Status", "Preferencial"]],
+        body: tableData,
+        startY: 30,
+      });
+
+      doc.save(`agendamentos-${selectedDate}.pdf`);
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      alert("Erro ao gerar relatório.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      if (!user && !hasAccess("atendente")) {
+        router.push("/admin/login");
+      }
+    };
+    checkUser();
+  }, [user, hasAccess, router]);
+
+  useEffect(() => {
+    loadAgendamentos();
+  }, [selectedDate]);
 
   const getStatusBadge = useCallback((status: AppointmentStatus): ReactElement | null => {
     const statusConfig: StatusConfigMap = {
@@ -520,13 +681,3 @@ export default function AgendamentosHojePage() {
     </>
   );
 }
-
-// Assuming selectedDate is declared earlier in the component,
-// this is where its initialization would be updated.
-// For example, if it was:
-// const [selectedDate, setSelectedDate] = useState('2023-01-01');
-// It would become:
-// const [selectedDate, setSelectedDate] = useState(() => {
-//   const now = new Date();
-//   return now.toLocaleDateString('en-CA');
-// });
