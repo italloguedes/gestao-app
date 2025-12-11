@@ -225,12 +225,12 @@ export default function RelatoriosPorAtendentePage() {
           <div>
             <button
               onClick={() => router.back()}
-              className="group flex items-center text-slate-500 hover:text-blue-600 transition-all duration-200 mb-4 text-sm font-medium"
+              className="group flex items-center text-slate-500 hover:text-emerald-600 transition-all duration-200 mb-4 text-sm font-medium"
             >
               <FiArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
               Voltar
             </button>
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 tracking-tight">
               Atendimentos por Colaborador
             </h1>
             <p className="text-slate-500 mt-2 text-lg font-light">
@@ -243,7 +243,7 @@ export default function RelatoriosPorAtendentePage() {
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
             <div className="flex items-center gap-2 text-slate-700">
-              <FiFilter className="w-5 h-5 text-blue-500" />
+              <FiFilter className="w-5 h-5 text-emerald-500" />
               <h2 className="font-semibold text-lg">Filtros de Período</h2>
             </div>
 
@@ -253,21 +253,21 @@ export default function RelatoriosPorAtendentePage() {
               <button
                 type="button"
                 onClick={() => setDateRange('hoje')}
-                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
               >
                 Hoje
               </button>
               <button
                 type="button"
                 onClick={() => setDateRange('semana')}
-                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
               >
                 Última Semana
               </button>
               <button
                 type="button"
                 onClick={() => setDateRange('mes')}
-                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
               >
                 Último Mês
               </button>
@@ -289,28 +289,28 @@ export default function RelatoriosPorAtendentePage() {
           <form onSubmit={handleSubmit} className="p-6">
             <div className="flex flex-col md:flex-row gap-6 items-end">
               <div className="flex-1 w-full relative group">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-blue-600 transition-colors">Data Inicial</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Data Inicial</label>
                 <div className="relative">
-                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                   <input
                     type="date"
                     value={dataInicio}
                     onChange={(e) => setDataInicio(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div className="flex-1 w-full relative group">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-blue-600 transition-colors">Data Final</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Data Final</label>
                 <div className="relative">
-                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                   <input
                     type="date"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
                     required
                   />
                 </div>
@@ -319,7 +319,7 @@ export default function RelatoriosPorAtendentePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full md:w-auto px-8 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                className="w-full md:w-auto px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -356,16 +356,16 @@ export default function RelatoriosPorAtendentePage() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {atendenteStats.map((stats, index) => (
-                <div key={stats.nome} className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-blue-100 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div key={stats.nome} className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-emerald-100 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
                         <FiUsers className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-700 transition-colors">{stats.nome}</h3>
+                        <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-emerald-700 transition-colors">{stats.nome}</h3>
                         <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Colaborador</span>
                       </div>
                     </div>
@@ -375,15 +375,17 @@ export default function RelatoriosPorAtendentePage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="p-3 bg-slate-50 rounded-xl">
-                      <p className="text-xs text-slate-500 mb-1">Total</p>
-                      <p className="text-xl font-bold text-slate-800 font-mono">{stats.total}</p>
+                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Total</p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</p>
+                      <p className="text-[10px] text-emerald-600/70 font-medium mt-1">Atendimentos</p>
                     </div>
-                    <div className="p-3 bg-indigo-50 rounded-xl">
-                      <p className="text-xs text-indigo-600 mb-1 flex items-center gap-1">
-                        <MdFingerprint className="w-3 h-3" /> Coletas
+                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                      <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <MdFingerprint className="w-3.5 h-3.5" /> Coletas
                       </p>
-                      <p className="text-xl font-bold text-indigo-700 font-mono">{stats.coletas}</p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.coletas}</p>
+                      <p className="text-[10px] text-purple-600/70 font-medium mt-1">Biometrias</p>
                     </div>
                   </div>
 
@@ -393,27 +395,27 @@ export default function RelatoriosPorAtendentePage() {
                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                         Concluídos
                       </span>
-                      <span className="font-semibold text-emerald-600">{stats.concluidos}</span>
+                      <span className="font-bold text-slate-700">{stats.concluidos}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-slate-600">
                         <div className="w-2 h-2 rounded-full bg-red-400"></div>
                         Cancelados
                       </span>
-                      <span className="font-semibold text-red-500">{stats.cancelados}</span>
+                      <span className="font-bold text-slate-700">{stats.cancelados}</span>
                     </div>
 
                     <div className="pt-3 border-t border-slate-100 mt-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-400 uppercase">Taxa de Eficiência</span>
-                        <span className="text-sm font-bold text-blue-600 font-mono">
+                        <span className="text-sm font-bold text-emerald-600 font-mono">
                           {stats.total > 0 ? Math.round((stats.concluidos / stats.total) * 100) : 0}%
                         </span>
                       </div>
                       {/* Mini progress bar */}
                       <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full"
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
                           style={{ width: `${stats.total > 0 ? (stats.concluidos / stats.total) * 100 : 0}%` }}
                         ></div>
                       </div>
@@ -423,7 +425,7 @@ export default function RelatoriosPorAtendentePage() {
                   {(stats.total > 0 || stats.coletas > 0) && (
                     <button
                       onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
-                      className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all flex items-center justify-center gap-2"
+                      className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-emerald-600 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"
                     >
                       <span>{atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}</span>
                       <svg
@@ -453,7 +455,7 @@ export default function RelatoriosPorAtendentePage() {
                   key={chip.label}
                   onClick={() => setStatus(chip.value)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-2 ${status === chip.value
-                    ? chip.color + ' ring-2 ring-offset-2 ring-blue-100 scale-105'
+                    ? chip.color + ' ring-2 ring-offset-2 ring-emerald-100 scale-105'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                 >
@@ -505,7 +507,7 @@ export default function RelatoriosPorAtendentePage() {
                         atendimento.coletor_nome === atendenteExpandido
                       )
                       .map((atendimento) => (
-                        <tr key={atendimento.id} className="hover:bg-blue-50/30 transition-colors group">
+                        <tr key={atendimento.id} className="hover:bg-emerald-50/30 transition-colors group">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 mr-3 text-xs font-bold">
@@ -516,7 +518,7 @@ export default function RelatoriosPorAtendentePage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {atendimento.coletor_nome ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
                                 {atendimento.coletor_nome}
                               </span>
                             ) : (
