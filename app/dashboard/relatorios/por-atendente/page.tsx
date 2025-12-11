@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  FiUsers,
+  FiCalendar,
+  FiFilter,
+  FiCheckCircle,
+  FiXCircle,
+  FiFingerprint,
+  FiSearch,
+  FiArrowLeft,
+  FiClock,
+  FiActivity
+} from 'react-icons/fi';
 
 interface Atendimento {
   id: string;
@@ -202,342 +214,336 @@ export default function RelatoriosPorAtendentePage() {
   useEffect(() => {
     if (dataInicio && dataFim && !loading) {
       // Opcional: Auto-submit ou deixar usuário clicar?
-      // Usuário geralmente espera atualização ao clicar no filtro, mas como é um formulário, 
-      // talvez seja melhor deixar explícito. Porém, para "Atalhos de data", faz sentido atualizar.
-      // Para simplificar, vou deixar o usuário clicar em "Gerar" ou implementar auto-submit nos botões de atalho.
     }
   }, [filtroAcao]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 pt-24">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 pt-24 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Atendimentos por Atendente
-          </h1>
-          <p className="text-sm text-gray-600">
-            Visualize métricas e desempenho individual dos atendentes e coletores
-          </p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <button
+              onClick={() => router.back()}
+              className="group flex items-center text-slate-500 hover:text-blue-600 transition-all duration-200 mb-4 text-sm font-medium"
+            >
+              <FiArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
+              Voltar
+            </button>
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight">
+              Atendimentos por Colaborador
+            </h1>
+            <p className="text-slate-500 mt-2 text-lg font-light">
+              Acompanhe o desempenho detalhado de atendimentos e coletas biométricas.
+            </p>
+          </div>
         </div>
 
-        {/* Formulário de Filtros */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-6">
-          <div className="border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-gray-900">Filtros e Período</h2>
+        {/* Filtros Card */}
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+            <div className="flex items-center gap-2 text-slate-700">
+              <FiFilter className="w-5 h-5 text-blue-500" />
+              <h2 className="font-semibold text-lg">Filtros de Período</h2>
+            </div>
 
-            {/* Atalhos de Data e Ação */}
-            <div className="flex flex-wrap gap-2">
+            {/* Atalhos */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">Atalhos:</span>
               <button
                 type="button"
-                onClick={() => { setDateRange('hoje'); }}
-                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                onClick={() => setDateRange('hoje')}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
               >
                 Hoje
               </button>
               <button
                 type="button"
-                onClick={() => { setDateRange('semana'); }}
-                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                onClick={() => setDateRange('semana')}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
               >
                 Última Semana
               </button>
               <button
                 type="button"
-                onClick={() => { setDateRange('mes'); }}
-                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                onClick={() => setDateRange('mes')}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
               >
                 Último Mês
               </button>
-              <div className="h-6 w-px bg-gray-300 mx-1 hidden md:block"></div>
+              <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
               <button
                 type="button"
                 onClick={toggleFiltroAcao}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${filtroAcao
-                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all shadow-sm flex items-center gap-2 ${filtroAcao
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200 ring-2 ring-purple-100 ring-offset-1'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'
                   }`}
               >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                {filtroAcao ? 'Apenas Ações' : 'Filtrar por Ações'}
+                <FiActivity className={`w-3 h-3 ${filtroAcao ? 'text-purple-600' : 'text-slate-400'}`} />
+                {filtroAcao ? 'Exibindo Apenas Ações' : 'Filtrar por Ações'}
               </button>
             </div>
           </div>
 
-          {/* Mensagens de feedback */}
-          {message && (
-            <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
-                ? 'bg-green-50 text-green-800 border-green-200'
-                : 'bg-red-50 text-red-800 border-red-200'
-              }`}>
-              <p className="text-sm font-medium">{message.text}</p>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              {/* Data Inicial */}
-              <div>
-                <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-700 mb-2">
-                  Data Inicial
-                </label>
-                <input
-                  type="date"
-                  id="dataInicio"
-                  value={dataInicio}
-                  onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
-                  required
-                />
+            <div className="flex flex-col md:flex-row gap-6 items-end">
+              <div className="flex-1 w-full relative group">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-blue-600 transition-colors">Data Inicial</label>
+                <div className="relative">
+                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Data Final */}
-              <div>
-                <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700 mb-2">
-                  Data Final
-                </label>
-                <input
-                  type="date"
-                  id="dataFim"
-                  value={dataFim}
-                  onChange={(e) => setDataFim(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
-                  required
-                />
+              <div className="flex-1 w-full relative group">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block group-focus-within:text-blue-600 transition-colors">Data Final</label>
+                <div className="relative">
+                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Botão de ação */}
-            <div className="pt-4 border-t border-gray-200">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full md:w-auto px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full md:w-auto px-8 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Carregando dados...
-                  </span>
+                    <span>Processando...</span>
+                  </>
                 ) : (
-                  <span>Gerar Relatório</span>
+                  <>
+                    <FiSearch className="w-5 h-5" />
+                    <span>Gerar Relatório</span>
+                  </>
                 )}
               </button>
             </div>
           </form>
+
+          {/* Mensagens */}
+          {message && (
+            <div className={`mx-6 mb-6 px-4 py-3 rounded-xl flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'
+              }`}>
+              {message.type === 'success' ? <FiCheckCircle className="w-5 h-5" /> : <FiXCircle className="w-5 h-5" />}
+              <p className="text-sm font-medium">{message.text}</p>
+            </div>
+          )}
         </div>
 
-        {/* Cards de Métricas por Atendente */}
+        {/* Results Section */}
         {atendenteStats.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {atendenteStats.map((stats) => (
-                <div key={stats.nome} className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{stats.nome}</h3>
-                      <p className="text-sm text-gray-500 mt-1">Colaborador</p>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {atendenteStats.map((stats, index) => (
+                <div key={stats.nome} className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-blue-100 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                        <FiUsers className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-700 transition-colors">{stats.nome}</h3>
+                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Colaborador</span>
+                      </div>
                     </div>
-                    <div className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-mono font-semibold">
-                      Rank #{atendenteStats.indexOf(stats) + 1}
+                    <div className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold font-mono">
+                      #{index + 1}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-slate-500 mb-1">Total</p>
+                      <p className="text-xl font-bold text-slate-800 font-mono">{stats.total}</p>
+                    </div>
+                    <div className="p-3 bg-indigo-50 rounded-xl">
+                      <p className="text-xs text-indigo-600 mb-1 flex items-center gap-1">
+                        <FiFingerprint className="w-3 h-3" /> Coletas
+                      </p>
+                      <p className="text-xl font-bold text-indigo-700 font-mono">{stats.coletas}</p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Atendimentos</span>
-                      <span className="text-sm font-mono font-semibold text-gray-900">{stats.total}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Coletas</span>
-                      <span className="text-sm font-mono font-semibold text-purple-600">{stats.coletas}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Concluídos</span>
-                      <span className="text-sm font-mono font-semibold text-green-600">{stats.concluidos}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Cancelados</span>
-                      <span className="text-sm font-mono font-semibold text-red-600">{stats.cancelados}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <span className="text-sm text-gray-600">Taxa de Conclusão</span>
-                      <span className="text-sm font-mono font-semibold text-emerald-600">
-                        {stats.total > 0 ? Math.round((stats.concluidos / stats.total) * 100) : 0}%
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-slate-600">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        Concluídos
                       </span>
+                      <span className="font-semibold text-emerald-600">{stats.concluidos}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-slate-600">
+                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                        Cancelados
+                      </span>
+                      <span className="font-semibold text-red-500">{stats.cancelados}</span>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 mt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase">Taxa de Eficiência</span>
+                        <span className="text-sm font-bold text-blue-600 font-mono">
+                          {stats.total > 0 ? Math.round((stats.concluidos / stats.total) * 100) : 0}%
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full"
+                          style={{ width: `${stats.total > 0 ? (stats.concluidos / stats.total) * 100 : 0}%` }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
 
                   {(stats.total > 0 || stats.coletas > 0) && (
                     <button
                       onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
-                      className="mt-4 w-full px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
+                      className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all flex items-center justify-center gap-2"
                     >
-                      {atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                      <span>{atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-300 ${atendenteExpandido === stats.nome ? 'rotate-180' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </button>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Filtros de Status (Chips) */}
-            <div className="bg-white border border-gray-200 rounded-lg mb-6">
-              <div className="px-6 py-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Filtrar por Status</h3>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setStatus('')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === ''
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Todos
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.total || 0}
+            {/* Status Filter Chips */}
+            <div className="flex flex-wrap items-center gap-3 py-4">
+              <span className="text-sm font-semibold text-slate-500 mr-2">Filtrar Tabela:</span>
+              {[
+                { label: 'Todos', value: '', count: statusCounts.total, color: 'bg-slate-800 text-white' },
+                { label: 'Confirmado', value: 'confirmado', count: statusCounts.confirmado, color: 'bg-blue-600 text-white' },
+                { label: 'Concluído', value: 'concluido', count: statusCounts.concluido, color: 'bg-emerald-600 text-white' },
+                { label: 'Cancelado', value: 'cancelado', count: statusCounts.cancelado, color: 'bg-red-500 text-white' },
+                { label: 'Ausente', value: 'ausente', count: statusCounts.ausente, color: 'bg-amber-500 text-white' },
+                { label: 'Bloqueado', value: 'bloqueado', count: statusCounts.bloqueado, color: 'bg-slate-500 text-white' },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => setStatus(chip.value)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-2 ${status === chip.value
+                      ? chip.color + ' ring-2 ring-offset-2 ring-blue-100 scale-105'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                >
+                  {chip.label}
+                  {chip.count > 0 && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${status === chip.value ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>
+                      {chip.count}
                     </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus('confirmado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'confirmado'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Confirmado
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.confirmado || 0}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus('concluido')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'concluido'
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Concluído
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.concluido || 0}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus('cancelado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'cancelado'
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Cancelado
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.cancelado || 0}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus('ausente')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'ausente'
-                      ? 'bg-yellow-600 text-white border-yellow-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Ausente
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.ausente || 0}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus('bloqueado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'bloqueado'
-                      ? 'bg-gray-600 text-white border-gray-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    Bloqueado
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
-                      {statusCounts.bloqueado || 0}
-                    </span>
-                  </button>
-                </div>
-              </div>
+                  )}
+                </button>
+              ))}
             </div>
 
-            {/* Tabela de Atendimentos */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Detalhes dos Atendimentos
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    ({getAtendimentosFiltrados().length} registros)
-                  </span>
-                </h2>
+            {/* Data Table */}
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 text-lg">Detalhes dos Atendimentos</h3>
+                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-mono font-medium text-slate-500">
+                  {getAtendimentosFiltrados().length} registros
+                </span>
               </div>
+
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Atendente
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Coleta Por
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Protocolo
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cliente
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        CPF
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data/Hora
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
+                <table className="min-w-full divide-y divide-slate-100">
+                  <thead>
+                    <tr className="bg-slate-50/80">
+                      {[
+                        { label: 'Atendente', icon: <FiUsers className="w-3.5 h-3.5" /> },
+                        { label: 'Coletor', icon: <FiFingerprint className="w-3.5 h-3.5" /> },
+                        { label: 'Protocolo', icon: null },
+                        { label: 'Cliente', icon: null },
+                        { label: 'CPF', icon: null },
+                        { label: 'Data/Hora', icon: <FiClock className="w-3.5 h-3.5" /> },
+                        { label: 'Status', icon: <FiActivity className="w-3.5 h-3.5" /> }
+                      ].map((header, idx) => (
+                        <th key={idx} scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <div className="flex items-center gap-2">
+                            {header.icon}
+                            {header.label}
+                          </div>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-50">
                     {getAtendimentosFiltrados()
                       .filter(atendimento => !atendenteExpandido ||
                         atendimento.atendente_nome === atendenteExpandido ||
                         atendimento.coletor_nome === atendenteExpandido
                       )
                       .map((atendimento) => (
-                        <tr key={atendimento.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {atendimento.atendente_nome || 'Não identificado'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600">
-                            {atendimento.coletor_nome || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                            {atendimento.protocolo}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {atendimento.nome}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                            {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                            {formatDate(atendimento.dia_atual)} {formatTime(atendimento.horario)}
+                        <tr key={atendimento.id} className="hover:bg-blue-50/30 transition-colors group">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 mr-3 text-xs font-bold">
+                                {(atendimento.atendente_nome || 'N')[0]}
+                              </div>
+                              <span className="text-sm font-semibold text-slate-700">{atendimento.atendente_nome || 'Não identificado'}</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
-                              atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                                atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                  atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
-                                    atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
-                                      'bg-gray-100 text-gray-800'
+                            {atendimento.coletor_nome ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                                {atendimento.coletor_nome}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-500">
+                            {atendimento.protocolo}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
+                            {atendimento.nome}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
+                            {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            {formatDate(atendimento.dia_atual)} <span className="text-slate-400 mx-1">•</span> {formatTime(atendimento.horario)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-700' :
+                                atendimento.status === 'concluido' ? 'bg-emerald-100 text-emerald-700' :
+                                  atendimento.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                                    atendimento.status === 'ausente' ? 'bg-amber-100 text-amber-700' :
+                                      atendimento.status === 'bloqueado' ? 'bg-slate-200 text-slate-700' :
+                                        'bg-slate-100 text-slate-600'
                               }`}>
-                              {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
+                              {atendimento.status ? atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1) : '-'}
                             </span>
                           </td>
                         </tr>
@@ -546,7 +552,7 @@ export default function RelatoriosPorAtendentePage() {
                 </table>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
