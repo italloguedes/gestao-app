@@ -10,12 +10,12 @@ import {
   FiFilter,
   FiCheckCircle,
   FiXCircle,
-  FiFingerprint,
   FiSearch,
   FiArrowLeft,
   FiClock,
   FiActivity
 } from 'react-icons/fi';
+import { MdFingerprint } from 'react-icons/md';
 
 interface Atendimento {
   id: string;
@@ -276,8 +276,8 @@ export default function RelatoriosPorAtendentePage() {
                 type="button"
                 onClick={toggleFiltroAcao}
                 className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all shadow-sm flex items-center gap-2 ${filtroAcao
-                    ? 'bg-purple-100 text-purple-700 border border-purple-200 ring-2 ring-purple-100 ring-offset-1'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'
+                  ? 'bg-purple-100 text-purple-700 border border-purple-200 ring-2 ring-purple-100 ring-offset-1'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'
                   }`}
               >
                 <FiActivity className={`w-3 h-3 ${filtroAcao ? 'text-purple-600' : 'text-slate-400'}`} />
@@ -381,7 +381,7 @@ export default function RelatoriosPorAtendentePage() {
                     </div>
                     <div className="p-3 bg-indigo-50 rounded-xl">
                       <p className="text-xs text-indigo-600 mb-1 flex items-center gap-1">
-                        <FiFingerprint className="w-3 h-3" /> Coletas
+                        <MdFingerprint className="w-3 h-3" /> Coletas
                       </p>
                       <p className="text-xl font-bold text-indigo-700 font-mono">{stats.coletas}</p>
                     </div>
@@ -453,8 +453,8 @@ export default function RelatoriosPorAtendentePage() {
                   key={chip.label}
                   onClick={() => setStatus(chip.value)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-2 ${status === chip.value
-                      ? chip.color + ' ring-2 ring-offset-2 ring-blue-100 scale-105'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    ? chip.color + ' ring-2 ring-offset-2 ring-blue-100 scale-105'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                 >
                   {chip.label}
@@ -482,7 +482,7 @@ export default function RelatoriosPorAtendentePage() {
                     <tr className="bg-slate-50/80">
                       {[
                         { label: 'Atendente', icon: <FiUsers className="w-3.5 h-3.5" /> },
-                        { label: 'Coletor', icon: <FiFingerprint className="w-3.5 h-3.5" /> },
+                        { label: 'Coletor', icon: <MdFingerprint className="w-3.5 h-3.5" /> },
                         { label: 'Protocolo', icon: null },
                         { label: 'Cliente', icon: null },
                         { label: 'CPF', icon: null },
@@ -537,11 +537,11 @@ export default function RelatoriosPorAtendentePage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-700' :
-                                atendimento.status === 'concluido' ? 'bg-emerald-100 text-emerald-700' :
-                                  atendimento.status === 'cancelado' ? 'bg-red-100 text-red-700' :
-                                    atendimento.status === 'ausente' ? 'bg-amber-100 text-amber-700' :
-                                      atendimento.status === 'bloqueado' ? 'bg-slate-200 text-slate-700' :
-                                        'bg-slate-100 text-slate-600'
+                              atendimento.status === 'concluido' ? 'bg-emerald-100 text-emerald-700' :
+                                atendimento.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                                  atendimento.status === 'ausente' ? 'bg-amber-100 text-amber-700' :
+                                    atendimento.status === 'bloqueado' ? 'bg-slate-200 text-slate-700' :
+                                      'bg-slate-100 text-slate-600'
                               }`}>
                               {atendimento.status ? atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1) : '-'}
                             </span>
