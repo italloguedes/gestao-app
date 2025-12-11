@@ -190,8 +190,8 @@ export default function RelatoriosPorAtendentePage() {
           {/* Mensagens de feedback */}
           {message && (
             <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
-                ? 'bg-green-50 text-green-800 border-green-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+              ? 'bg-green-50 text-green-800 border-green-200'
+              : 'bg-red-50 text-red-800 border-red-200'
               }`}>
               <p className="text-sm font-medium">{message.text}</p>
             </div>
@@ -314,8 +314,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === ''
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Todos
@@ -326,8 +326,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('confirmado')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'confirmado'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Confirmado
@@ -338,8 +338,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('concluido')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'concluido'
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Concluído
@@ -350,8 +350,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('cancelado')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'cancelado'
-                        ? 'bg-red-600 text-white border-red-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Cancelado
@@ -362,8 +362,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('ausente')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'ausente'
-                        ? 'bg-yellow-600 text-white border-yellow-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-yellow-600 text-white border-yellow-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Ausente
@@ -374,8 +374,8 @@ export default function RelatoriosPorAtendentePage() {
                   <button
                     onClick={() => setStatus('bloqueado')}
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'bloqueado'
-                        ? 'bg-gray-600 text-white border-gray-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? 'bg-gray-600 text-white border-gray-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                   >
                     Bloqueado
@@ -426,7 +426,10 @@ export default function RelatoriosPorAtendentePage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {getAtendimentosFiltrados()
-                      .filter(atendimento => !atendenteExpandido || atendimento.atendente_nome === atendenteExpandido)
+                      .filter(atendimento => !atendenteExpandido ||
+                        atendimento.atendente_nome === atendenteExpandido ||
+                        atendimento.coletor_nome === atendenteExpandido
+                      )
                       .map((atendimento) => (
                         <tr key={atendimento.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -449,11 +452,11 @@ export default function RelatoriosPorAtendentePage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
-                                atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                                  atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                    atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
-                                      atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
-                                        'bg-gray-100 text-gray-800'
+                              atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
+                                atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                                  atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
+                                    atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
+                                      'bg-gray-100 text-gray-800'
                               }`}>
                               {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
                             </span>
