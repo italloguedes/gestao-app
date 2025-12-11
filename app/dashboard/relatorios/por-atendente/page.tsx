@@ -17,6 +17,8 @@ interface Atendimento {
   solicitante: string;
   atendente_nome: string;
   usuario_id: string;
+  coletor_nome?: string;
+  fotos_coletadas?: boolean;
 }
 
 interface AtendenteStats {
@@ -24,6 +26,7 @@ interface AtendenteStats {
   total: number;
   concluidos: number;
   cancelados: number;
+  coletas: number;
   atendimentos: Atendimento[];
 }
 
@@ -94,30 +97,46 @@ export default function RelatoriosPorAtendentePage() {
         return;
       }
 
-      // Processar dados por atendente
-      const atendentesMap = new Map<string, AtendenteStats>();
+      // Processar dados por atendente (unificando Atendente e Coletor)
+      const pessoasMap = new Map<string, AtendenteStats>();
 
-      atendimentos.forEach((atendimento: any) => {
-        const atendenteNome = atendimento.atendente_nome || 'Não identificado';
-
-        if (!atendentesMap.has(atendenteNome)) {
-          atendentesMap.set(atendenteNome, {
-            nome: atendenteNome,
+      const getOrInitStats = (nome: string) => {
+        if (!pessoasMap.has(nome)) {
+          pessoasMap.set(nome, {
+            nome: nome,
             total: 0,
             concluidos: 0,
             cancelados: 0,
+            coletas: 0,
             atendimentos: []
           });
         }
+        return pessoasMap.get(nome)!;
+      };
 
-        const stats = atendentesMap.get(atendenteNome)!;
-        stats.total++;
-        if (atendimento.status === 'concluido') stats.concluidos++;
-        if (atendimento.status === 'cancelado') stats.cancelados++;
-        stats.atendimentos.push(atendimento);
+      atendimentos.forEach((atendimento: any) => {
+        // Processar Atendente
+        if (atendimento.atendente_nome) {
+          const stats = getOrInitStats(atendimento.atendente_nome);
+          stats.total++;
+          if (atendimento.status === 'concluido') stats.concluidos++;
+          if (atendimento.status === 'cancelado') stats.cancelados++;
+          stats.atendimentos.push(atendimento);
+        }
+
+        // Processar Coletor (incrementar apenas contagem de coletas)
+        if (atendimento.coletor_nome && atendimento.fotos_coletadas) {
+          const stats = getOrInitStats(atendimento.coletor_nome);
+          stats.coletas++;
+          // Não adicionamos ao array de atendimentos aqui para não duplicar na visualização,
+          // pois o atendimento já foi adicionado pelo atendente_nome.
+          // Se o coletor for diferente do atendente, ele aparecerá na lista de cards mas os detalhes
+          // mostrarão apenas os atendimentos onde ele foi o ATENDENTE principal,
+          // mas o contador de coletas estará correto.
+        }
       });
 
-      const statsArray = Array.from(atendentesMap.values());
+      const statsArray = Array.from(pessoasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
       setAtendenteStats(statsArray);
       setAtendimentosData(atendimentos);
 
@@ -129,7 +148,7 @@ export default function RelatoriosPorAtendentePage() {
       setStatusCounts(counts);
 
       setMessage({
-        text: `Relatório gerado com sucesso! Total: ${atendimentos.length} atendimentos de ${statsArray.length} atendente(s)`,
+        text: `Relatório gerado com sucesso! ${atendimentos.length} registros processados.`,
         type: 'success'
       });
 
@@ -158,7 +177,7 @@ export default function RelatoriosPorAtendentePage() {
             Atendimentos por Atendente
           </h1>
           <p className="text-sm text-gray-600">
-            Visualize métricas e desempenho individual dos atendentes
+            Visualize métricas e desempenho individual dos atendentes e coletores
           </p>
         </div>
 
@@ -170,11 +189,10 @@ export default function RelatoriosPorAtendentePage() {
 
           {/* Mensagens de feedback */}
           {message && (
-            <div className={`mx-6 mt-4 p-4 border rounded-lg ${
-              message.type === 'success'
+            <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
                 ? 'bg-green-50 text-green-800 border-green-200'
                 : 'bg-red-50 text-red-800 border-red-200'
-            }`}>
+              }`}>
               <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
@@ -244,17 +262,21 @@ export default function RelatoriosPorAtendentePage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{stats.nome}</h3>
-                      <p className="text-sm text-gray-500 mt-1">Atendente</p>
+                      <p className="text-sm text-gray-500 mt-1">Colaborador</p>
                     </div>
-                    <div className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-mono font-semibold">
-                      {stats.total}
+                    <div className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-mono font-semibold">
+                      Rank #{atendenteStats.indexOf(stats) + 1}
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Total de Atendimentos</span>
+                      <span className="text-sm text-gray-600">Atendimentos</span>
                       <span className="text-sm font-mono font-semibold text-gray-900">{stats.total}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Coletas</span>
+                      <span className="text-sm font-mono font-semibold text-purple-600">{stats.coletas}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Concluídos</span>
@@ -272,12 +294,14 @@ export default function RelatoriosPorAtendentePage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
-                    className="mt-4 w-full px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
-                  >
-                    {atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}
-                  </button>
+                  {stats.total > 0 && (
+                    <button
+                      onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
+                      className="mt-4 w-full px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
+                    >
+                      {atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -289,11 +313,10 @@ export default function RelatoriosPorAtendentePage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setStatus('')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === ''
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === ''
                         ? 'bg-emerald-600 text-white border-emerald-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Todos
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -302,11 +325,10 @@ export default function RelatoriosPorAtendentePage() {
                   </button>
                   <button
                     onClick={() => setStatus('confirmado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === 'confirmado'
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'confirmado'
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Confirmado
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -315,11 +337,10 @@ export default function RelatoriosPorAtendentePage() {
                   </button>
                   <button
                     onClick={() => setStatus('concluido')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === 'concluido'
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'concluido'
                         ? 'bg-green-600 text-white border-green-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Concluído
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -328,11 +349,10 @@ export default function RelatoriosPorAtendentePage() {
                   </button>
                   <button
                     onClick={() => setStatus('cancelado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === 'cancelado'
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'cancelado'
                         ? 'bg-red-600 text-white border-red-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Cancelado
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -341,11 +361,10 @@ export default function RelatoriosPorAtendentePage() {
                   </button>
                   <button
                     onClick={() => setStatus('ausente')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === 'ausente'
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'ausente'
                         ? 'bg-yellow-600 text-white border-yellow-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Ausente
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -354,11 +373,10 @@ export default function RelatoriosPorAtendentePage() {
                   </button>
                   <button
                     onClick={() => setStatus('bloqueado')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      status === 'bloqueado'
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'bloqueado'
                         ? 'bg-gray-600 text-white border-gray-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Bloqueado
                     <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -373,7 +391,7 @@ export default function RelatoriosPorAtendentePage() {
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="border-b border-gray-200 px-6 py-4">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Atendimentos
+                  Detalhes dos Atendimentos
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     ({getAtendimentosFiltrados().length} registros)
                   </span>
@@ -385,6 +403,9 @@ export default function RelatoriosPorAtendentePage() {
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Atendente
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Coleta Por
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Protocolo
@@ -411,6 +432,9 @@ export default function RelatoriosPorAtendentePage() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {atendimento.atendente_nome || 'Não identificado'}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600">
+                            {atendimento.coletor_nome || '-'}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
                             {atendimento.protocolo}
                           </td>
@@ -424,14 +448,13 @@ export default function RelatoriosPorAtendentePage() {
                             {formatDate(atendimento.dia_atual)} {formatTime(atendimento.horario)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
-                              atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
-                              atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                              atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                              atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
-                              atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
+                                atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
+                                  atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                                    atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
+                                      atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
+                                        'bg-gray-100 text-gray-800'
+                              }`}>
                               {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
                             </span>
                           </td>

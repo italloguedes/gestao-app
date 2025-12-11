@@ -272,12 +272,26 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
+      // Buscar nome do usuário atual se não estiver disponível
+      let coletorNome = user?.user_metadata?.name;
+
+      if (!coletorNome) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('auth_id', user?.id)
+          .single();
+        coletorNome = userData?.name || 'Não identificado';
+      }
+
       // Atualizar atendimento: fotos coletadas e voltar status
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
           fotos_coletadas: true,
-          status: 'em_andamento'  // Volta para status normal (coleta concluída)
+          status: 'em_andamento',  // Volta para status normal (coleta concluída)
+          coletor_id: user?.id,
+          coletor_nome: coletorNome
         })
         .eq('id', chamadaAtual.atendimento_id);
 
