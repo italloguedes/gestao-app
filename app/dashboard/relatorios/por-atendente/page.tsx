@@ -37,6 +37,7 @@ export default function RelatoriosPorAtendentePage() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [status, setStatus] = useState('');
+  const [filtroAcao, setFiltroAcao] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [atendimentosData, setAtendimentosData] = useState<Atendimento[]>([]);
   const [atendenteStats, setAtendenteStats] = useState<AtendenteStats[]>([]);
@@ -54,8 +55,33 @@ export default function RelatoriosPorAtendentePage() {
     return timeString.substring(0, 5);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const setDateRange = (range: 'hoje' | 'semana' | 'mes') => {
+    const hoje = new Date();
+    const dataFimStr = hoje.toISOString().split('T')[0];
+    let dataInicioStr = '';
+
+    if (range === 'hoje') {
+      dataInicioStr = dataFimStr;
+    } else if (range === 'semana') {
+      const semanaPassada = new Date(hoje);
+      semanaPassada.setDate(hoje.getDate() - 7);
+      dataInicioStr = semanaPassada.toISOString().split('T')[0];
+    } else if (range === 'mes') {
+      const mesPassado = new Date(hoje);
+      mesPassado.setMonth(hoje.getMonth() - 1);
+      dataInicioStr = mesPassado.toISOString().split('T')[0];
+    }
+
+    setDataInicio(dataInicioStr);
+    setDataFim(dataFimStr);
+  };
+
+  const toggleFiltroAcao = () => {
+    setFiltroAcao(!filtroAcao);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setMessage(null);
 
@@ -80,6 +106,11 @@ export default function RelatoriosPorAtendentePage() {
         .gte('dia_atual', dataInicioAjustada)
         .lte('dia_atual', dataFimAjustada);
 
+      // Se filtro por ação estiver ativado, usar ilike para buscar 'acao' no solicitante
+      if (filtroAcao) {
+        query = query.ilike('solicitante', '%acao%');
+      }
+
       query = query.order('atendente_nome', { ascending: true })
         .order('dia_atual', { ascending: true })
         .order('horario', { ascending: true });
@@ -94,6 +125,9 @@ export default function RelatoriosPorAtendentePage() {
 
       if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Nenhum atendimento encontrado no período selecionado', type: 'error' });
+        setAtendenteStats([]); // Limpar stats anteriores se não houver resultados
+        setAtendimentosData([]);
+        setStatusCounts({});
         return;
       }
 
@@ -128,11 +162,7 @@ export default function RelatoriosPorAtendentePage() {
         if (atendimento.coletor_nome && atendimento.fotos_coletadas) {
           const stats = getOrInitStats(atendimento.coletor_nome);
           stats.coletas++;
-          // Não adicionamos ao array de atendimentos aqui para não duplicar na visualização,
-          // pois o atendimento já foi adicionado pelo atendente_nome.
-          // Se o coletor for diferente do atendente, ele aparecerá na lista de cards mas os detalhes
-          // mostrarão apenas os atendimentos onde ele foi o ATENDENTE principal,
-          // mas o contador de coletas estará correto.
+          // Não adicionamos ao array de atendimentos aqui para não duplicar mas o filtro de tabela cuidará da exibição
         }
       });
 
@@ -168,6 +198,16 @@ export default function RelatoriosPorAtendentePage() {
     return atendimentosData.filter(a => a.status === status);
   };
 
+  // Efeito para recarregar quando o filtro de ação muda (se já houver datas)
+  useEffect(() => {
+    if (dataInicio && dataFim && !loading) {
+      // Opcional: Auto-submit ou deixar usuário clicar?
+      // Usuário geralmente espera atualização ao clicar no filtro, mas como é um formulário, 
+      // talvez seja melhor deixar explícito. Porém, para "Atalhos de data", faz sentido atualizar.
+      // Para simplificar, vou deixar o usuário clicar em "Gerar" ou implementar auto-submit nos botões de atalho.
+    }
+  }, [filtroAcao]);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 pt-24">
       <div className="max-w-7xl mx-auto">
@@ -183,15 +223,54 @@ export default function RelatoriosPorAtendentePage() {
 
         {/* Formulário de Filtros */}
         <div className="bg-white border border-gray-200 rounded-lg mb-6">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-gray-900">Período</h2>
+          <div className="border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-gray-900">Filtros e Período</h2>
+
+            {/* Atalhos de Data e Ação */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => { setDateRange('hoje'); }}
+                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDateRange('semana'); }}
+                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Última Semana
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDateRange('mes'); }}
+                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Último Mês
+              </button>
+              <div className="h-6 w-px bg-gray-300 mx-1 hidden md:block"></div>
+              <button
+                type="button"
+                onClick={toggleFiltroAcao}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${filtroAcao
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                {filtroAcao ? 'Apenas Ações' : 'Filtrar por Ações'}
+              </button>
+            </div>
           </div>
 
           {/* Mensagens de feedback */}
           {message && (
             <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
-              ? 'bg-green-50 text-green-800 border-green-200'
-              : 'bg-red-50 text-red-800 border-red-200'
+                ? 'bg-green-50 text-green-800 border-green-200'
+                : 'bg-red-50 text-red-800 border-red-200'
               }`}>
               <p className="text-sm font-medium">{message.text}</p>
             </div>
@@ -294,7 +373,7 @@ export default function RelatoriosPorAtendentePage() {
                     </div>
                   </div>
 
-                  {stats.total > 0 && (
+                  {(stats.total > 0 || stats.coletas > 0) && (
                     <button
                       onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
                       className="mt-4 w-full px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
