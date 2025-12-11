@@ -19,7 +19,7 @@ interface CreateAppointmentModalProps {
   selectedDate: string;
   selectedTime?: string;
   occupiedSlots: string[];
-  existingAppointments?: Array<{cpf: string, nome: string}>;
+  existingAppointments?: Array<{ cpf: string, nome: string }>;
 }
 
 export default function CreateAppointmentModal({
@@ -37,7 +37,7 @@ export default function CreateAppointmentModal({
   // hidden default values
   const defaultBirthday = "1900-01-01";
   const defaultEmail = "default@example.com";
-const [preferential, setPreferential] = useState(false);
+  const [preferential, setPreferential] = useState(false);
   const [horario, setHorario] = useState(selectedTime);
   const [errors, setErrors] = useState<{
     nome?: string;
@@ -50,47 +50,45 @@ const [preferential, setPreferential] = useState(false);
     const slots: string[] = [];
     let hora = 7;
     let minuto = 0;
-    const endHour = 20;
-    const endMinute = 20;
+    const endHour = 22;
+    const endMinute = 0;
 
     while (true) {
+      if (hora === endHour && minuto === endMinute) break;
+
       const horaStr = hora.toString().padStart(2, "0");
       const minutoStr = minuto.toString().padStart(2, "0");
       slots.push(`${horaStr}:${minutoStr}`);
-
-      if (hora === endHour && minuto === endMinute) break;
 
       minuto += 5;
       if (minuto >= 60) {
         minuto = 0;
         hora += 1;
       }
-
-      if (hora >= 24) break;
     }
 
     return slots;
   }, []);
 
   const validate = () => {
-      const errs: typeof errors = {};
-      if (!nome.trim()) errs.nome = "Nome é obrigatório";
-      if (!cpf.trim()) errs.cpf = "CPF é obrigatório";
-      else if (!/^\d{11}$/.test(cpf))
-        errs.cpf = "CPF deve ter 11 dígitos sem pontuação";
-      else {
-        // Verificar se já existe um agendamento com o mesmo CPF na mesma data
-        const existingAppointment = existingAppointments.find(app => app.cpf === cpf);
-        if (existingAppointment) {
-          errs.cpf = `Já existe um agendamento para este CPF na data selecionada. Nome: ${existingAppointment.nome}`;
-        }
+    const errs: typeof errors = {};
+    if (!nome.trim()) errs.nome = "Nome é obrigatório";
+    if (!cpf.trim()) errs.cpf = "CPF é obrigatório";
+    else if (!/^\d{11}$/.test(cpf))
+      errs.cpf = "CPF deve ter 11 dígitos sem pontuação";
+    else {
+      // Verificar se já existe um agendamento com o mesmo CPF na mesma data
+      const existingAppointment = existingAppointments.find(app => app.cpf === cpf);
+      if (existingAppointment) {
+        errs.cpf = `Já existe um agendamento para este CPF na data selecionada. Nome: ${existingAppointment.nome}`;
       }
-      if (!telefone.trim()) errs.telefone = "Telefone é obrigatório";
-      else if (!/^\d{10,11}$/.test(telefone))
-        errs.telefone = "Telefone deve ter 10 ou 11 dígitos";
-      if (!horario) errs.horario = "Horário é obrigatório";
-      setErrors(errs);
-      return Object.keys(errs).length === 0;
+    }
+    if (!telefone.trim()) errs.telefone = "Telefone é obrigatório";
+    else if (!/^\d{10,11}$/.test(telefone))
+      errs.telefone = "Telefone deve ter 10 ou 11 dígitos";
+    if (!horario) errs.horario = "Horário é obrigatório";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,9 +136,8 @@ const [preferential, setPreferential] = useState(false);
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.nome ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.nome ? "border-red-300" : "border-gray-300"
+                  }`}
                 placeholder="Digite o nome completo"
               />
             </div>
@@ -156,14 +153,13 @@ const [preferential, setPreferential] = useState(false);
             <div className="relative">
               <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
-                  type="text"
-                  value={cpf}
-                  onChange={(e) => setCpf(e.target.value)}
-                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.cpf ? "border-red-300" : "border-gray-300"
+                type="text"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.cpf ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="00000000000"
-                  maxLength={11}
+                placeholder="00000000000"
+                maxLength={11}
               />
             </div>
             {errors.cpf && (
@@ -178,14 +174,13 @@ const [preferential, setPreferential] = useState(false);
             <div className="relative">
               <FiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
-                  type="text"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.telefone ? "border-red-300" : "border-gray-300"
+                type="text"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.telefone ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="00000000000"
-                  maxLength={11}
+                placeholder="00000000000"
+                maxLength={11}
               />
             </div>
             {errors.telefone && (
@@ -219,9 +214,8 @@ const [preferential, setPreferential] = useState(false);
               <select
                 value={horario}
                 onChange={(e) => setHorario(e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.horario ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.horario ? "border-red-300" : "border-gray-300"
+                  }`}
               >
                 <option value="">Selecione um horário</option>
                 {HORARIOS.filter((slot) => !occupiedSlots.includes(slot)).map(
