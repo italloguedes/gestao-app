@@ -153,10 +153,17 @@ export default function AgendamentosHojePage() {
 
   const handleCreateAppointment = async (newAppointment: any) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("Sessão expirada. Por favor, faça login novamente.");
+      }
+
       const response = await fetch("/api/agendamentos", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
         },
         body: JSON.stringify(newAppointment),
       });
