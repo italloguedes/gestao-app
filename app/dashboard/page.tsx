@@ -420,40 +420,41 @@ export default function DashboardPage() {
       />
 
       {/* Hero Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-gray-200/50">
+      {/* Hero Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pb-2 border-b border-gray-200/50">
         <div>
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Painel de Controle</h1>
-          <p className="mt-2 text-lg text-gray-600 font-medium">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Painel de Controle</h1>
+          <p className="mt-1 text-base text-gray-600 font-medium">
             Bem-vindo de volta, <span className="text-emerald-600">{user?.email?.split('@')[0]}</span>
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <div className="relative group flex-1 sm:w-80">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+              <FiSearch className="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
             </div>
             <Input
               type="text"
               placeholder="Buscar atendimento..."
-              className="pl-10 h-12 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md"
+              className="pl-9 h-10 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl shadow-sm transition-all duration-300 hover:shadow-md text-sm"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               onKeyDown={handleGlobalSearch}
             />
           </div>
           <Button
-            className="h-12 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold px-6"
+            className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-200 hover:shadow-lg transition-all duration-300 font-semibold px-5 text-sm"
             onClick={() => setShowNovoAtendimentoModal(true)}
           >
-            <FiPlus className="mr-2 h-5 w-5" />
+            <FiPlus className="mr-1.5 h-4 w-4" />
             Novo Atendimento
           </Button>
         </div>
       </div>
 
       {/* Stats Section */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         <TodayStats
           total={todayStats.total}
           confirmados={todayStats.confirmados}
@@ -464,66 +465,67 @@ export default function DashboardPage() {
         <DashboardStats stats={stats} loading={loading} />
       </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
-        {/* Main Column */}
-        <div className="lg:col-span-2 space-y-8">
-          <RecentAtendimentos
-            atendimentos={recentAtendimentos}
-            loading={loading}
-            onEdit={handleEditAtendimento}
-          />
-        </div>
+      {/* Content Grid - Swapped Order for Left Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 pb-8">
 
-        {/* Sidebar Column */}
-        <div className="space-y-8">
+        {/* Sidebar Column (Left) - Takes 1/4 space */}
+        <div className="space-y-6 lg:col-span-1">
           {/* Quick Actions Card */}
-          <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-              <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">
-                <FiCheckCircle className="h-6 w-6" />
+          <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                <FiCheckCircle className="h-5 w-5" />
               </div>
               Ações Rápidas
             </h2>
-            <div className="space-y-4">
-              <QuickAction href="/dashboard/coleta-digitais" color="border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100" icon={<MdFingerprint className="h-6 w-6" />}>
+            <div className="space-y-3">
+              <QuickAction href="/dashboard/coleta-digitais" color="border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100" icon={<MdFingerprint className="h-5 w-5" />}>
                 Fila de Coleta
               </QuickAction>
 
-              <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-200 text-blue-800 bg-blue-50 hover:bg-blue-100" icon={<FiRefreshCw className="h-6 w-6" />}>
+              <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-200 text-blue-800 bg-blue-50 hover:bg-blue-100" icon={<FiRefreshCw className="h-5 w-5" />}>
                 Atualizar CIN
               </QuickAction>
 
-              <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-200 text-red-800 bg-red-50 hover:bg-red-100" icon={<FiAlertTriangle className="h-6 w-6" />}>
+              <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-200 text-red-800 bg-red-50 hover:bg-red-100" icon={<FiAlertTriangle className="h-5 w-5" />}>
                 Ver Correções
               </QuickAction>
 
               <Button
-                className="w-full justify-start h-auto py-4 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl transition-all duration-300 group"
+                className="w-full justify-start h-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition-all duration-300 group"
                 variant="ghost"
                 onClick={() => setShowEntregarCinModal(true)}
               >
-                <div className="bg-emerald-200 p-2 rounded-xl mr-4 group-hover:scale-110 transition-transform">
-                  <FiCheckCircle className="h-6 w-6 text-emerald-800" />
+                <div className="bg-emerald-200 p-1.5 rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                  <FiCheckCircle className="h-5 w-5 text-emerald-800" />
                 </div>
-                <span className="font-bold text-lg">Entregar CIN</span>
+                <span className="font-bold text-sm">Entregar CIN</span>
               </Button>
             </div>
           </div>
 
           {/* Help Card */}
-          <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-[2rem] shadow-xl p-8 text-white relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden group">
             <div className="relative z-10">
-              <h3 className="text-2xl font-bold mb-3">Precisa de ajuda?</h3>
-              <p className="text-emerald-100 mb-6 leading-relaxed">Confira o manual completo do sistema ou entre em contato com nossa equipe de suporte.</p>
-              <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full h-12 rounded-xl font-bold shadow-lg">
+              <h3 className="text-xl font-bold mb-2">Ajuda?</h3>
+              <p className="text-emerald-100 mb-4 text-sm leading-relaxed">Confira o manual ou contate o suporte.</p>
+              <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full h-10 rounded-xl font-bold text-sm shadow-md">
                 Ver Documentação
               </Button>
             </div>
             {/* Abstract Shapes */}
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity duration-500"></div>
-            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-emerald-400 opacity-20 rounded-full blur-2xl group-hover:opacity-30 transition-opacity duration-500"></div>
+            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-opacity duration-500"></div>
+            <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-24 h-24 bg-emerald-400 opacity-20 rounded-full blur-xl group-hover:opacity-30 transition-opacity duration-500"></div>
           </div>
+        </div>
+
+        {/* Main Column (Right) - Takes 3/4 space */}
+        <div className="lg:col-span-3 space-y-6">
+          <RecentAtendimentos
+            atendimentos={recentAtendimentos}
+            loading={loading}
+            onEdit={handleEditAtendimento}
+          />
         </div>
       </div>
     </div>
