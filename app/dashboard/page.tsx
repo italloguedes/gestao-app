@@ -58,6 +58,7 @@ interface AtendimentoEntrega extends Atendimento {
 }
 
 import TodayStats from './components/TodayStats';
+import DashboardCharts from '@/components/dashboard/DashboardCharts';
 
 // ... existing imports
 
@@ -463,6 +464,9 @@ export default function DashboardPage() {
         />
         <DashboardStats stats={stats} loading={loading} />
       </div>
+
+      {/* Charts & Analytics Section */}
+      <DashboardCharts />
 
       {/* Content Grid - Swapped Order for Left Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 pb-6">
