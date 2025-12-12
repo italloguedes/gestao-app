@@ -110,7 +110,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="bg-white/95 backdrop-blur-lg shadow-lg fixed top-0 left-0 right-0 z-50 border-b-2 border-gray-200/50">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo e navegação principal */}
           <div className="flex items-center">
@@ -166,7 +166,7 @@ export default function DashboardHeader() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="py-2 px-2">
                     <button
                       onClick={() => {
@@ -259,7 +259,7 @@ export default function DashboardHeader() {
           </div>
         )}
       </div>
-      
+
       {/* Modal de Perfil */}
       <UserProfileModal
         show={showProfileModal}
