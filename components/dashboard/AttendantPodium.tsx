@@ -27,13 +27,6 @@ export default function AttendantPodium() {
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             const dateStr = sevenDaysAgo.toISOString().split('T')[0];
 
-            // Fetch Users
-            const { data: users, error: usersError } = await supabase
-                .from('users')
-                .select('id, auth_id, name');
-
-            if (usersError) throw usersError;
-
             // Fetch Atendimentos (Last 7 days)
             const { data: atendimentos, error: dataError } = await supabase
                 .from('atendimentos')
@@ -42,7 +35,7 @@ export default function AttendantPodium() {
 
             if (dataError) throw dataError;
 
-            processRanking(atendimentos || [], users || []);
+            processRanking(atendimentos || []);
         } catch (error) {
             console.error('Error fetching ranking:', error);
         } finally {
@@ -50,38 +43,39 @@ export default function AttendantPodium() {
         }
     };
 
-    const processRanking = (atendimentos: any[], users: any[]) => {
+    const processRanking = (atendimentos: any[]) => {
         const userStats = new Map<string, { name: string, atendimentos: number, coletas: number }>();
 
-        const userIdToName = new Map<string, string>();
-        const authIdToName = new Map<string, string>();
-
-        users.forEach(u => {
-            userIdToName.set(u.id, u.name);
-            if (u.auth_id) authIdToName.set(u.auth_id, u.name);
-        });
+        const getOrInitStats = (nome: string) => {
+            if (!userStats.has(nome)) {
+                userStats.set(nome, {
+                    name: nome,
+                    atendimentos: 0,
+                    coletas: 0
+                });
+            }
+            return userStats.get(nome)!;
+        };
 
         atendimentos.forEach(a => {
-            // Count Created By (usuario_id)
-            const creatorId = a.usuario_id;
-            const creatorName = authIdToName.get(creatorId) || userIdToName.get(creatorId) || a.atendente_nome || 'Desconhecido';
+            // Count Created By (atendente_nome)
+            if (a.atendente_nome) {
+                const stats = getOrInitStats(a.atendente_nome);
+                stats.atendimentos++;
+            }
 
-            if (!userStats.has(creatorName)) userStats.set(creatorName, { name: creatorName, atendimentos: 0, coletas: 0 });
-            userStats.get(creatorName)!.atendimentos++;
-
-            // Count Collected By (coletor_id)
-            if (a.coletor_id) {
-                const coletorId = a.coletor_id;
-                const coletorName = authIdToName.get(coletorId) || userIdToName.get(coletorId) || a.coletor_nome || 'Desconhecido';
-
-                if (!userStats.has(coletorName)) userStats.set(coletorName, { name: coletorName, atendimentos: 0, coletas: 0 });
-                userStats.get(coletorName)!.coletas++;
+            // Count Collected By (coletor_nome) ONLY if fotos_coletadas is true
+            if (a.coletor_nome && a.fotos_coletadas) {
+                const stats = getOrInitStats(a.coletor_nome);
+                stats.coletas++;
             }
         });
 
-        // Filter out "Desconhecido" and "Não identificado" if preferred, or keep them to show data gaps
+        // Filter out unwanted names
+        const ignoredNames = ['Desconhecido', 'Não identificado', 'Super Administrador'];
+
         const sortedRanking = Array.from(userStats.values())
-            .filter(u => u.name !== 'Desconhecido' && u.name !== 'Não identificado' && u.name !== 'Super Administrador')
+            .filter(u => !ignoredNames.includes(u.name))
             .map(u => ({
                 ...u,
                 score: u.atendimentos + u.coletas
