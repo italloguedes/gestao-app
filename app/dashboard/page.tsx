@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 // DashboardHeader import removed (handled by layout)
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
 import SignaturePadCanvas from '@/components/SignaturePadCanvas';
 import ModoEntregaModal from '@/components/ModoEntregaModal';
-import DashboardStats from '@/components/dashboard/DashboardStats';
+
 import RecentAtendimentos from '@/components/dashboard/RecentAtendimentos';
 import QuickAction from '@/components/dashboard/QuickAction';
 import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
@@ -462,7 +463,19 @@ export default function DashboardPage() {
           preferenciais={todayStats.preferenciais}
           loading={loading}
         />
-        <DashboardStats stats={stats} loading={loading} />
+
+        {/* Banner Institucional */}
+        <div className="w-full h-32 sm:h-40 relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 group">
+          <Image
+            src="/banner-dashboard.png"
+            alt="Banner Cidadania e Inclusão"
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            priority
+            quality={100}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/10 to-transparent pointer-events-none"></div>
+        </div>
       </div>
 
       {/* 3-Column Main Grid */}
