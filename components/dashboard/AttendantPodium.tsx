@@ -31,7 +31,7 @@ export default function AttendantPodium() {
             const { data: atendimentos, error: dataError } = await supabase
                 .from('atendimentos')
                 .select('*')
-                .gte('created_at', dateStr);
+                .gte('dia_atual', dateStr);
 
             if (dataError) throw dataError;
 
