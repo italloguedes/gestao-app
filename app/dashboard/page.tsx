@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
-import DashboardHeader from '@/components/DashboardHeader';
+// DashboardHeader import removed (handled by layout)
 import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
 import SignaturePadCanvas from '@/components/SignaturePadCanvas';
@@ -344,9 +344,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <DashboardHeader />
-
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Modals */}
       <EntregarCinModal
         show={showEntregarCinModal}
@@ -421,104 +419,113 @@ export default function DashboardPage() {
         recipientName={nomeRecebedor}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
-        {/* Header Section with Search */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Painel de Controle</h1>
-            <p className="text-gray-500 mt-1">Bem-vindo de volta, {user?.email}</p>
-          </div>
+      {/* Hero Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-gray-200/50">
+        <div>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Painel de Controle</h1>
+          <p className="mt-2 text-lg text-gray-600 font-medium">
+            Bem-vindo de volta, <span className="text-emerald-600">{user?.email?.split('@')[0]}</span>
+          </p>
+        </div>
 
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-80">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                type="text"
-                placeholder="Buscar atendimento (Nome ou CPF)..."
-                className="pl-10 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl shadow-sm"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                onKeyDown={handleGlobalSearch}
-              />
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+          <div className="relative group flex-1 sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiSearch className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm shadow-emerald-200" onClick={() => setShowNovoAtendimentoModal(true)}>
-              <FiPlus className="mr-2 h-5 w-5" />
-              Novo Atendimento
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-          <TodayStats
-            total={todayStats.total}
-            confirmados={todayStats.confirmados}
-            concluidos={todayStats.concluidos}
-            preferenciais={todayStats.preferenciais}
-            loading={loading}
-          />
-          <DashboardStats stats={stats} loading={loading} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content Area - Recent Atendimentos */}
-          <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-            <RecentAtendimentos
-              atendimentos={recentAtendimentos}
-              loading={loading}
-              onEdit={handleEditAtendimento}
+            <Input
+              type="text"
+              placeholder="Buscar atendimento..."
+              className="pl-10 h-12 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              onKeyDown={handleGlobalSearch}
             />
           </div>
+          <Button
+            className="h-12 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold px-6"
+            onClick={() => setShowNovoAtendimentoModal(true)}
+          >
+            <FiPlus className="mr-2 h-5 w-5" />
+            Novo Atendimento
+          </Button>
+        </div>
+      </div>
 
-          {/* Sidebar Area - Quick Actions */}
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
-            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <FiCheckCircle className="text-emerald-500" />
-                Ações Rápidas
-              </h2>
-              <div className="space-y-3">
-                <QuickAction href="/dashboard/coleta-digitais" color="border-amber-500 text-amber-700 bg-amber-50/50" icon={<MdFingerprint className="h-5 w-5" />}>
-                  Fila de Coleta
-                </QuickAction>
+      {/* Stats Section */}
+      <div className="space-y-6">
+        <TodayStats
+          total={todayStats.total}
+          confirmados={todayStats.confirmados}
+          concluidos={todayStats.concluidos}
+          preferenciais={todayStats.preferenciais}
+          loading={loading}
+        />
+        <DashboardStats stats={stats} loading={loading} />
+      </div>
 
-                <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-500 text-blue-700 bg-blue-50/50" icon={<FiRefreshCw className="h-5 w-5" />}>
-                  Atualizar CIN
-                </QuickAction>
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+        {/* Main Column */}
+        <div className="lg:col-span-2 space-y-8">
+          <RecentAtendimentos
+            atendimentos={recentAtendimentos}
+            loading={loading}
+            onEdit={handleEditAtendimento}
+          />
+        </div>
 
-                <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-500 text-red-700 bg-red-50/50" icon={<FiAlertTriangle className="h-5 w-5" />}>
-                  Ver Correções
-                </QuickAction>
-
-                <Button
-                  className="w-full justify-start h-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl"
-                  variant="ghost"
-                  onClick={() => setShowEntregarCinModal(true)}
-                >
-                  <div className="bg-emerald-200 p-1.5 rounded-lg mr-3">
-                    <FiCheckCircle className="h-5 w-5 text-emerald-800" />
-                  </div>
-                  <span className="font-medium">Entregar CIN</span>
-                </Button>
+        {/* Sidebar Column */}
+        <div className="space-y-8">
+          {/* Quick Actions Card */}
+          <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">
+                <FiCheckCircle className="h-6 w-6" />
               </div>
-            </div>
+              Ações Rápidas
+            </h2>
+            <div className="space-y-4">
+              <QuickAction href="/dashboard/coleta-digitais" color="border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100" icon={<MdFingerprint className="h-6 w-6" />}>
+                Fila de Coleta
+              </QuickAction>
 
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl shadow-lg p-6 text-white relative overflow-hidden">
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-2">Precisa de ajuda?</h3>
-                <p className="text-emerald-100 text-sm mb-4">Confira o manual do sistema ou entre em contato com o suporte.</p>
-                <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full">
-                  Ver Documentação
-                </Button>
-              </div>
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-              <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-emerald-400 opacity-20 rounded-full blur-xl"></div>
+              <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-200 text-blue-800 bg-blue-50 hover:bg-blue-100" icon={<FiRefreshCw className="h-6 w-6" />}>
+                Atualizar CIN
+              </QuickAction>
+
+              <QuickAction href="/dashboard/atendimentos/correcoes" color="border-red-200 text-red-800 bg-red-50 hover:bg-red-100" icon={<FiAlertTriangle className="h-6 w-6" />}>
+                Ver Correções
+              </QuickAction>
+
+              <Button
+                className="w-full justify-start h-auto py-4 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl transition-all duration-300 group"
+                variant="ghost"
+                onClick={() => setShowEntregarCinModal(true)}
+              >
+                <div className="bg-emerald-200 p-2 rounded-xl mr-4 group-hover:scale-110 transition-transform">
+                  <FiCheckCircle className="h-6 w-6 text-emerald-800" />
+                </div>
+                <span className="font-bold text-lg">Entregar CIN</span>
+              </Button>
             </div>
           </div>
+
+          {/* Help Card */}
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-[2rem] shadow-xl p-8 text-white relative overflow-hidden group">
+            <div className="relative z-10">
+              <h3 className="text-2xl font-bold mb-3">Precisa de ajuda?</h3>
+              <p className="text-emerald-100 mb-6 leading-relaxed">Confira o manual completo do sistema ou entre em contato com nossa equipe de suporte.</p>
+              <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full h-12 rounded-xl font-bold shadow-lg">
+                Ver Documentação
+              </Button>
+            </div>
+            {/* Abstract Shapes */}
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity duration-500"></div>
+            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-emerald-400 opacity-20 rounded-full blur-2xl group-hover:opacity-30 transition-opacity duration-500"></div>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
