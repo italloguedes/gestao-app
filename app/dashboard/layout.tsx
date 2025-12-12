@@ -15,9 +15,9 @@ export default function DashboardLayout({
 }) {
   return (
     <DashboardGuard>
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-gray-100">
         <DashboardNav />
-        <main className="pt-20 pb-8">
+        <main className="pt-20 pb-6">
           <div className="w-full px-4 sm:px-6 lg:px-8">
             {children}
           </div>

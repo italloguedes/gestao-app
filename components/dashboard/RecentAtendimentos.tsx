@@ -51,74 +51,74 @@ const formatDate = (dateString: string) => {
 
 export default function RecentAtendimentos({ atendimentos, loading, onEdit }: RecentAtendimentosProps) {
     return (
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gradient-to-r from-white to-gray-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                        <FiClock className="h-5 w-5" />
+                    <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                        <FiClock className="h-4 w-4" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-800">Atendimentos Recentes</h2>
-                        <p className="text-xs text-gray-500 font-medium">Últimas atualizações</p>
+                        <h2 className="text-base font-bold text-gray-800 leading-tight">Atendimentos Recentes</h2>
+                        <p className="text-[11px] text-gray-500 font-medium">Últimas atualizações</p>
                     </div>
                 </div>
                 <Link
                     href="/dashboard/atendimentos"
-                    className="group flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                    className="group flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-all duration-200"
                 >
                     Ver todos
-                    <FiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    <FiArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                 </Link>
             </div>
 
-            <div className="flex-1 overflow-auto p-2">
+            <div className="flex-1 overflow-auto p-1">
                 {loading ? (
                     <div className="space-y-2 p-2">
                         {[...Array(5)].map((_, i) => (
-                            <div key={i} className="h-16 bg-gray-50 rounded-xl animate-pulse border border-gray-100"></div>
+                            <div key={i} className="h-14 bg-gray-50 rounded-lg animate-pulse border border-gray-100"></div>
                         ))}
                     </div>
                 ) : atendimentos.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                        <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                            <FiClock className="h-8 w-8 text-gray-300" />
+                    <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                        <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                            <FiClock className="h-6 w-6 text-gray-300" />
                         </div>
-                        <p className="font-medium text-gray-500">Nenhum atendimento recente</p>
+                        <p className="text-sm font-medium text-gray-500">Nenhum atendimento recente</p>
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         {atendimentos.map((atendimento) => (
                             <div
                                 key={atendimento.id}
                                 onClick={() => onEdit(atendimento)}
-                                className="group flex items-center justify-between p-4 rounded-xl hover:bg-blue-50/50 border border-transparent hover:border-blue-100 cursor-pointer transition-all duration-200"
+                                className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer transition-all duration-200"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${atendimento.nome ? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600' : 'bg-gray-100'
+                                <div className="flex items-center gap-3">
+                                    <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold ${atendimento.nome ? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600' : 'bg-gray-100'
                                         }`}>
                                         {atendimento.nome ? atendimento.nome.charAt(0).toUpperCase() : <FiUser />}
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                        <h3 className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
                                             {atendimento.nome}
                                         </h3>
-                                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                                        <div className="flex items-center gap-2 text-[11px] text-gray-500">
                                             <span className="flex items-center gap-1">
                                                 <FiCalendar className="h-3 w-3" />
                                                 {formatDate(atendimento.dia_atual)}
                                             </span>
-                                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
                                             <span className="font-mono">{atendimento.protocolo}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(atendimento.status)}`}>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(atendimento.status)}`}>
                                         {atendimento.status}
                                     </span>
-                                    <div className="h-8 w-8 rounded-full flex items-center justify-center text-gray-300 group-hover:text-blue-600 group-hover:bg-blue-100 transition-all">
-                                        <FiChevronRight className="h-5 w-5" />
+                                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-gray-300 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all">
+                                        <FiChevronRight className="h-4 w-4" />
                                     </div>
                                 </div>
                             </div>
