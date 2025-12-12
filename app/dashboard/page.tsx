@@ -58,7 +58,7 @@ interface AtendimentoEntrega extends Atendimento {
 }
 
 import TodayStats from './components/TodayStats';
-import DashboardCharts from '@/components/dashboard/DashboardCharts';
+import AttendantPodium from '@/components/dashboard/AttendantPodium';
 
 // ... existing imports
 
@@ -465,15 +465,11 @@ export default function DashboardPage() {
         <DashboardStats stats={stats} loading={loading} />
       </div>
 
-      {/* Charts & Analytics Section */}
-      <DashboardCharts />
+      {/* 3-Column Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6 items-start">
 
-      {/* Content Grid - Swapped Order for Left Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 pb-6">
-
-        {/* Sidebar Column (Left) - Takes 1/4 space */}
-        <div className="space-y-4 lg:col-span-1">
-          {/* Quick Actions Card */}
+        {/* 1. Quick Actions (Left) */}
+        <div className="space-y-4 flex flex-col h-full">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
             <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
               <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
@@ -505,31 +501,38 @@ export default function DashboardPage() {
                 <span className="font-bold text-xs">Entregar CIN</span>
               </Button>
             </div>
-          </div>
 
-          {/* Help Card */}
-          <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl shadow-sm p-5 text-white relative overflow-hidden group">
-            <div className="relative z-10">
-              <h3 className="text-lg font-bold mb-1.5">Ajuda?</h3>
-              <p className="text-emerald-100 mb-3 text-xs leading-relaxed">Confira o manual ou contate o suporte.</p>
-              <Button variant="secondary" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none w-full h-8 rounded-lg font-bold text-xs shadow-sm">
-                Ver Documentação
-              </Button>
+            {/* Help Card Integrated */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-xl p-4 text-white relative overflow-hidden group">
+                <div className="relative z-10 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm font-bold">Ajuda?</h3>
+                    <p className="text-emerald-100 text-[10px]">Consulte o manual.</p>
+                  </div>
+                  <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0 h-8 w-8 p-0 rounded-lg shadow-none backdrop-blur-sm">
+                    <FiSearch className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            {/* Abstract Shapes */}
-            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-opacity duration-500"></div>
-            <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-16 h-16 bg-emerald-400 opacity-20 rounded-full blur-xl group-hover:opacity-30 transition-opacity duration-500"></div>
           </div>
         </div>
 
-        {/* Main Column (Right) - Takes 3/4 space */}
-        <div className="lg:col-span-3 space-y-4">
+        {/* 2. Recent Attendances (Middle) */}
+        <div className="space-y-4 flex flex-col h-full">
           <RecentAtendimentos
             atendimentos={recentAtendimentos}
             loading={loading}
             onEdit={handleEditAtendimento}
           />
         </div>
+
+        {/* 3. Attendant Ranking Podium (Right) */}
+        <div className="space-y-4 flex flex-col h-full">
+          <AttendantPodium />
+        </div>
+
       </div>
     </div>
   );
