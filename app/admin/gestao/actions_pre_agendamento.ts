@@ -15,23 +15,28 @@ const getSupabase = async () => {
 // Helper to check if user is admin
 const checkAdmin = async () => {
     const supabase = await getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('Unauthorized');
+
+    // Use getUser instead of getSession for better security and reliability on server
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        console.error('Auth Error:', authError);
+        throw new Error('Unauthorized: User not found');
     }
 
     // Check role in users table
-    const { data: user, error } = await supabase
+    const { data: userData, error } = await supabase
         .from('users')
         .select('role')
-        .eq('auth_id', session.user.id)
+        .eq('auth_id', user.id)
         .single();
 
-    if (error || !user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    if (error || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
         throw new Error('Forbidden: Admin access required');
     }
 
-    return { supabase, session };
+    // mimic session object for compatibility if needed, or just return user
+    return { supabase, session: { user } as any }; // existing code expects session.user.id
 };
 
 // Update generation to accept name
