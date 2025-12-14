@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { approvePreScheduling, rejectPreScheduling } from '../actions_pre_agendamento';
+import { approvePreScheduling, rejectPreScheduling } from '../actions'; // Verify correct path
 import Image from 'next/image';
 import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
 

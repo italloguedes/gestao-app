@@ -1,4 +1,4 @@
-import { getLinks, getPendingRequests } from './actions';
+import { getLinks, getPendingRequests } from './actions_pre_agendamento';
 import LinkManager from './components/LinkManager';
 import RequestList from './components/RequestList';
 import { FiInbox } from 'react-icons/fi';
@@ -6,7 +6,7 @@ import { FiInbox } from 'react-icons/fi';
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
-export default async function AdminGestaoPage() {
+export async function PreAgendamentoGestao() {
   // Parallel fetching
   const [linksRes, requestsRes] = await Promise.all([
     getLinks(),

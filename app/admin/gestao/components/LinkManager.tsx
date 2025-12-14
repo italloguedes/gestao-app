@@ -1,16 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { generateSchedulingLink, getLinks } from '../actions';
+import { generateSchedulingLink, getLinks } from '../actions_pre_agendamento';
 import { FiCopy, FiPlus, FiLink } from 'react-icons/fi';
-// import { showToast } from '@/lib/utils'; // Removed invalid import // Assuming showToast exists or I should make one locally if not exporting
+// import { showToast } from '@/lib/utils'; // Removed invalid import
 
-// Basic Toast fallback if not imported
+// Basic Toast fallback
 const toast = (msg: string, type: 'success' | 'error' = 'success') => {
-    // If you have a toast library, use it. Otherwise, simple alert or custom toast.
-    // I'll assume a simple alert for now or try to use a UI component if known.
-    // The previous file app/agendamento/page.tsx had a local showToast function.
-    // I will use window.alert for simplicity or a simple inline message.
     alert(msg);
 };
 
