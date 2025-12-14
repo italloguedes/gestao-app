@@ -147,13 +147,27 @@ export default function ColetaDigitaisPage() {
         .eq('dia_atual', hoje)
         .eq('status', 'em_andamento')  // Status correto quando atendimento é criado
         .eq('fotos_coletadas', false)
-        .order('atendimento_preferencial', { ascending: false })  // Preferenciais primeiro
-        .order('horario', { ascending: true });  // Depois por horário
+        .order('horario', { ascending: true }); // Ordenar apenas por horário inicialmente
 
       if (error) throw error;
 
+      const rawData = data || [];
+
+      // Separar em duas filas
+      const preferenciais = rawData.filter((a: any) => a.atendimento_preferencial);
+      const normais = rawData.filter((a: any) => !a.atendimento_preferencial);
+
+      // Intercalar: 1 Preferencial, 1 Normal, etc.
+      const filaIntercalada = [];
+      const maxLen = Math.max(preferenciais.length, normais.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        if (i < preferenciais.length) filaIntercalada.push(preferenciais[i]);
+        if (i < normais.length) filaIntercalada.push(normais[i]);
+      }
+
       // Mapear para o formato esperado pela interface
-      const atendimentosMapeados = (data || []).map((atendimento: any) => ({
+      const atendimentosMapeados = filaIntercalada.map((atendimento: any) => ({
         id: atendimento.id,
         nome: atendimento.nome,
         cpf: atendimento.cpf,
