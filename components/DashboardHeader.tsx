@@ -139,9 +139,17 @@ export default function DashboardHeader() {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-3 focus:outline-none group"
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-300 ring-2 ring-emerald-200">
-                  {userInitial}
-                </div>
+                {user?.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt={userDisplayName}
+                    className="w-10 h-10 rounded-xl object-cover shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-300 ring-2 ring-emerald-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-300 ring-2 ring-emerald-200">
+                    {userInitial}
+                  </div>
+                )}
               </button>
 
               {/* Dropdown do usuário */}
@@ -149,9 +157,17 @@ export default function DashboardHeader() {
                 <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 py-2 z-50 animate-fade-in">
                   <div className="px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
-                        {userInitial}
-                      </div>
+                      {user?.user_metadata?.avatar_url ? (
+                        <img
+                          src={user.user_metadata.avatar_url}
+                          alt={userDisplayName}
+                          className="w-12 h-12 rounded-xl object-cover shadow-md"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center font-bold text-xl shadow-md">
+                          {userInitial}
+                        </div>
+                      )}
                       <div className="flex-1">
                         <p className="text-sm font-bold text-gray-900 truncate">{userDisplayName}</p>
                         <p className="text-xs text-gray-600 truncate">{user?.email}</p>
@@ -218,9 +234,17 @@ export default function DashboardHeader() {
               {/* Informações do usuário */}
               <div className="px-3 py-3 border-b border-gray-100 mb-2">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold text-lg">
-                    {userInitial}
-                  </div>
+                  {user?.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt={userDisplayName}
+                      className="w-10 h-10 rounded-full object-cover bg-emerald-100"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold text-lg">
+                      {userInitial}
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm font-medium text-gray-900">{userDisplayName}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
