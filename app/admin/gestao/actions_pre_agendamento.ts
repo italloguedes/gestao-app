@@ -7,45 +7,27 @@ import { redirect } from 'next/navigation';
 
 // Helper to get Supabase client with user context
 const getSupabase = async () => {
-    return createServerActionClient({ cookies });
+    const cookieStore = await cookies();
+    // @ts-ignore: Next 15/16 + AuthHelpers types mismatch workaround
+    return createServerActionClient({ cookies: () => cookieStore });
 };
 
-// Helper to check if user is admin
-const checkAdmin = async () => {
-    const supabase = await getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('Unauthorized');
-    }
+// ... checkAdmin uses getSupabase ...
 
-    // Check role in users table
-    const { data: user, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', session.user.id)
-        .single();
-
-    if (error || !user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-        throw new Error('Forbidden: Admin access required');
-    }
-
-    return { supabase, session };
-};
-
-export async function generateSchedulingLink() {
+// Update generation to accept name
+export async function generateSchedulingLink(nome?: string) {
     try {
         const { supabase, session } = await checkAdmin();
 
-        // Generate a random token (simple implementation, can be more robust)
+        // Generate a random token
         const token = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
 
         const { data, error } = await supabase
             .from('links_agendamento')
             .insert({
                 token,
-                created_by: session.user.id // This might fail if created_by expects uuid from users table or auth.users?
-                // Schema says: created_by UUID REFERENCES auth.users(id)
-                // session.user.id IS auth.users.id. Correct.
+                nome, // Insert the name
+                created_by: session.user.id
             })
             .select()
             .single();
@@ -65,7 +47,7 @@ export async function getLinks() {
         const { supabase } = await checkAdmin();
         const { data, error } = await supabase
             .from('links_agendamento')
-            .select('*, criado_por_user:created_by(email)') // Adjust if users table implies joining
+            .select('*, criado_por_user:created_by(email)')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
