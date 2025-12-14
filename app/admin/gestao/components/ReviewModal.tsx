@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { approvePreScheduling, rejectPreScheduling } from '../actions_pre_agendamento';
 import Image from 'next/image';
 import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
+import { supabase } from '@/lib/supabase-client';
 
 interface Request {
     id: string;
@@ -30,6 +31,9 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
     const [time, setTime] = useState('');
     const [availableTimes, setAvailableTimes] = useState<string[]>([]);
     const [loadingTimes, setLoadingTimes] = useState(false);
+
+    // Rejection state
+    const [rejectionReason, setRejectionReason] = useState('');
 
     useEffect(() => {
         if (date) {
@@ -60,13 +64,22 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
         if (!request) return;
         setLoading(true);
         try {
+            // Get session token
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+                alert('Erro: Sessão inválida. Faça login novamente.');
+                return;
+            }
+
             if (action === 'approve') {
                 if (!date || !time) {
                     alert('Por favor, selecione data e horário.');
                     setLoading(false);
                     return;
                 }
-                const res = await approvePreScheduling(request.id, { data: date, horario: time });
+                const res = await approvePreScheduling(request.id, { data: date, horario: time }, token);
                 if (res.success) {
                     alert('Solicitação aprovada e agendamento criado!');
                     onUpdate();
@@ -75,7 +88,13 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
                     alert('Erro ao aprovar: ' + res.error);
                 }
             } else if (action === 'reject') {
-                const res = await rejectPreScheduling(request.id);
+                if (!rejectionReason.trim()) {
+                    alert('Por favor, informe o motivo da rejeição.');
+                    setLoading(false);
+                    return;
+                }
+
+                const res = await rejectPreScheduling(request.id, rejectionReason, token);
                 if (res.success) {
                     alert('Solicitação rejeitada.');
                     onUpdate();
@@ -101,20 +120,27 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
                 {/* Image Section */}
                 <div className="w-full md:w-1/2 bg-gray-100 p-4 border-r border-gray-200 flex items-center justify-center min-h-[300px]">
                     {request.certidao_url ? (
-                        <div className="relative w-full h-full min-h-[300px]">
-                            <Image
-                                src={request.certidao_url}
-                                alt="Certidão"
-                                fill
-                                className="object-contain"
-                                unoptimized // Allow external URLs if domain not configured in next.config
-                            />
-                            <a href={request.certidao_url} target="_blank" rel="noopener noreferrer" className="absolute bottom-4 right-4 bg-white/80 px-3 py-1 rounded text-sm font-medium hover:bg-white transition">
-                                Abrir Original
+                        <div className="relative w-full h-full min-h-[300px] flex flex-col">
+                            <div className="relative flex-grow w-full h-full min-h-[300px]">
+                                <Image
+                                    src={request.certidao_url}
+                                    alt="Certidão"
+                                    fill
+                                    className="object-contain"
+                                    unoptimized
+                                />
+                            </div>
+                            <a
+                                href={request.certidao_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 text-center text-blue-600 hover:text-blue-800 text-sm font-medium underline block"
+                            >
+                                Abrir imagem original
                             </a>
                         </div>
                     ) : (
-                        <span className="text-gray-400">Sem imagem</span>
+                        <span className="text-gray-400">Sem imagem disponível</span>
                     )}
                 </div>
 
@@ -217,8 +243,16 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
                             </div>
                         ) : (
                             <div className="bg-red-50 p-4 rounded-lg border border-red-100 animate-in fade-in slide-in-from-bottom-2">
-                                <h3 className="font-semibold text-red-800 mb-2">Confirmar Rejeição?</h3>
-                                <p className="text-sm text-red-600 mb-4">Esta ação não pode ser desfeita.</p>
+                                <h3 className="font-semibold text-red-800 mb-2">Rejeitar Solicitação</h3>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium text-red-700 mb-1">Motivo da Rejeição</label>
+                                    <textarea
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                        placeholder="Ex: Documento ilegível, CPF não consta..."
+                                        className="w-full p-2 rounded border border-red-200 focus:ring-2 focus:ring-red-500 outline-none text-sm min-h-[80px]"
+                                    />
+                                </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setAction(null)}
