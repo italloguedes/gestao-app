@@ -1,4 +1,4 @@
-'use client';
+// 'use client'; // Removed to allow server component async usage
 
 import Link from 'next/link';
 import { FiUsers, FiCalendar, FiClock, FiSettings, FiCheckCircle } from 'react-icons/fi';
