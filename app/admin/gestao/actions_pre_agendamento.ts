@@ -31,7 +31,7 @@ export async function getAvailableSlots(date: string) {
     }
 
     try {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const supabase = createServerActionClient({ cookies: () => cookieStore });
 
         const { data: agendamentos, error } = await supabase

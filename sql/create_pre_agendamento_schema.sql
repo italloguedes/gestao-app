@@ -73,3 +73,16 @@ ON pre_agendamentos
 FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
+
+-- Public (anon) can read requests (for the public list)
+CREATE POLICY "Public read pre_agendamentos"
+ON pre_agendamentos
+FOR SELECT
+TO anon, authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM links_agendamento
+        WHERE links_agendamento.id = pre_agendamentos.link_id
+        AND links_agendamento.ativo = true
+    )
+);
