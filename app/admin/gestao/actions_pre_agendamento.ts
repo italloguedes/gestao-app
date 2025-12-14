@@ -111,7 +111,7 @@ export async function getLinks(accessToken?: string) {
         const { supabase } = await checkAdmin(accessToken);
         const { data, error } = await supabase
             .from('links_agendamento')
-            .select('*, criado_por_user:created_by(email)')
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
