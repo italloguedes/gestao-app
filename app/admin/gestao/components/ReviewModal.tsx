@@ -58,6 +58,8 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
             const res = await getAvailableSlots(selectedDate);
             if (res.success && res.data) {
                 setAvailableTimes(res.data);
+            } else {
+                alert('Erro: ' + (res.error || 'Falha desconhecida ao buscar horários'));
             }
         } catch (error) {
             console.error('Error fetching times', error);

@@ -42,7 +42,7 @@ export async function getAvailableSlots(date: string) {
 
         if (error) {
             console.error('Error fetching appointments for slots:', error);
-            return { success: false, error: 'Erro ao buscar horários.' };
+            return { success: false, error: 'Erro ao buscar horários: ' + error.message };
         }
 
         const occupiedSlots = new Set(agendamentos?.map(a => a.horario.substring(0, 5)));
