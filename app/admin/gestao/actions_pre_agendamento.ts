@@ -15,6 +15,7 @@ const getSupabase = async () => {
 // Helper to check if user is admin
 // Helper to check if user is admin
 // Helper to check if user is admin - now accepts explicit token
+// Helper to check if user is admin - now accepts explicit token
 const checkAdmin = async (accessToken?: string) => {
     // If no token provided, try cookies (fallback)
     if (!accessToken) {
@@ -39,12 +40,22 @@ const checkAdmin = async (accessToken?: string) => {
         // Don't throw yet, let the token check fail or throw explicit error
     }
 
-    // Initialize generic client to validate token
-    const supabase = await getSupabase();
-
-    // If token is provided, validate it directly
+    // Use token if provided
     if (accessToken) {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
+        // We must create a FRESH client with the token to ensure DB operations use it
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+        const authenticatedSupabase = createClient(supabaseUrl, supabaseKey, {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        });
+
+        const { data: { user }, error: authError } = await authenticatedSupabase.auth.getUser();
 
         if (authError || !user) {
             console.error('DEBUG: Token Validation Failed:', authError);
@@ -52,7 +63,7 @@ const checkAdmin = async (accessToken?: string) => {
         }
 
         // Check role in users table
-        const { data: userData, error } = await supabase
+        const { data: userData, error } = await authenticatedSupabase
             .from('users')
             .select('role')
             .eq('auth_id', user.id)
@@ -62,7 +73,7 @@ const checkAdmin = async (accessToken?: string) => {
             throw new Error('Forbidden: Admin access required');
         }
 
-        return { supabase, session: { user } as any };
+        return { supabase: authenticatedSupabase, session: { user } as any };
     }
 
     // If we reached here, both cookie and token failed
