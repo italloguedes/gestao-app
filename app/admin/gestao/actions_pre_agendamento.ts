@@ -19,27 +19,27 @@ const checkAdmin = async () => {
     // Use getUser instead of getSession for better security and reliability on server
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-        // DEBUG: Inspect cookies if auth fails
-        const cookieStore = await cookies();
-        console.error('DEBUG: Auth Error:', authError);
-        console.error('DEBUG: User is null. Cookies present:', cookieStore.getAll().map(c => c.name));
-        throw new Error('Unauthorized: User not found. Please relogin.');
-    }
+    // DEBUG: Inspect cookies if auth fails
+    const cookieStore = await cookies();
+    const cookieNames = cookieStore.getAll().map(c => c.name).join(', ');
+    console.error('DEBUG: Auth Error:', authError);
+    console.error('DEBUG: User is null. Cookies present:', cookieNames);
+    throw new Error(`Unauthorized: User not found. Cookies: ${cookieNames}. Pkg: auth-helpers`);
+}
 
-    // Check role in users table
-    const { data: userData, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', user.id)
-        .single();
+// Check role in users table
+const { data: userData, error } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_id', user.id)
+    .single();
 
-    if (error || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
-        throw new Error('Forbidden: Admin access required');
-    }
+if (error || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
+    throw new Error('Forbidden: Admin access required');
+}
 
-    // mimic session object for compatibility if needed, or just return user
-    return { supabase, session: { user } as any }; // existing code expects session.user.id
+// mimic session object for compatibility if needed, or just return user
+return { supabase, session: { user } as any }; // existing code expects session.user.id
 };
 
 // Update generation to accept name
