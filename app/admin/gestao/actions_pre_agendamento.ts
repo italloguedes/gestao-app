@@ -12,9 +12,6 @@ const getSupabase = async () => {
     return createServerActionClient({ cookies: () => cookieStore });
 };
 
-// Helper to check if user is admin
-// Helper to check if user is admin
-// Helper to check if user is admin - now accepts explicit token
 // Helper to check if user is admin - now accepts explicit token
 const checkAdmin = async (accessToken?: string) => {
     // If no token provided, try cookies (fallback)
@@ -37,7 +34,6 @@ const checkAdmin = async (accessToken?: string) => {
         } catch (e) {
             // Ignore cookie error if we are going to fail anyway
         }
-        // Don't throw yet, let the token check fail or throw explicit error
     }
 
     // Use token if provided
@@ -160,9 +156,9 @@ export async function getPendingRequests(accessToken?: string) {
     }
 }
 
-export async function approvePreScheduling(preAgendamentoId: string, scheduleData: { data: string, horario: string }) {
+export async function approvePreScheduling(preAgendamentoId: string, scheduleData: { data: string, horario: string }, accessToken?: string) {
     try {
-        const { supabase, session } = await checkAdmin();
+        const { supabase, session } = await checkAdmin(accessToken);
 
         // 1. Get the pre-scheduling request
         const { data: request, error: fetchError } = await supabase
@@ -177,42 +173,15 @@ export async function approvePreScheduling(preAgendamentoId: string, scheduleDat
         const { error: insertError } = await supabase
             .from('agendamentos')
             .insert({
-                // user_id: ??? - Pre-scheduling often involves users NOT yet in system or generic. 
-                // However, `agendamentos` table has `user_id uuid REFERENCES auth.users`.
-                // If the user doesn't have an account, we can't link it.
-                // The prompt says: "Ao aprovar, o sistema cria o agendamento... usando a mesma lógica".
-                // Existing `agendamentos` require `user_id`.
-                // PROBLEM: Public users don't have auth accounts. 
-                // DOES `agendamentos` allow null user_id?
-                // Let's assume we need to create a "shadow" user or map to a generic "Visitante".
-                // OR, `agendamentos` might NOT enforce `user_id` strictly if we change schema or if it's nullable.
-                // Let's check `agendamentos` schema again.
-                // If user_id is NOT NULL, we are blocked unless we create a user.
-                // Prompt says: "Não pode criar agendamentos diretamente...". 
-                // Maybe we skip `user_id` if allowed, or use a "Guest" user.
-                // I'll assume for now `user_id` might be nullable OR we use the Admin's ID as placeholder (bad practice).
-                // Better: Check `check_agendamentos.sql` output.
-                // user_id is likely mandatory.
-                // I will add a TODO or try to insert without user_id if possible, or use a specific strategy.
-                // STRATEGY: Create a placeholder user for them? Or maybe the prompt implies they register?
-                // Prompt: "Usuário acessa link... Campos: Nome, CPF..." -> No Login mentioned.
-                // If `agendamentos` requires `user_id`, we might need to change it to nullable OR create a dummy account.
-                // I will assume for this implementation I can make `user_id` nullable in SQL or use a system placeholder.
-                // Checking `app/agendamento/page.tsx` -> `user_id: user.id` is sent.
-                // I will try to use the Admin's ID or a specific "Gestão" ID for the record, 
-                // or ideally make `user_id` nullable. 
-                // Let's modify the SQL to allow nullable `user_id` if needed, but I cannot modify `agendamentos` easily without knowing constraints.
-                // I'll try to insert with `user_id` being NULL. If it fails, I'll update the plan.
-
                 nome: request.nome,
                 cpf: request.cpf,
                 telefone: request.telefone,
                 data: scheduleData.data,
                 horario: scheduleData.horario,
                 status: 'confirmado',
-                // Additional fields if needed from existing logic
-                email: 'nao_informado@exemplo.com', // Placeholder if not collected
-                data_nascimento: '2000-01-01', // Placeholder if not collected (Prompt didn't ask for birthday)
+                email: 'nao_informado@exemplo.com',
+                data_nascimento: '2000-01-01',
+                observacoes: 'Agendamento via Pré-Agendamento'
             });
 
         if (insertError) throw insertError;
@@ -237,16 +206,19 @@ export async function approvePreScheduling(preAgendamentoId: string, scheduleDat
     }
 }
 
-export async function rejectPreScheduling(preAgendamentoId: string) {
+export async function rejectPreScheduling(preAgendamentoId: string, motivo: string, accessToken?: string) {
     try {
-        const { supabase, session } = await checkAdmin();
+        const { supabase, session } = await checkAdmin(accessToken);
+
+        if (!motivo) throw new Error('Motivo de rejeição é obrigatório');
 
         const { error } = await supabase
             .from('pre_agendamentos')
             .update({
                 status: 'rejeitado',
                 validado_em: new Date().toISOString(),
-                validado_por: session.user.id
+                validado_por: session.user.id,
+                motivo_rejeicao: motivo
             })
             .eq('id', preAgendamentoId);
 
