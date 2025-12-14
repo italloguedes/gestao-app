@@ -1,7 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { approvePreScheduling, rejectPreScheduling } from '../actions_pre_agendamento';
+import { approvePreScheduling, rejectPreScheduling, getAvailableSlots } from '../actions_pre_agendamento';
+
+// ... (other imports)
+
+// ... inside component
+
+
+// ... (other imports)
+import Image from 'next/image';
+import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
+import { supabase } from '@/lib/supabase-client';
 import Image from 'next/image';
 import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
@@ -46,12 +56,11 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
     // Fetch available times when date changes
     const fetchTimes = async (selectedDate: string) => {
         setLoadingTimes(true);
+        setAvailableTimes([]); // Clear previous
         try {
-            // Reusing the existing API from agendamento page
-            const res = await fetch(`/api/agendamentos/disponibilidade?data=${selectedDate}`);
-            if (res.ok) {
-                const data = await res.json();
-                setAvailableTimes([...data.manha, ...data.tarde]);
+            const res = await getAvailableSlots(selectedDate);
+            if (res.success && res.data) {
+                setAvailableTimes(res.data);
             }
         } catch (error) {
             console.error('Error fetching times', error);

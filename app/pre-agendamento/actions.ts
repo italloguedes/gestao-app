@@ -135,39 +135,45 @@ export async function checkPreSchedulingStatus(token: string, cpf: string) {
             }
         };
 
+    } catch (error: any) {
+        console.error('Error checking status:', error);
+        return { success: false, error: 'Erro ao consultar status.' };
+    }
+}
 
-        export async function getPublicRequests(token: string) {
-            try {
-                const supabase = getPublicSupabase();
+export async function getPublicRequests(token: string) {
+    try {
+        const supabase = getPublicSupabase();
 
-                // 1. Validate Token
-                const { valid, linkId } = await validateToken(token);
-                if (!valid || !linkId) {
-                    return { success: false, error: 'Link inválido' };
-                }
 
-                // 2. Fetch requests
-                const { data, error } = await supabase
-                    .from('pre_agendamentos')
-                    .select('nome, cpf, status, motivo_rejeicao, created_at')
-                    .eq('link_id', linkId)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                // 3. Mask sensitive data
-                const publicData = data.map(req => ({
-                    nome: req.nome,
-                    cpf: req.cpf.replace(/\d{3}\.\d{3}\./, '***.***.'), // Mask first 6 digits
-                    status: req.status,
-                    motivo: req.status === 'rejeitado' ? req.motivo_rejeicao : null,
-                    created_at: req.created_at
-                }));
-
-                return { success: true, data: publicData };
-
-            } catch (error: any) {
-                console.error('Error fetching public requests:', error);
-                return { success: false, error: 'Erro ao carregar lista.' };
-            }
+        // 1. Validate Token
+        const { valid, linkId } = await validateToken(token);
+        if (!valid || !linkId) {
+            return { success: false, error: 'Link inválido' };
         }
+
+        // 2. Fetch requests
+        const { data, error } = await supabase
+            .from('pre_agendamentos')
+            .select('nome, cpf, status, motivo_rejeicao, created_at')
+            .eq('link_id', linkId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // 3. Mask sensitive data
+        const publicData = data.map(req => ({
+            nome: req.nome,
+            cpf: req.cpf.replace(/\d{3}\.\d{3}\./, '***.***.'), // Mask first 6 digits
+            status: req.status,
+            motivo: req.status === 'rejeitado' ? req.motivo_rejeicao : null,
+            created_at: req.created_at
+        }));
+
+        return { success: true, data: publicData };
+
+    } catch (error: any) {
+        console.error('Error fetching public requests:', error);
+        return { success: false, error: 'Erro ao carregar lista.' };
+    }
+}

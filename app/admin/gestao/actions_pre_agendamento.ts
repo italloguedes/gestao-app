@@ -12,6 +12,50 @@ const getSupabase = async () => {
     return createServerActionClient({ cookies: () => cookieStore });
 };
 
+export async function getAvailableSlots(date: string) {
+    // 1. Generate Slots (Sam logic as AgendamentosHojePage)
+    const HORARIOS: string[] = [];
+    let hora = 7;
+    let minuto = 0;
+    const endHour = 22;
+
+    while (hora < endHour) {
+        const horaStr = hora.toString().padStart(2, "0");
+        const minutoStr = minuto.toString().padStart(2, "0");
+        HORARIOS.push(`${horaStr}:${minutoStr}`);
+        minuto += 5;
+        if (minuto >= 60) {
+            minuto = 0;
+            hora += 1;
+        }
+    }
+
+    try {
+        const cookieStore = cookies();
+        const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+        const { data: agendamentos, error } = await supabase
+            .from('agendamentos')
+            .select('horario')
+            .eq('data', date)
+            .in('status', ['confirmado', 'bloqueado', 'concluido', 'ausente', 'chamando']);
+
+        if (error) {
+            console.error('Error fetching appointments for slots:', error);
+            return { success: false, error: 'Erro ao buscar horários.' };
+        }
+
+        const occupiedSlots = new Set(agendamentos?.map(a => a.horario.substring(0, 5)));
+        const availableSlots = HORARIOS.filter(slot => !occupiedSlots.has(slot));
+
+        return { success: true, data: availableSlots };
+
+    } catch (error) {
+        console.error('Error in getAvailableSlots:', error);
+        return { success: false, error: 'Erro interno.' };
+    }
+}
+
 // Helper to check if user is admin - now accepts explicit token
 const checkAdmin = async (accessToken?: string) => {
     // If no token provided, try cookies (fallback)
