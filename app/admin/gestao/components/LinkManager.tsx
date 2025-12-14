@@ -18,7 +18,16 @@ export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const res = await generateSchedulingLink(nomeLink); // Pass name
+            // Get current session token from client Supabase
+            // We use the imported supabase client which holds the LocalStorage session
+            const { data: { session } } = await import('@/lib/supabase-client').then(m => m.supabase.auth.getSession());
+
+            if (!session?.access_token) {
+                toast('Erro de autenticação: Sessão não encontrada', 'error');
+                return;
+            }
+
+            const res = await generateSchedulingLink(nomeLink, session.access_token); // Pass name AND token
             if (res.success && res.data) {
                 setLinks([res.data, ...links]);
                 toast('Link gerado com sucesso!');
