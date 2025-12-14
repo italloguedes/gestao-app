@@ -1,16 +1,25 @@
 'use server';
 
-import { supabaseServer } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
+
+// Use Anon Key for public actions (relies on RLS)
+const getPublicSupabase = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    return createClient(supabaseUrl, supabaseKey);
+};
 
 export async function validateToken(token: string) {
     try {
-        const { data, error } = await supabaseServer
+        const supabase = getPublicSupabase();
+        const { data, error } = await supabase
             .from('links_agendamento')
             .select('id, ativo')
             .eq('token', token)
             .single();
 
         if (error || !data || !data.ativo) {
+            console.error('Validation error:', error);
             return { valid: false };
         }
 
@@ -23,6 +32,7 @@ export async function validateToken(token: string) {
 
 export async function submitPreAgendamento(formData: FormData) {
     try {
+        const supabase = getPublicSupabase();
         const token = formData.get('token') as string;
         const nome = formData.get('nome') as string;
         const cpf = formData.get('cpf') as string;
@@ -48,9 +58,9 @@ export async function submitPreAgendamento(formData: FormData) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const { error: uploadError } = await supabaseServer
+        const { error: uploadError } = await supabase
             .storage
-            .from('certidoes') // Ensure this bucket exists!
+            .from('certidoes')
             .upload(filePath, buffer, {
                 contentType: file.type,
                 upsert: false
@@ -62,13 +72,13 @@ export async function submitPreAgendamento(formData: FormData) {
         }
 
         // Get Public URL
-        const { data: { publicUrl } } = supabaseServer
+        const { data: { publicUrl } } = supabase
             .storage
             .from('certidoes')
             .getPublicUrl(filePath);
 
         // 3. Insert Record
-        const { error: insertError } = await supabaseServer
+        const { error: insertError } = await supabase
             .from('pre_agendamentos')
             .insert({
                 link_id: linkId,
