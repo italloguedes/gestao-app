@@ -12,8 +12,8 @@ const getSupabase = async () => {
     return createServerActionClient({ cookies: () => cookieStore });
 };
 
-export async function getAvailableSlots(date: string) {
-    // 1. Generate Slots (Sam logic as AgendamentosHojePage)
+export async function getAvailableSlots(date: string, token?: string) {
+    // 1. Generate Slots
     const HORARIOS: string[] = [];
     let hora = 7;
     let minuto = 0;
@@ -31,8 +31,9 @@ export async function getAvailableSlots(date: string) {
     }
 
     try {
-        const cookieStore = await cookies();
-        const supabase = createServerActionClient({ cookies: () => Promise.resolve(cookieStore) });
+        // Use checkAdmin to get an authenticated client or fall back to cookie-based
+        // But since cookie-based is failing, relying on token is safer.
+        const { supabase } = await checkAdmin(token);
 
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
@@ -50,9 +51,9 @@ export async function getAvailableSlots(date: string) {
 
         return { success: true, data: availableSlots };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in getAvailableSlots:', error);
-        return { success: false, error: 'Erro interno.' };
+        return { success: false, error: error.message || 'Erro interno.' };
     }
 }
 

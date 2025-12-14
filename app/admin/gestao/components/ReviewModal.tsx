@@ -55,7 +55,11 @@ export default function ReviewModal({ request, onClose, onUpdate }: ReviewModalP
         setLoadingTimes(true);
         setAvailableTimes([]); // Clear previous
         try {
-            const res = await getAvailableSlots(selectedDate);
+            // Get session token for authentication
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await getAvailableSlots(selectedDate, token);
             if (res.success && res.data) {
                 setAvailableTimes(res.data);
             } else {
