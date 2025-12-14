@@ -1,19 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { generateSchedulingLink, getLinks } from '../actions_pre_agendamento';
-import { FiCopy, FiPlus, FiLink } from 'react-icons/fi';
-// import { showToast } from '@/lib/utils'; // Removed invalid import
+import { useState, useEffect } from 'react';
+import { generateSchedulingLink, deleteLink } from '../actions_pre_agendamento';
+import { FiCopy, FiPlus, FiLink, FiTrash2 } from 'react-icons/fi';
 
 // Basic Toast fallback
 const toast = (msg: string, type: 'success' | 'error' = 'success') => {
     alert(msg);
 };
 
-export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
+interface LinkManagerProps {
+    initialLinks: any[];
+    onLinkCreated?: () => void;
+}
+
+export default function LinkManager({ initialLinks, onLinkCreated }: LinkManagerProps) {
     const [links, setLinks] = useState(initialLinks);
     const [loading, setLoading] = useState(false);
     const [nomeLink, setNomeLink] = useState('');
+
+    useEffect(() => {
+        setLinks(initialLinks);
+    }, [initialLinks]);
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -27,11 +35,11 @@ export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
                 return;
             }
 
-            const res = await generateSchedulingLink(nomeLink, session.access_token); // Pass name AND token
+            const res = await generateSchedulingLink(nomeLink, session.access_token);
             if (res.success && res.data) {
-                setLinks([res.data, ...links]);
+                if (onLinkCreated) onLinkCreated();
                 toast('Link gerado com sucesso!');
-                setNomeLink(''); // Clear input
+                setNomeLink('');
             } else {
                 toast('Erro ao gerar link: ' + res.error, 'error');
             }
@@ -39,6 +47,25 @@ export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
             toast('Erro ao gerar link', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir este link?')) return;
+
+        try {
+            const { data: { session } } = await import('@/lib/supabase-client').then(m => m.supabase.auth.getSession());
+            if (!session?.access_token) return;
+
+            const res = await deleteLink(id, session.access_token);
+            if (res.success) {
+                toast('Link excluído!');
+                if (onLinkCreated) onLinkCreated();
+            } else {
+                toast('Erro ao excluir: ' + res.error, 'error');
+            }
+        } catch (err) {
+            toast('Erro ao excluir link', 'error');
         }
     };
 
@@ -106,13 +133,20 @@ export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
                                     <td className="px-4 py-3">
                                         {new Date(link.created_at).toLocaleDateString('pt-BR')} {new Date(link.created_at).toLocaleTimeString('pt-BR')}
                                     </td>
-                                    <td className="px-4 py-3 text-right">
+                                    <td className="px-4 py-3 text-right flex justify-end gap-2">
                                         <button
                                             onClick={() => copyToClipboard(link.token)}
                                             className="text-emerald-600 hover:text-emerald-800 p-1"
                                             title="Copiar Link"
                                         >
                                             <FiCopy size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(link.id)}
+                                            className="text-red-500 hover:text-red-700 p-1"
+                                            title="Excluir Link"
+                                        >
+                                            <FiTrash2 size={18} />
                                         </button>
                                     </td>
                                 </tr>
