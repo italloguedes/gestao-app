@@ -25,7 +25,7 @@ export default function PreSchedulingForm({ token }: { token: string }) {
             const { getPublicRequests } = await import('../actions');
             const res = await getPublicRequests(token);
             if (res.success) {
-                setPublicRequests(res.data);
+                setPublicRequests(res.data || []);
                 setListLoaded(true);
             } else {
                 setListError(res.error || 'Erro ao carregar lista.');
@@ -118,8 +118,8 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                 <button
                     onClick={() => handleTabChange('new')}
                     className={`flex-1 pb-4 text-sm font-medium text-center transition-colors relative ${activeTab === 'new'
-                            ? 'text-emerald-600 border-b-2 border-emerald-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'text-emerald-600 border-b-2 border-emerald-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Nova Solicitação
@@ -127,8 +127,8 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                 <button
                     onClick={() => handleTabChange('status')}
                     className={`flex-1 pb-4 text-sm font-medium text-center transition-colors relative ${activeTab === 'status'
-                            ? 'text-emerald-600 border-b-2 border-emerald-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'text-emerald-600 border-b-2 border-emerald-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Lista de Solicitações
