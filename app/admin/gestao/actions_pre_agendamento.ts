@@ -12,7 +12,27 @@ const getSupabase = async () => {
     return createServerActionClient({ cookies: () => cookieStore });
 };
 
-// ... checkAdmin uses getSupabase ...
+// Helper to check if user is admin
+const checkAdmin = async () => {
+    const supabase = await getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        throw new Error('Unauthorized');
+    }
+
+    // Check role in users table
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_id', session.user.id)
+        .single();
+
+    if (error || !user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+        throw new Error('Forbidden: Admin access required');
+    }
+
+    return { supabase, session };
+};
 
 // Update generation to accept name
 export async function generateSchedulingLink(nome?: string) {
