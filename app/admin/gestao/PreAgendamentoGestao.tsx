@@ -1,20 +1,55 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { getLinks, getPendingRequests } from './actions_pre_agendamento';
 import LinkManager from './components/LinkManager';
 import RequestList from './components/RequestList';
 import { FiInbox } from 'react-icons/fi';
+import { supabase } from '@/lib/supabase-client';
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = 'force-dynamic';
+export function PreAgendamentoGestao() {
+  const [links, setLinks] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export async function PreAgendamentoGestao() {
-  // Parallel fetching
-  const [linksRes, requestsRes] = await Promise.all([
-    getLinks(),
-    getPendingRequests()
-  ]);
+  const fetchData = async () => {
+    try {
+      // Get token from client
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-  const links = (linksRes.success && linksRes.data) ? linksRes.data : [];
-  const requests = (requestsRes.success && requestsRes.data) ? requestsRes.data : [];
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+
+      const [linksRes, requestsRes] = await Promise.all([
+        getLinks(token),
+        getPendingRequests(token)
+      ]);
+
+      if (linksRes.success) setLinks(linksRes.data);
+      if (requestsRes.success) setRequests(requestsRes.data);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Callback to refresh data (passed to child components)
+  const refreshData = () => {
+    fetchData();
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Carregando dados de gestão...</div>;
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
@@ -28,7 +63,7 @@ export async function PreAgendamentoGestao() {
 
         {/* Left Column: Link Management (1/3) */}
         <div className="lg:col-span-1">
-          <LinkManager initialLinks={links} />
+          <LinkManager initialLinks={links} onLinkCreated={refreshData} />
         </div>
 
         {/* Right Column: Pending Requests (2/3) */}

@@ -110,9 +110,9 @@ export async function generateSchedulingLink(nome?: string, accessToken?: string
     }
 }
 
-export async function getLinks() {
+export async function getLinks(accessToken?: string) {
     try {
-        const { supabase } = await checkAdmin();
+        const { supabase } = await checkAdmin(accessToken);
         const { data, error } = await supabase
             .from('links_agendamento')
             .select('*, criado_por_user:created_by(email)')
@@ -126,9 +126,26 @@ export async function getLinks() {
     }
 }
 
-export async function getPendingRequests() {
+export async function deleteLink(linkId: string, accessToken?: string) {
     try {
-        const { supabase } = await checkAdmin();
+        const { supabase } = await checkAdmin(accessToken);
+        const { error } = await supabase
+            .from('links_agendamento')
+            .delete()
+            .eq('id', linkId);
+
+        if (error) throw error;
+        revalidatePath('/admin/gestao');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error in deleteLink:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getPendingRequests(accessToken?: string) {
+    try {
+        const { supabase } = await checkAdmin(accessToken);
         const { data, error } = await supabase
             .from('pre_agendamentos')
             .select('*')
