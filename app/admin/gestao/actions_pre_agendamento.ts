@@ -14,40 +14,67 @@ const getSupabase = async () => {
 
 // Helper to check if user is admin
 // Helper to check if user is admin
-const checkAdmin = async () => {
+// Helper to check if user is admin - now accepts explicit token
+const checkAdmin = async (accessToken?: string) => {
+    // If no token provided, try cookies (fallback)
+    if (!accessToken) {
+        try {
+            const supabase = await getSupabase();
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (user && !error) {
+                // Check role for cookie-based user
+                const { data: userData, error: roleError } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('auth_id', user.id)
+                    .single();
+
+                if (!roleError && userData && (userData.role === 'admin' || userData.role === 'superadmin')) {
+                    return { supabase, session: { user } as any };
+                }
+            }
+        } catch (e) {
+            // Ignore cookie error if we are going to fail anyway
+        }
+        // Don't throw yet, let the token check fail or throw explicit error
+    }
+
+    // Initialize generic client to validate token
     const supabase = await getSupabase();
 
-    // Use getUser instead of getSession for better security and reliability on server
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // If token is provided, validate it directly
+    if (accessToken) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
 
-    if (authError || !user) {
-        // DEBUG: Inspect cookies if auth fails
-        const cookieStore = await cookies();
-        const cookieNames = cookieStore.getAll().map(c => c.name).join(', ');
-        console.error('DEBUG: Auth Error:', authError);
-        console.error('DEBUG: User is null. Cookies present:', cookieNames);
-        throw new Error(`Unauthorized: User not found. Cookies: ${cookieNames}. Pkg: auth-helpers`);
+        if (authError || !user) {
+            console.error('DEBUG: Token Validation Failed:', authError);
+            throw new Error('Unauthorized: Invalid token');
+        }
+
+        // Check role in users table
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('auth_id', user.id)
+            .single();
+
+        if (error || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
+            throw new Error('Forbidden: Admin access required');
+        }
+
+        return { supabase, session: { user } as any };
     }
 
-    // Check role in users table
-    const { data: userData, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', user.id)
-        .single();
-
-    if (error || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
-        throw new Error('Forbidden: Admin access required');
-    }
-
-    // mimic session object for compatibility if needed, or just return user
-    return { supabase, session: { user } as any };
+    // If we reached here, both cookie and token failed
+    const cookieStore = await cookies();
+    const cookieNames = cookieStore.getAll().map(c => c.name).join(', ');
+    throw new Error(`Unauthorized: No valid session found. Cookies: ${cookieNames}`);
 };
 
-// Update generation to accept name
-export async function generateSchedulingLink(nome?: string) {
+// Update generation to accept name AND token
+export async function generateSchedulingLink(nome?: string, accessToken?: string) {
     try {
-        const { supabase, session } = await checkAdmin();
+        const { supabase, session } = await checkAdmin(accessToken);
 
         // Generate a random token
         const token = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
