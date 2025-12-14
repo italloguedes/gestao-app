@@ -41,26 +41,26 @@ export default function LinkManager({ initialLinks }: { initialLinks: any[] }) {
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-emerald-100 mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div className="flex flex-col gap-4 mb-6">
                 <h2 className="text-xl font-bold text-emerald-800 flex items-center gap-2">
                     <FiLink /> Links de Pré-Agendamento
                 </h2>
 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex flex-col md:flex-row gap-2 w-full">
                     <input
                         type="text"
                         placeholder="Nome do Link (ex: Instagram, Campanha X)"
                         value={nomeLink}
                         onChange={(e) => setNomeLink(e.target.value)}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none flex-1 md:w-64"
+                        className="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none flex-grow"
                     />
                     <button
                         onClick={handleGenerate}
                         disabled={loading}
-                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 min-w-[120px]"
                     >
                         <FiPlus />
-                        {loading ? '...' : 'Gerar'}
+                        {loading ? 'Gerando...' : 'Gerar Link'}
                     </button>
                 </div>
             </div>

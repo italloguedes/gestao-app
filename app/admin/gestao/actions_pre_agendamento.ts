@@ -20,8 +20,11 @@ const checkAdmin = async () => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-        console.error('Auth Error:', authError);
-        throw new Error('Unauthorized: User not found');
+        // DEBUG: Inspect cookies if auth fails
+        const cookieStore = await cookies();
+        console.error('DEBUG: Auth Error:', authError);
+        console.error('DEBUG: User is null. Cookies present:', cookieStore.getAll().map(c => c.name));
+        throw new Error('Unauthorized: User not found. Please relogin.');
     }
 
     // Check role in users table
