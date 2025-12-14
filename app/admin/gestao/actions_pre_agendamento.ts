@@ -46,7 +46,7 @@ export async function getAvailableSlots(date: string, token?: string) {
             return { success: false, error: 'Erro ao buscar horários: ' + error.message };
         }
 
-        const occupiedSlots = new Set(agendamentos?.map(a => a.horario.substring(0, 5)));
+        const occupiedSlots = new Set(agendamentos?.map((a: { horario: string }) => a.horario.substring(0, 5)));
         const availableSlots = HORARIOS.filter(slot => !occupiedSlots.has(slot));
 
         return { success: true, data: availableSlots };
