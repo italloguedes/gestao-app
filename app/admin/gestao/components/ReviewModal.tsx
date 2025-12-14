@@ -12,9 +12,6 @@ import { approvePreScheduling, rejectPreScheduling, getAvailableSlots } from '..
 import Image from 'next/image';
 import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
-import Image from 'next/image';
-import { FiCheck, FiX, FiCalendar, FiClock } from 'react-icons/fi';
-import { supabase } from '@/lib/supabase-client';
 
 interface Request {
     id: string;
