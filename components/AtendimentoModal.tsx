@@ -9,7 +9,7 @@ import jsPDF from 'jspdf';
 import {
   FiX, FiUser, FiMail, FiCalendar, FiClock, FiFileText,
   FiAlertCircle, FiSave, FiTrash2, FiMessageSquare, FiSend,
-  FiCheckCircle, FiXCircle, FiLock, FiCreditCard, FiDownload, FiEye
+  FiCheckCircle, FiXCircle, FiLock, FiDownload, FiEye
 } from 'react-icons/fi';
 
 export interface Atendimento {
@@ -51,7 +51,7 @@ export default function AtendimentoModal({
   const [formData, setFormData] = useState<Partial<Atendimento>>(atendimento);
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const { isAdmin, isSuperAdmin, role } = usePermissions();
+  const { isAdmin, isSuperAdmin } = usePermissions();
   const { user } = useAuth();
 
   // Estados para histórico de observações
@@ -164,31 +164,30 @@ export default function AtendimentoModal({
     return date.toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'America/Fortaleza'
-    }).replace(',', ' as');
+    });
   };
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'concluido':
-        return { color: 'bg-emerald-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Concluído' };
+        return { color: 'bg-emerald-500', icon: <FiCheckCircle className="w-5 h-5" />, label: 'Concluído' };
       case 'em_andamento':
-        return { color: 'bg-amber-500', icon: <FiClock className="w-4 h-4" />, label: 'Em andamento' };
+        return { color: 'bg-amber-500', icon: <FiClock className="w-5 h-5" />, label: 'Em andamento' };
       case 'correcao':
-        return { color: 'bg-rose-500', icon: <FiAlertCircle className="w-4 h-4" />, label: 'Correção' };
+        return { color: 'bg-rose-500', icon: <FiAlertCircle className="w-5 h-5" />, label: 'Correção' };
       case 'cancelado':
-        return { color: 'bg-slate-500', icon: <FiXCircle className="w-4 h-4" />, label: 'Cancelado' };
+        return { color: 'bg-slate-500', icon: <FiXCircle className="w-5 h-5" />, label: 'Cancelado' };
       case 'bloqueado':
-        return { color: 'bg-slate-600', icon: <FiLock className="w-4 h-4" />, label: 'Bloqueado' };
+        return { color: 'bg-slate-600', icon: <FiLock className="w-5 h-5" />, label: 'Bloqueado' };
       case 'entregue':
-        return { color: 'bg-blue-500', icon: <FiCheckCircle className="w-4 h-4" />, label: 'Entregue' };
+        return { color: 'bg-blue-500', icon: <FiCheckCircle className="w-5 h-5" />, label: 'Entregue' };
       case 'pendente':
-        return { color: 'bg-yellow-500', icon: <FiClock className="w-4 h-4" />, label: 'Pendente' };
+        return { color: 'bg-yellow-500', icon: <FiClock className="w-5 h-5" />, label: 'Pendente' };
       default:
-        return { color: 'bg-slate-500', icon: <FiClock className="w-4 h-4" />, label: status };
+        return { color: 'bg-slate-500', icon: <FiClock className="w-5 h-5" />, label: status };
     }
   };
 
@@ -480,7 +479,7 @@ export default function AtendimentoModal({
     <>
       {/* Modal de visualização do PDF */}
       {pdfUrl && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative">
             <button
               onClick={() => setPdfUrl(null)}
@@ -514,22 +513,24 @@ export default function AtendimentoModal({
         </div>
       )}
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6">
-          <div className="flex items-center justify-between">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col transform transition-all scale-100">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 flex justify-between items-center shadow-lg relative z-20">
             <div>
-              <h2 className="text-2xl font-bold text-white">Editar Atendimento</h2>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="text-white/90 text-sm">
-                  Protocolo: <span className="font-bold">{atendimento.protocolo}</span>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <FiFileText className="w-6 h-6" />
+                Editar Atendimento
+              </h2>
+              <div className="flex items-center gap-3 mt-1.5 opacity-90">
+                <span className="text-white text-sm font-medium bg-white/20 px-2 py-0.5 rounded-md">
+                  Protocolo: {atendimento.protocolo}
                 </span>
                 {atendimento.atendente_nome && (
                   <>
-                    <span className="text-white/50">•</span>
-                    <span className="text-white/90 text-sm">
-                      Atendente: <span className="font-bold">{atendimento.atendente_nome}</span>
+                    <span className="text-white/40 text-xs">•</span>
+                    <span className="text-white text-sm">
+                      Atendente: <span className="font-semibold">{atendimento.atendente_nome}</span>
                     </span>
                   </>
                 )}
@@ -537,280 +538,251 @@ export default function AtendimentoModal({
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all"
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all backdrop-blur-sm"
             >
               <FiX className="w-6 h-6" />
             </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Formulário */}
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-3xl mx-auto space-y-6">
-              {/* Status */}
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
-                <label className="block text-sm font-bold text-slate-700 mb-3">Status do Atendimento</label>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 ${statusConfig.color} rounded-xl flex items-center justify-center text-white`}>
-                    {statusConfig.icon}
+          {/* Content */}
+          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+            {/* Formulário */}
+            <div className="flex-1 overflow-y-auto p-6 lg:p-10 bg-slate-50 relative">
+              <div className="max-w-4xl mx-auto space-y-8">
+
+                {/* Status Section */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Status Atual</label>
+                  <div className="flex gap-4 items-center">
+                    <div className={`p-3 rounded-xl ${statusConfig.color} text-white shadow-md`}>
+                      {statusConfig.icon}
+                    </div>
+                    <div className="flex-1">
+                      <select
+                        value={formData.status || ''}
+                        onChange={(e) => handleChange('status', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-semibold text-slate-700 bg-white"
+                      >
+                        <option value="">Selecione um status...</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="correcao">Correção</option>
+                        <option value="bloqueado">Bloqueado</option>
+                        <option value="cancelado">Cancelado</option>
+                        <option value="entregue">Entregue</option>
+                      </select>
+                    </div>
                   </div>
-                  <select
-                    value={formData.status || ''}
-                    onChange={(e) => handleChange('status', e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-semibold bg-white"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="pendente">Pendente</option>
-                    <option value="em_andamento">Em Andamento</option>
-                    <option value="concluido">Concluído</option>
-                    <option value="correcao">Correção</option>
-                    <option value="bloqueado">Bloqueado</option>
-                    <option value="cancelado">Cancelado</option>
-                    <option value="entregue">Entregue</option>
-                  </select>
                 </div>
-              </div>
 
-              {/* Informações Pessoais */}
-              <div className="bg-white rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <FiUser className="w-5 h-5 text-blue-600" />
-                  Informações Pessoais
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nome Completo *</label>
-                    <input
-                      type="text"
-                      value={formData.nome || ''}
-                      onChange={(e) => handleChange('nome', e.target.value)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
-                        validationErrors.nome ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                      placeholder="Nome completo"
-                    />
-                    {validationErrors.nome && <p className="text-red-500 text-sm mt-1">{validationErrors.nome}</p>}
-                  </div>
+                {/* Personal Info */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <FiUser className="text-emerald-500" /> Informações Pessoais
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Nome Completo</label>
+                      <input
+                        type="text"
+                        value={formData.nome || ''}
+                        onChange={(e) => handleChange('nome', e.target.value)}
+                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.nome ? 'border-red-400 ring-4 ring-red-500/10' : ''
+                          }`}
+                      />
+                      {validationErrors.nome && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.nome}</p>}
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">CPF *</label>
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">CPF</label>
                       <input
                         type="text"
                         value={formData.cpf || ''}
                         onChange={(e) => handleChange('cpf', e.target.value)}
-                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
-                          validationErrors.cpf ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                        }`}
-                        placeholder="000.000.000-00"
+                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.cpf ? 'border-red-400 ring-4 ring-red-500/10' : ''
+                          }`}
                       />
-                      {validationErrors.cpf && <p className="text-red-500 text-sm mt-1">{validationErrors.cpf}</p>}
+                      {validationErrors.cpf && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.cpf}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">E-mail *</label>
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">E-mail</label>
                       <input
                         type="email"
                         value={formData.email || ''}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
-                          validationErrors.email ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                        }`}
-                        placeholder="email@exemplo.com"
+                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.email ? 'border-red-400 ring-4 ring-red-500/10' : ''
+                          }`}
                       />
-                      {validationErrors.email && <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>}
+                      {validationErrors.email && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Solicitante</label>
+                      <input
+                        type="text"
+                        value={formData.solicitante || ''}
+                        onChange={(e) => handleChange('solicitante', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                      />
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Solicitante *</label>
-                    <input
-                      type="text"
-                      value={formData.solicitante || ''}
-                      onChange={(e) => handleChange('solicitante', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="Nome do solicitante"
-                    />
+                {/* Attendance Info */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <FiCalendar className="text-emerald-500" /> Dados do Agendamento
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Data</label>
+                      <input
+                        type="date"
+                        value={formData.dia_atual || ''}
+                        onChange={(e) => handleChange('dia_atual', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Horário</label>
+                      <input
+                        type="time"
+                        value={formData.horario || ''}
+                        onChange={(e) => handleChange('horario', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Protocolo</label>
+                      <input
+                        type="text"
+                        value={formData.protocolo || ''}
+                        onChange={(e) => handleChange('protocolo', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium font-mono text-slate-700"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Dados do Atendimento */}
-              <div className="bg-white rounded-2xl p-6 border-2 border-slate-200 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <FiCalendar className="w-5 h-5 text-purple-600" />
-                  Dados do Atendimento
+              </div>
+            </div>
+
+            {/* Sidebar - Chat & Observations */}
+            <div className="w-full lg:w-[400px] bg-white border-l border-slate-200 flex flex-col shadow-xl z-10">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <FiMessageSquare className="text-emerald-600" /> Observações
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Data *</label>
-                    <input
-                      type="date"
-                      value={formData.dia_atual || ''}
-                      onChange={(e) => handleChange('dia_atual', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Horário *</label>
-                    <input
-                      type="time"
-                      value={formData.horario || ''}
-                      onChange={(e) => handleChange('horario', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Protocolo *</label>
-                    <input
-                      type="text"
-                      value={formData.protocolo || ''}
-                      onChange={(e) => handleChange('protocolo', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="Número do protocolo"
-                    />
-                  </div>
-                </div>
+                <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                  {historicoObservacoes.length}
+                </span>
               </div>
-            </div>
-          </div>
 
-          {/* Sidebar - Histórico de Observações estilo Chat */}
-          <div className="w-96 bg-gradient-to-b from-slate-50 to-slate-100 border-l-2 border-slate-200 flex flex-col">
-            {/* Header do Chat */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <FiMessageSquare className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold">Observações</h3>
-                <p className="text-white/80 text-xs">{historicoObservacoes.length} mensagem{historicoObservacoes.length !== 1 ? 's' : ''}</p>
-              </div>
-            </div>
-
-            {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historicoObservacoes.length > 0 ? (
-                historicoObservacoes.map((obs) => (
-                  <div key={obs.id} className="flex flex-col">
-                    <div className="bg-white rounded-2xl rounded-tl-sm p-4 shadow-sm border border-slate-200">
-                      <p className="text-slate-800 text-sm leading-relaxed mb-2">{obs.observacao}</p>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {obs.usuario_nome || 'Usuário'} - {formatChatDate(obs.created_at)}
-                      </p>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                {historicoObservacoes.length > 0 ? (
+                  historicoObservacoes.map((obs) => (
+                    <div key={obs.id} className="flex flex-col animate-fade-in text-sm">
+                      <div className="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                        <p className="text-slate-800 mb-2 leading-relaxed">{obs.observacao}</p>
+                        <div className="flex items-center justify-between text-xs text-slate-400">
+                          <span className="font-semibold text-emerald-600">{obs.usuario_nome || 'Usuário'}</span>
+                          <span>{formatChatDate(obs.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
+                    <FiMessageSquare className="w-12 h-12 mb-3" />
+                    <p className="font-medium">Nenhuma observação.</p>
                   </div>
-                ))
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <FiMessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm font-medium">Nenhuma observação ainda</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input de Nova Mensagem */}
-            <div className="p-4 bg-white border-t-2 border-slate-200">
-              <div className="mb-3">
-                <textarea
-                  value={novaObservacao}
-                  onChange={(e) => setNovaObservacao(e.target.value)}
-                  placeholder="Digite uma observação..."
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none text-sm"
-                  rows={3}
-                />
+                )}
               </div>
+
+              <div className="p-4 bg-white border-t border-slate-200">
+                <div className="relative">
+                  <textarea
+                    value={novaObservacao}
+                    onChange={(e) => setNovaObservacao(e.target.value)}
+                    placeholder="Nova observação..."
+                    className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none text-sm"
+                    rows={2}
+                  />
+                  <button
+                    onClick={handleAddObservacao}
+                    disabled={!novaObservacao.trim() || addingObservacao}
+                    className="absolute right-2 bottom-3 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:bg-slate-300 transition-all"
+                  >
+                    {addingObservacao ? (
+                      <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <FiSend className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="bg-white border-t border-slate-200 p-6 flex items-center justify-between gap-4 shadow-[0_-5px_20px_-10px_rgba(0,0,0,0.1)] relative z-30">
+            <div className="flex items-center gap-3">
+              {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
+                <button
+                  onClick={handleVisualizarComprovante}
+                  disabled={gerandoComprovante}
+                  className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl font-bold transition-all flex items-center gap-2 text-sm border border-emerald-200"
+                >
+                  {gerandoComprovante ? (
+                    <div className="w-4 h-4 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
+                  ) : <FiEye className="w-4 h-4" />}
+                  Ver Comprovante
+                </button>
+              )}
+
+              {canDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={saving}
+                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all flex items-center gap-2 text-sm border border-transparent hover:border-red-200"
+                >
+                  <FiTrash2 className="w-4 h-4" /> Excluir
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
               <button
-                onClick={handleAddObservacao}
-                disabled={!novaObservacao.trim() || addingObservacao}
-                className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={onClose}
+                className="px-6 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition-all text-sm"
               >
-                {addingObservacao ? (
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 rounded-xl font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transform active:scale-95 transition-all text-sm flex items-center gap-2"
+              >
+                {saving ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Enviando...
+                    <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                    Salvando...
                   </>
                 ) : (
                   <>
-                    <FiSend className="w-5 h-5" />
-                    Enviar Observação
+                    <FiSave className="w-4 h-4" />
+                    Salvar Alterações
                   </>
                 )}
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t-2 border-slate-200 bg-white px-8 py-4 flex justify-between items-center">
-          <div className="flex gap-3">
-            {/* Botão Visualizar Comprovante - Só aparece se tiver assinatura */}
-            {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
-              <button
-                onClick={handleVisualizarComprovante}
-                disabled={gerandoComprovante}
-                className="px-5 py-3 bg-emerald-50 border-2 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 text-emerald-700 font-bold rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                {gerandoComprovante ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <FiEye className="w-5 h-5" />
-                    Ver Comprovante
-                  </>
-                )}
-              </button>
-            )}
-            {canDelete && (
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-5 py-3 bg-red-50 border-2 border-red-200 hover:bg-red-100 hover:border-red-300 text-red-600 font-bold rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                <FiTrash2 className="w-5 h-5" />
-                Excluir
-              </button>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all flex items-center gap-2"
-            >
-              <FiX className="w-5 h-5" />
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <FiSave className="w-5 h-5" />
-                  Salvar Alterações
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
