@@ -13,8 +13,8 @@ export default async function AdminGestaoPage() {
     getPendingRequests()
   ]);
 
-  const links = (linksRes.success && linksRes.data) ? linksRes.data : [];
-  const requests = (requestsRes.success && requestsRes.data) ? requestsRes.data : [];
+  const links = linksRes.success ? linksRes.data : [];
+  const requests = requestsRes.success ? requestsRes.data : [];
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
