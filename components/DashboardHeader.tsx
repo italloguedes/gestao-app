@@ -180,19 +180,6 @@ export default function DashboardHeader() {
                       </div>
                       Meu Perfil
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setShowSettingsModal(true);
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all duration-200 group"
-                    >
-                      <div className="p-2 bg-blue-100 rounded-lg mr-3 group-hover:scale-110 transition-transform">
-                        <FiSettings className="h-4 w-4 text-blue-700" />
-                      </div>
-                      Configurações
-                    </button>
                   </div>
 
                   <div className="border-t-2 border-gray-100 py-2 px-2">
@@ -272,15 +259,6 @@ export default function DashboardHeader() {
             setUser(user);
           };
           checkUser();
-        }}
-      />
-
-      {/* Modal de Configurações */}
-      <UserSettingsModal
-        show={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        onSuccess={() => {
-          setShowSettingsModal(false);
         }}
       />
 

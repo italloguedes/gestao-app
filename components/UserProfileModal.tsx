@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase-client';
+import { FiCamera, FiUser } from 'react-icons/fi';
 
 interface UserProfile {
   id?: number;
@@ -41,8 +42,10 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'security'>('personal');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar dados do perfil
   useEffect(() => {
@@ -115,6 +118,50 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      setMessage('');
+
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('Você deve selecionar uma imagem para fazer upload.');
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${authUser.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload image to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile state
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      setMessage('Foto carregada com sucesso! Clique em Salvar para persistir.');
+
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      setMessage(`Erro no upload: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,23 +256,48 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
         </button>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-6 text-white">
-          <div className="flex items-center">
-            <div className="bg-white/20 p-3 rounded-xl mr-4">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-6 text-white text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center">
+            {/* Avatar Section in Header */}
+            <div className="relative group mb-4 sm:mb-0 sm:mr-6 shrink-0">
+              <div className="w-24 h-24 rounded-full border-4 border-white/30 overflow-hidden bg-white shadow-lg cursor-pointer relative" onClick={handleAvatarClick}>
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
+                    <FiUser className="w-10 h-10" />
+                  </div>
+                )}
+
+                {/* Overlay on Hover */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {uploading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  ) : (
+                    <FiCamera className="w-8 h-8 text-white" />
+                  )}
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
+
             <div>
-              <h2 className="text-2xl font-bold">Meu Perfil</h2>
-              <p className="text-emerald-100">Gerencie suas informações pessoais</p>
+              <h2 className="text-2xl font-bold">{profile.name || 'Meu Perfil'}</h2>
+              <p className="text-emerald-100">{profile.email}</p>
+              {profile.position && <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-medium backdrop-blur-sm">{profile.position}</span>}
             </div>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="flex px-8">
+          <nav className="flex px-4 sm:px-8 overflow-x-auto">
             {[
               { id: 'personal', label: 'Pessoal', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
               { id: 'professional', label: 'Profissional', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6' },
@@ -234,11 +306,10 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
+                className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
                     ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
@@ -259,11 +330,10 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {message && (
-                <div className={`flex items-center gap-3 p-4 rounded-lg border text-sm font-medium ${
-                  message.includes('sucesso')
+                <div className={`flex items-center gap-3 p-4 rounded-lg border text-sm font-medium ${message.includes('sucesso')
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     : 'bg-red-50 border-red-200 text-red-700'
-                }`}>
+                  }`}>
                   {message.includes('sucesso') ? (
                     <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -280,6 +350,12 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
               {/* Tab Personal */}
               {activeTab === 'personal' && (
                 <div className="space-y-5">
+                  <div className="flex items-center justify-center sm:hidden mb-4">
+                    <button type="button" onClick={handleAvatarClick} className="text-sm text-emerald-600 font-medium hover:text-emerald-700 flex items-center gap-2">
+                      <FiCamera /> Alterar Foto de Perfil
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
@@ -391,7 +467,7 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">E-mail de Login</label>
@@ -403,14 +479,13 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
                       />
                       <p className="text-xs text-gray-500 mt-1">O e-mail não pode ser alterado por questões de segurança</p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Status da Conta</label>
-                      <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                        profile.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
+                      <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${profile.status === 'active'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {profile.status === 'active' ? 'Ativa' : 'Inativa'}
                       </div>
                     </div>
