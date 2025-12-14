@@ -27,3 +27,5 @@ USING (bucket_id = 'certidoes' AND (auth.role() = 'service_role' OR EXISTS (
     WHERE users.auth_id = auth.uid()::text
     AND (users.role = 'admin' OR users.role = 'superadmin')
 )));
+
+
