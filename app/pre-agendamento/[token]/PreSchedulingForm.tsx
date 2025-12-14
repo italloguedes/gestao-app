@@ -11,12 +11,38 @@ export default function PreSchedulingForm({ token }: { token: string }) {
     const [success, setSuccess] = useState(false);
     const [fileName, setFileName] = useState('');
 
-    // Status Check States
-    const [checkCpf, setCheckCpf] = useState('');
-    const [statusResult, setStatusResult] = useState<any>(null);
-    const [statusError, setStatusError] = useState('');
+    // Public List State
+    const [publicRequests, setPublicRequests] = useState<any[]>([]);
+    const [listLoaded, setListLoaded] = useState(false);
+    const [listError, setListError] = useState('');
 
     const router = useRouter();
+
+    const fetchPublicList = async () => {
+        setLoading(true);
+        setListError('');
+        try {
+            const { getPublicRequests } = await import('../actions');
+            const res = await getPublicRequests(token);
+            if (res.success) {
+                setPublicRequests(res.data);
+                setListLoaded(true);
+            } else {
+                setListError(res.error || 'Erro ao carregar lista.');
+            }
+        } catch (err) {
+            setListError('Erro ao carregar lista.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTabChange = (tab: 'new' | 'status') => {
+        setActiveTab(tab);
+        if (tab === 'status' && !listLoaded) {
+            fetchPublicList();
+        }
+    };
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -29,32 +55,13 @@ export default function PreSchedulingForm({ token }: { token: string }) {
             const res = await submitPreAgendamento(formData);
             if (res.success) {
                 setSuccess(true);
+                setListLoaded(false); // Force reload list next time
             } else {
                 alert('Erro: ' + res.error);
             }
         } catch (err) {
             console.error(err);
             alert('Ocorreu um erro ao enviar a solicitação.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCheckStatus = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setStatusResult(null);
-        setStatusError('');
-
-        try {
-            const res = await checkPreSchedulingStatus(token, checkCpf);
-            if (res.success) {
-                setStatusResult(res.data);
-            } else {
-                setStatusError(res.error || 'Erro ao consultar.');
-            }
-        } catch (err) {
-            setStatusError('Erro ao consultar status.');
         } finally {
             setLoading(false);
         }
@@ -77,7 +84,7 @@ export default function PreSchedulingForm({ token }: { token: string }) {
         const activeStyle = styles[status as keyof typeof styles] || styles.pendente;
 
         return (
-            <span className={`px-3 py-1 rounded-full text-sm font-bold border ${activeStyle} capitalize`}>
+            <span className={`px-2 py-0.5 rounded text-xs font-bold border ${activeStyle} capitalize`}>
                 {status}
             </span>
         );
@@ -94,14 +101,11 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                     Seus dados foram recebidos com sucesso.<br />
                     Aguarde a validação da nossa equipe e o agendamento oficial.
                 </p>
-                <div className="p-4 bg-white rounded-lg border border-emerald-200 text-sm text-gray-500">
-                    Você pode acompanhar o status na aba "Consultar Agendamento" usando seu CPF.
-                </div>
                 <button
-                    onClick={() => { setSuccess(false); setActiveTab('status'); }}
+                    onClick={() => { setSuccess(false); handleTabChange('status'); }}
                     className="mt-6 text-emerald-600 font-semibold hover:text-emerald-700 underline"
                 >
-                    Consultar Status agora
+                    Ver lista de agendamentos
                 </button>
             </div>
         );
@@ -112,7 +116,7 @@ export default function PreSchedulingForm({ token }: { token: string }) {
             {/* Tabs */}
             <div className="flex border-b border-gray-200">
                 <button
-                    onClick={() => setActiveTab('new')}
+                    onClick={() => handleTabChange('new')}
                     className={`flex-1 pb-4 text-sm font-medium text-center transition-colors relative ${activeTab === 'new'
                             ? 'text-emerald-600 border-b-2 border-emerald-600'
                             : 'text-gray-500 hover:text-gray-700'
@@ -121,13 +125,13 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                     Nova Solicitação
                 </button>
                 <button
-                    onClick={() => setActiveTab('status')}
+                    onClick={() => handleTabChange('status')}
                     className={`flex-1 pb-4 text-sm font-medium text-center transition-colors relative ${activeTab === 'status'
                             ? 'text-emerald-600 border-b-2 border-emerald-600'
                             : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
-                    Acompanhar Solicitação
+                    Lista de Solicitações
                 </button>
             </div>
 
@@ -139,7 +143,6 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                 <ul className="list-disc list-inside space-y-1 opacity-90">
                     <li>Esta solicitação não garante o agendamento imediato.</li>
                     <li>Nossa equipe validará a documentação enviada.</li>
-                    <li>Você poderá acompanhar o status aqui usando seu CPF.</li>
                 </ul>
             </div>
 
@@ -235,67 +238,34 @@ export default function PreSchedulingForm({ token }: { token: string }) {
                 </form>
             ) : (
                 <div className="animate-in slide-in-from-right-4 duration-500">
-                    <form onSubmit={handleCheckStatus} className="mb-8">
-                        <label htmlFor="check-cpf" className="block text-sm font-medium text-gray-700 mb-1">Informe seu CPF</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                id="check-cpf"
-                                value={checkCpf}
-                                onChange={(e) => setCheckCpf(e.target.value)}
-                                placeholder="000.000.000-00"
-                                required
-                                className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                            />
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition disabled:opacity-50"
-                            >
-                                {loading ? <FiSearch className="animate-spin" /> : <FiSearch />}
-                            </button>
-                        </div>
-                    </form>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-800">Solicitações Recentes</h3>
+                        <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">{publicRequests.length} solicitações</span>
+                    </div>
 
-                    {statusError && (
-                        <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200 text-center">
-                            {statusError}
-                        </div>
-                    )}
-
-                    {statusResult && (
-                        <div className="bg-white border rounded-xl p-6 shadow-sm">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-lg">{statusResult.nome}</h3>
-                                    <p className="text-gray-500 text-sm">Solicitado em {new Date(statusResult.created_at).toLocaleDateString('pt-BR')}</p>
+                    {loading && !listLoaded ? (
+                        <div className="text-center py-8 text-gray-500">Carregando lista...</div>
+                    ) : listError ? (
+                        <div className="text-center py-8 text-red-500">{listError}</div>
+                    ) : publicRequests.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">Nenhuma solicitação encontrada neste link.</div>
+                    ) : (
+                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            {publicRequests.map((req, idx) => (
+                                <div key={idx} className="bg-white border text-sm border-gray-100 p-4 rounded-xl shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                    <div>
+                                        <div className="font-bold text-gray-800">{req.nome}</div>
+                                        <div className="text-gray-500 text-xs font-mono mt-0.5">CPF: {req.cpf}</div>
+                                        <div className="text-gray-400 text-xs mt-1">{new Date(req.created_at).toLocaleString('pt-BR')}</div>
+                                        {req.status === 'rejeitado' && req.motivo && (
+                                            <div className="mt-2 text-xs text-red-600 bg-red-50 p-1.5 rounded border border-red-100">
+                                                Motivo: {req.motivo}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <StatusBadge status={req.status} />
                                 </div>
-                                <StatusBadge status={statusResult.status} />
-                            </div>
-
-                            {statusResult.status === 'rejeitado' && statusResult.motivo_rejeicao && (
-                                <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-100">
-                                    <p className="text-red-800 font-medium text-sm mb-1">Motivo da Rejeição:</p>
-                                    <p className="text-red-700 text-sm">{statusResult.motivo_rejeicao}</p>
-                                </div>
-                            )}
-
-                            {statusResult.status === 'aprovado' && (
-                                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-100">
-                                    <p className="text-green-800 font-medium text-sm">
-                                        Sua solicitação foi aprovada! Você deve ter recebido as informações do agendamento oficial.
-                                        Caso tenha dúvidas, entre em contato.
-                                    </p>
-                                </div>
-                            )}
-
-                            {statusResult.status === 'pendente' && (
-                                <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                                    <p className="text-yellow-800 font-medium text-sm">
-                                        Sua solicitação está em análise. Por favor, aguarde.
-                                    </p>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     )}
                 </div>
