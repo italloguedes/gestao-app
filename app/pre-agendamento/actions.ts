@@ -100,3 +100,43 @@ export async function submitPreAgendamento(formData: FormData) {
         return { success: false, error: error.message || 'Erro interno no servidor' };
     }
 }
+
+export async function checkPreSchedulingStatus(token: string, cpf: string) {
+    try {
+        const supabase = getPublicSupabase();
+
+        // 1. Validate Token to get Link ID
+        const { valid, linkId } = await validateToken(token);
+        if (!valid || !linkId) {
+            return { success: false, error: 'Link inválido' };
+        }
+
+        // 2. Search for request with this CPF and Link ID
+        const { data, error } = await supabase
+            .from('pre_agendamentos')
+            .select('status, motivo_rejeicao, created_at, nome')
+            .eq('link_id', linkId)
+            .eq('cpf', cpf)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error || !data) {
+            return { success: false, error: 'Solicitação não encontrada para este CPF neste link.' };
+        }
+
+        return {
+            success: true,
+            data: {
+                status: data.status,
+                motivo_rejeicao: data.motivo_rejeicao,
+                created_at: data.created_at,
+                nome: data.nome
+            }
+        };
+
+    } catch (error: any) {
+        console.error('Error checking status:', error);
+        return { success: false, error: 'Erro ao consultar status.' };
+    }
+}
