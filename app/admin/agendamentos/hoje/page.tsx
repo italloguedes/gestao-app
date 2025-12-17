@@ -57,6 +57,8 @@ interface Agendamento {
   tipo_cancelamento?: string;
   atendimento_preferencial?: boolean;
   observacoes?: string;
+  locked_by?: string;
+  locked_at?: string;
 }
 
 const HORARIOS = (() => {
@@ -114,7 +116,7 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, locked_by, locked_at")
         .eq("data", selectedDate)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente", "chamando"])
         .order("horario", { ascending: true });
@@ -626,10 +628,59 @@ export default function AgendamentosHojePage() {
                                 {agendamento.status === "confirmado" && (
                                   <div className="space-y-2">
                                     <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("iniciar");
-                                        setIsModalOpen(true);
+                                      onClick={async () => {
+                                        if (!user) return;
+
+                                        // Tentar impor bloqueio
+                                        try {
+                                          // Verificar se já está bloqueado
+                                          const { data: currentData, error: fetchError } = await supabase
+                                            .from("agendamentos")
+                                            .select("locked_by, locked_at")
+                                            .eq("id", agendamento.id)
+                                            .single();
+
+                                          if (fetchError) throw fetchError;
+
+                                          // Se estiver bloqueado por outra pessoa
+                                          if (currentData.locked_by && currentData.locked_by !== user.id) {
+                                            // Tentar buscar o nome de quem bloqueou
+                                            const { data: lockedUserData } = await supabase
+                                              .from("users")
+                                              .select("name")
+                                              .eq("auth_id", currentData.locked_by)
+                                              .single();
+
+                                            const lockedUserName = lockedUserData?.name || "outro atendente";
+                                            alert(`Este agendamento já está sendo acessado por ${lockedUserName}. Não é possível iniciar o atendimento simultaneamente.`);
+                                            return;
+                                          }
+
+                                          // Se não estiver bloqueado, impor bloqueio
+                                          if (!currentData.locked_by) {
+                                            const { error: lockError } = await supabase
+                                              .from("agendamentos")
+                                              .update({
+                                                locked_by: user.id,
+                                                locked_at: new Date().toISOString()
+                                              })
+                                              .eq("id", agendamento.id);
+
+                                            if (lockError) throw lockError;
+                                          }
+
+                                          // Se chegou aqui, ou já era nosso ou conseguimos bloquear
+                                          setSelectedAppointment({
+                                            ...agendamento,
+                                            locked_by: user.id,
+                                            locked_at: new Date().toISOString()
+                                          });
+                                          setModalAction("iniciar");
+                                          setIsModalOpen(true);
+                                        } catch (error) {
+                                          console.error("Erro ao verificar/impor bloqueio:", error);
+                                          alert("Erro ao verificar disponibilidade do agendamento.");
+                                        }
                                       }}
                                       className="w-full px-3 py-2.5 text-sm rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
                                     >
