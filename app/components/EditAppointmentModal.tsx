@@ -27,15 +27,24 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   }, [initialAction]);
 
   // Unlock when closing without concluding
+  // Unlock when closing without concluding
   const handleUnlock = async () => {
-    if (action === 'iniciar' && appointment?.id && appointment?.locked_by === user?.id) {
-      console.log('🔓 Desbloqueando agendamento...');
+    // Tenta desbloquear se a ação for iniciar e tivermos IDs válidos
+    // Removemos a verificação estrita de appointment.locked_by no JS para evitar problemas com estado desatualizado
+    if (action === 'iniciar' && appointment?.id && user?.id) {
+      console.log('🔓 Tentando desbloquear agendamento...', { appointmentId: appointment.id, userId: user.id });
+
       const { error } = await supabase
         .from('agendamentos')
         .update({ locked_by: null, locked_at: null })
-        .eq('id', appointment.id);
+        .eq('id', appointment.id)
+        .eq('locked_by', user.id); // Garante que só desbloqueia se for o dono do bloqueio
 
-      if (error) console.error('Erro ao desbloquear:', error);
+      if (error) {
+        console.error('Erro ao desbloquear:', error);
+      } else {
+        console.log('🔓 Agendamento desbloqueado com sucesso (se pertencia a este usuário).');
+      }
     }
   };
 
