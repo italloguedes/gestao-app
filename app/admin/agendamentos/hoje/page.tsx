@@ -659,84 +659,118 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`rounded-2xl shadow-lg border-2 transition-all duration-300 min-h-[240px] hover:shadow-2xl hover:scale-[1.02] ${agendamentosHorario.length > 0
+                    className={`relative group rounded-3xl transition-all duration-300 min-h-[260px] flex flex-col ${agendamentosHorario.length > 0
                       ? hasPreferential
-                        ? "bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-amber-300 shadow-amber-200"
+                        ? "bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 hover:shadow-xl hover:shadow-amber-200/20"
                         : hasConcluded
-                          ? "bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-emerald-300"
-                          : "bg-white border-slate-300 hover:border-emerald-400"
-                      : "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 border-dashed"
+                          ? "bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200/50 hover:shadow-xl hover:shadow-emerald-200/20"
+                          : "bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-100/50"
+                      : "bg-slate-50/50 border-2 border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                       }`}
                   >
-                    <div className="p-5 h-full flex flex-col">
-                      <div className="flex items-center justify-between mb-4">
+                    <div className="p-6 flex flex-col h-full">
+                      {/* Header do Card */}
+                      <div className="flex items-center justify-between mb-5">
                         <div
-                          className={`flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-md ${isPassedTime
-                            ? "bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700"
+                          className={`flex items-center rounded-2xl px-4 py-2 text-sm font-bold shadow-sm transition-all duration-300 ${isPassedTime
+                            ? "bg-slate-200 text-slate-500"
                             : isEmpty
-                              ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white"
-                              : "bg-gradient-to-r from-rose-500 to-red-500 text-white"
+                              ? "bg-white text-slate-600 border border-slate-200 group-hover:border-emerald-400 group-hover:text-emerald-600"
+                              : "bg-emerald-600 text-white shadow-emerald-200"
                             }`}
                         >
-                          <FiClock className="w-4 h-4 mr-2" />
-                          <span>{horario}</span>
+                          <FiClock className={`w-4 h-4 mr-2 ${isEmpty ? "text-slate-400 group-hover:text-emerald-500" : "text-emerald-100"}`} />
+                          <span className="tracking-wide text-base">{horario}</span>
                         </div>
-                        {!isEmpty && (
-                          <span className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 text-white font-bold shadow-md">
-                            Ocupado
+
+                        {!isEmpty ? (
+                          <div className="flex gap-2">
+                            {agendamentosHorario.map((agendamento) => {
+                              // Badges de status compactos
+                              const statusColor = {
+                                confirmado: "bg-blue-100 text-blue-700",
+                                concluido: "bg-emerald-100 text-emerald-700",
+                                cancelado: "bg-red-100 text-red-700",
+                                ausente: "bg-amber-100 text-amber-700",
+                                bloqueado: "bg-slate-100 text-slate-700",
+                                chamando: "bg-purple-100 text-purple-700"
+                              }[agendamento.status] || "bg-gray-100 text-gray-700";
+
+                              return (
+                                <span key={agendamento.id} className={`w-3 h-3 rounded-full ${statusColor} block ring-2 ring-white`}></span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider group-hover:text-emerald-500 transition-colors">
+                            Disponível
                           </span>
                         )}
                       </div>
 
+                      {/* Conteúdo do Card */}
                       {agendamentosHorario.length > 0 ? (
-                        <div className="flex-1 space-y-3">
-                          {agendamentosHorario.map((agendamento: Agendamento, index: number) => (
-                            <div key={agendamento.id} className={`${index > 0 ? 'border-t-2 border-slate-200 pt-3' : ''}`}>
-                              <div className="flex items-center justify-between mb-3">
-                                {getStatusBadge(agendamento.status as AppointmentStatus)}
-                                {agendamento.atendimento_preferencial && (
-                                  <div className="flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg shadow-md">
-                                    <FiStar className="w-3.5 h-3.5 mr-1" />
-                                    <span className="text-xs font-bold">Pref</span>
+                        <div className="flex-1 flex flex-col justify-between">
+                          <div className="space-y-4">
+                            {agendamentosHorario.map((agendamento: Agendamento, index: number) => (
+                              <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-100 pt-4' : ''}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  {/* Status Badge Full */}
+                                  {(() => {
+                                    const config = {
+                                      chamando: { text: "Chamando", class: "bg-purple-100 text-purple-700 border-purple-200" },
+                                      concluido: { text: "Concluído", class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+                                      ausente: { text: "Ausente", class: "bg-rose-100 text-rose-700 border-rose-200" },
+                                      confirmado: { text: "Confirmado", class: "bg-blue-100 text-blue-700 border-blue-200" },
+                                      bloqueado: { text: "Bloqueado", class: "bg-slate-100 text-slate-700 border-slate-200" },
+                                      cancelado: { text: "Cancelado", class: "bg-orange-100 text-orange-700 border-orange-200" },
+                                    }[agendamento.status as AppointmentStatus] || { text: agendamento.status, class: "bg-gray-100 text-gray-700" };
+
+                                    return (
+                                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${config.class} inline-flex items-center`}>
+                                        {config.text}
+                                      </span>
+                                    );
+                                  })()}
+
+                                  {agendamento.atendimento_preferencial && (
+                                    <div className="flex items-center text-amber-500" title="Preferencial">
+                                      <FiStar className="w-4 h-4 fill-current" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="space-y-1.5 mb-2">
+                                  <div className="flex items-start text-slate-800">
+                                    <span className="font-bold text-lg leading-tight line-clamp-2" title={agendamento.nome}>
+                                      {agendamento.nome}
+                                    </span>
                                   </div>
-                                )}
-                              </div>
-
-                              <div className="space-y-2 mb-3">
-                                <div className="flex items-center text-slate-800">
-                                  <FiUser className="w-4 h-4 mr-2 text-emerald-600" />
-                                  <span className="font-bold text-sm truncate">
-                                    {agendamento.nome}
-                                  </span>
+                                  <div className="flex items-center text-slate-500 font-medium text-sm">
+                                    <FiPhone className="w-3.5 h-3.5 mr-2 opacity-75" />
+                                    {agendamento.telefone}
+                                  </div>
                                 </div>
-                                <div className="flex items-center text-slate-700">
-                                  <FiPhone className="w-4 h-4 mr-2 text-blue-600" />
-                                  <span className="text-sm">{agendamento.telefone}</span>
-                                </div>
-                              </div>
 
-                              <div className="space-y-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedAppointment(agendamento);
-                                    setModalAction("edit");
-                                    setIsModalOpen(true);
-                                  }}
-                                  className="w-full px-3 py-2.5 text-sm rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md hover:shadow-lg"
-                                >
-                                  <FiEdit className="w-4 h-4 mr-2" />
-                                  Editar
-                                </button>
+                                {/* Ações */}
+                                <div className="pt-2 flex flex-col gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedAppointment(agendamento);
+                                      setModalAction("edit");
+                                      setIsModalOpen(true);
+                                    }}
+                                    className="w-full px-4 py-2 text-sm rounded-xl bg-slate-50 hover:bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-all duration-200 flex items-center justify-center font-bold"
+                                  >
+                                    <FiEdit className="w-4 h-4 mr-2" />
+                                    Detalhes
+                                  </button>
 
-                                {agendamento.status === "confirmado" && (
-                                  <div className="space-y-2">
+                                  {agendamento.status === "confirmado" && (
                                     <button
                                       onClick={async () => {
                                         if (!user) return;
-
-                                        // Tentar impor bloqueio
                                         try {
-                                          // Verificar se já está bloqueado
                                           const { data: currentData, error: fetchError } = await supabase
                                             .from("agendamentos")
                                             .select("locked_by, locked_at")
@@ -745,89 +779,65 @@ export default function AgendamentosHojePage() {
 
                                           if (fetchError) throw fetchError;
 
-                                          // Se estiver bloqueado por outra pessoa
                                           if (currentData.locked_by && currentData.locked_by !== user.id) {
-                                            // Tentar buscar o nome de quem bloqueou
-                                            const { data: lockedUserData } = await supabase
+                                            const { data: userData } = await supabase
                                               .from("users")
                                               .select("name")
                                               .eq("auth_id", currentData.locked_by)
                                               .single();
 
-                                            const lockedUserName = lockedUserData?.name || "outro atendente";
-                                            alert(`Este agendamento já está sendo acessado por ${lockedUserName}. Não é possível iniciar o atendimento simultaneamente.`);
+                                            const lockedByName = userData?.name || "Outro usuário";
+                                            alert(`Este agendamento está sendo atendido por: ${lockedByName}`);
                                             return;
                                           }
 
-                                          // Se não estiver bloqueado, impor bloqueio
-                                          if (!currentData.locked_by) {
-                                            const { error: lockError } = await supabase
-                                              .from("agendamentos")
-                                              .update({
-                                                locked_by: user.id,
-                                                locked_at: new Date().toISOString()
-                                              })
-                                              .eq("id", agendamento.id);
+                                          // Lock
+                                          const { error: lockError } = await supabase
+                                            .from("agendamentos")
+                                            .update({
+                                              locked_by: user.id,
+                                              locked_at: new Date().toISOString()
+                                            })
+                                            .eq("id", agendamento.id);
 
-                                            if (lockError) throw lockError;
-                                          }
+                                          if (lockError) throw lockError;
 
-                                          // Se chegou aqui, ou já era nosso ou conseguimos bloquear
-                                          setSelectedAppointment({
-                                            ...agendamento,
-                                            locked_by: user.id,
-                                            locked_at: new Date().toISOString()
-                                          });
+                                          // Success
+                                          setSelectedAppointment(agendamento);
                                           setModalAction("iniciar");
                                           setIsModalOpen(true);
+
                                         } catch (error) {
-                                          console.error("Erro ao verificar/impor bloqueio:", error);
-                                          alert("Erro ao verificar disponibilidade do agendamento.");
+                                          console.error("Error locking:", error);
+                                          alert("Erro ao iniciar atendimento.");
                                         }
                                       }}
-                                      className="w-full px-3 py-2.5 text-sm rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg shadow-emerald-200/50 transition-all duration-300 flex items-center justify-center font-bold transform hover:-translate-y-0.5"
                                     >
                                       <FiCheckCircle className="w-4 h-4 mr-2" />
                                       Iniciar Atendimento
                                     </button>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("ausente");
-                                          setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                      >
-                                        <FiXCircle className="w-3.5 h-3.5 mr-1" />
-                                        Ausente
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(agendamento);
-                                          setModalAction("cancelar");
-                                          setIsModalOpen(true);
-                                        }}
-                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                      >
-                                        <FiSlash className="w-3.5 h-3.5 mr-1" />
-                                        Cancelar
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedAppointment(agendamento);
+                                      setModalAction("cancelar");
+                                      setIsModalOpen(true);
+                                    }}
+                                    className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                  >
+                                    <FiSlash className="w-3.5 h-3.5 mr-1" />
+                                    Cancelar
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-16 h-16 bg-gradient-to-br from-slate-200 to-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                              <FiClock className="w-8 h-8 text-slate-500" />
-                            </div>
-                            <p className="text-slate-600 text-sm font-bold">Horário Livre</p>
-                          </div>
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300 group-hover:text-emerald-400 transition-colors">
+                          <FiPlus className="w-8 h-8 opacity-50 mb-2 group-hover:scale-110 transition-transform duration-300" />
+                          <span className="text-sm font-medium">Livre</span>
                         </div>
                       )}
                     </div>
@@ -836,8 +846,8 @@ export default function AgendamentosHojePage() {
               })}
             </div>
           )}
-        </div>
-      </div>
+        </div >
+      </div >
 
       {selectedAppointment && isModalOpen && (
         <EditAppointmentModal
@@ -853,7 +863,8 @@ export default function AgendamentosHojePage() {
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteAppointment}
         />
-      )}
+      )
+      }
 
       <CreateAppointmentModal
         isOpen={isCreateModalOpen}
