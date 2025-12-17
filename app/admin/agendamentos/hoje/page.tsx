@@ -216,26 +216,129 @@ export default function AgendamentosHojePage() {
     }
   };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     setActionLoading(true);
     try {
+      // 1. Buscar dados do atendente
+      let atendenteNome = 'Não identificado';
+      if (user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('name')
+          .eq('auth_id', user.id)
+          .single();
+
+        if (!userError && userData?.name) {
+          atendenteNome = userData.name;
+        }
+      }
+
       const doc = new jsPDF();
 
-      doc.setFontSize(16);
-      doc.text(`Relatório de Agendamentos - ${formatDate(selectedDate)}`, 14, 20);
+      // Configurações de estilo
+      const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+      const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro
 
-      const tableData = agendamentos.map(a => [
+      // --- CABEÇALHO ---
+      // Fundo verde
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+
+      // Título
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      const title = 'RELATÓRIO DE AGENDAMENTOS DO DIA';
+      const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+      doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 14);
+
+      // Subtítulo (Data)
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const subtitle = `Data: ${formatDate(selectedDate)}`;
+      const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
+      doc.text(subtitle, (doc.internal.pageSize.width - subtitleWidth) / 2, 22);
+
+      // Resumo de total
+      doc.setFontSize(9);
+      const totalText = `Total: ${agendamentos.length} ${agendamentos.length === 1 ? 'registro' : 'registros'}`;
+      const totalWidth = doc.getStringUnitWidth(totalText) * 9 / doc.internal.scaleFactor;
+      doc.text(totalText, (doc.internal.pageSize.width - totalWidth) / 2, 28);
+
+
+      // --- TABELA ---
+      const tableColumn = ['Horário', 'Nome do Paciente', 'Telefone', 'Status', 'Preferencial'];
+      const tableRows = agendamentos.map(a => [
         a.horario,
         a.nome,
         a.telefone,
-        a.status,
+        a.status.charAt(0).toUpperCase() + a.status.slice(1),
         a.atendimento_preferencial ? "Sim" : "Não"
       ]);
 
       autoTable(doc, {
-        head: [["Horário", "Nome", "Telefone", "Status", "Preferencial"]],
-        body: tableData,
-        startY: 30,
+        head: [tableColumn],
+        body: tableRows,
+        startY: 40,
+        styles: {
+          fontSize: 9,
+          cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+          lineColor: [230, 230, 230],
+          lineWidth: 0.1,
+          textColor: [50, 50, 50],
+          overflow: 'linebreak'
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // Horário
+          1: { cellWidth: 'auto', halign: 'left' },                  // Nome
+          2: { cellWidth: 35, halign: 'center' },                    // Telefone
+          3: { cellWidth: 25, halign: 'center' },                    // Status
+          4: { cellWidth: 25, halign: 'center' }                     // Preferencial
+        },
+        alternateRowStyles: {
+          fillColor: secondaryColor
+        },
+        margin: { left: 15, right: 15 },
+
+        // --- RODAPÉ (PÁGINAS) ---
+        didDrawPage: (data) => {
+          const pageCount = (doc as any).getNumberOfPages();
+          const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+          const pageSize = doc.internal.pageSize;
+          const pageHeight = pageSize.height;
+          const pageWidth = pageSize.width;
+
+          // Linha separadora
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
+
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+
+          // Data de emissão (Esquerda)
+          const now = new Date();
+          const dateStr = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          doc.text(dateStr, 15, pageHeight - 10);
+
+          // Atendente (Centro)
+          const userStr = `Atendente: ${atendenteNome}`;
+          const userWidth = doc.getStringUnitWidth(userStr) * 8 / doc.internal.scaleFactor;
+          doc.text(userStr, (pageWidth - userWidth) / 2, pageHeight - 10);
+
+          // Paginação (Direita)
+          const pageStr = `Página ${currentPage} de ${pageCount}`;
+          const pageStrWidth = doc.getStringUnitWidth(pageStr) * 8 / doc.internal.scaleFactor;
+          doc.text(pageStr, pageWidth - 15 - pageStrWidth, pageHeight - 10);
+        }
       });
 
       doc.save(`agendamentos-${selectedDate}.pdf`);
