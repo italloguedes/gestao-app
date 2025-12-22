@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import MultiSelectAsync from '@/components/MultiSelectAsync';
+import { searchApplicants } from '../actions';
 
 interface Atendimento {
   id: string;
@@ -36,7 +38,7 @@ export default function GerarRelatorioPage() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [nome, setNome] = useState('');
-  const [solicitante, setSolicitante] = useState('');
+  const [solicitantes, setSolicitantes] = useState<string[]>([]);
   const [status, setStatus] = useState('');
   const [ordenacao, setOrdenacao] = useState<'padrao' | 'nome'>('padrao');
   const [tipoRelatorio, setTipoRelatorio] = useState<'completo' | 'assinatura'>('completo');
@@ -415,8 +417,8 @@ export default function GerarRelatorioPage() {
         query = query.ilike('nome', `%${nome}%`);
       }
 
-      if (solicitante) {
-        query = query.ilike('solicitante', `%${solicitante}%`);
+      if (solicitantes.length > 0) {
+        query = query.in('solicitante', solicitantes);
       }
 
       if (status) {
@@ -501,11 +503,10 @@ export default function GerarRelatorioPage() {
 
           {/* Mensagens de feedback */}
           {message && (
-            <div className={`mx-6 mt-4 p-4 border rounded-lg ${
-              message.type === 'success'
-                ? 'bg-green-50 text-green-800 border-green-200'
-                : 'bg-red-50 text-red-800 border-red-200'
-            }`}>
+            <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
+              ? 'bg-green-50 text-green-800 border-green-200'
+              : 'bg-red-50 text-red-800 border-red-200'
+              }`}>
               <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
@@ -557,16 +558,12 @@ export default function GerarRelatorioPage() {
 
               {/* Solicitante */}
               <div>
-                <label htmlFor="solicitante" className="block text-sm font-medium text-gray-700 mb-2">
-                  Solicitante
-                </label>
-                <input
-                  type="text"
-                  id="solicitante"
-                  value={solicitante}
-                  onChange={(e) => setSolicitante(e.target.value)}
-                  placeholder="Digite o solicitante..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
+                <MultiSelectAsync
+                  label="Solicitantes"
+                  placeholder="Pesquisar solicitante..."
+                  fetchOptions={searchApplicants}
+                  value={solicitantes}
+                  onChange={setSolicitantes}
                 />
               </div>
 
@@ -634,11 +631,10 @@ export default function GerarRelatorioPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setStatus('')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === ''
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === ''
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Todos
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -647,11 +643,10 @@ export default function GerarRelatorioPage() {
                 </button>
                 <button
                   onClick={() => setStatus('confirmado')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === 'confirmado'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'confirmado'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Confirmado
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -660,11 +655,10 @@ export default function GerarRelatorioPage() {
                 </button>
                 <button
                   onClick={() => setStatus('concluido')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === 'concluido'
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'concluido'
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Concluído
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -673,11 +667,10 @@ export default function GerarRelatorioPage() {
                 </button>
                 <button
                   onClick={() => setStatus('cancelado')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === 'cancelado'
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'cancelado'
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Cancelado
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -686,11 +679,10 @@ export default function GerarRelatorioPage() {
                 </button>
                 <button
                   onClick={() => setStatus('ausente')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === 'ausente'
-                      ? 'bg-yellow-600 text-white border-yellow-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'ausente'
+                    ? 'bg-yellow-600 text-white border-yellow-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Ausente
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -699,11 +691,10 @@ export default function GerarRelatorioPage() {
                 </button>
                 <button
                   onClick={() => setStatus('bloqueado')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                    status === 'bloqueado'
-                      ? 'bg-gray-600 text-white border-gray-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'bloqueado'
+                    ? 'bg-gray-600 text-white border-gray-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   Bloqueado
                   <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
@@ -765,14 +756,13 @@ export default function GerarRelatorioPage() {
                           {formatDate(atendimento.dia_atual)} {formatTime(atendimento.horario)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
-                            atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
                             atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                            atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                            atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
-                            atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                              atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                                atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
+                                  atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
+                                    'bg-gray-100 text-gray-800'
+                            }`}>
                             {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
                           </span>
                         </td>
