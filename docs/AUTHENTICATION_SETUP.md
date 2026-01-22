@@ -286,4 +286,4 @@ Se encontrar problemas:
 
 ---
 
-**Última atualização**: 2025-10-21
+**Última atualização**: 2026-10-21

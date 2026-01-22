@@ -253,7 +253,7 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
     </p>
   </div>
   <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
-    © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+    © 2026 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
   </div>
 </div>
 `,
@@ -354,11 +354,10 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
 
         {/* Message */}
         {message && (
-          <div className={`m-6 flex items-start gap-3 p-4 rounded-xl border-2 transition-all duration-300 ${
-            messageType === 'success'
+          <div className={`m-6 flex items-start gap-3 p-4 rounded-xl border-2 transition-all duration-300 ${messageType === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-red-50 border-red-200 text-red-800'
-          }`}>
+            }`}>
             {messageType === 'success' ? (
               <FiCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             ) : (
@@ -407,11 +406,10 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
                 id="cpf"
                 value={cpf}
                 onChange={handleCPFChange}
-                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors.cpf
+                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${validationErrors.cpf
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'border-slate-200 focus:ring-slate-500 focus:border-slate-500'
-                }`}
+                  }`}
                 placeholder="000.000.000-00"
                 required
                 maxLength={14}
@@ -439,11 +437,10 @@ export default function NovoAtendimentoModal({ show, onClose, onSuccess }: NovoA
                 id="email"
                 value={email}
                 onChange={handleEmailChange}
-                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors.email
+                className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all ${validationErrors.email
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'border-slate-200 focus:ring-slate-500 focus:border-slate-500'
-                }`}
+                  }`}
                 placeholder="email@exemplo.com"
                 required
               />

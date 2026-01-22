@@ -264,7 +264,7 @@ export default function AtendimentoPage() {
   const [atendimento] = useState({
     id: 123,
     requerente: 'João da Silva',
-    protocolo: '2025/001234'
+    protocolo: '2026/001234'
   });
 
   const handleSaveSignature = async (result: WacomSignatureResult) => {

@@ -37,7 +37,7 @@ export default function NovoAtendimentoPage() {
             <div className={`mb-6 flex items-center gap-3 p-4 rounded-lg border text-sm font-medium transition-all duration-300 ${message.includes('sucesso')
               ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
               : 'bg-red-50 border-red-200 text-red-700'
-            }`}>
+              }`}>
               {message.includes('sucesso') ? (
                 <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               ) : (
@@ -155,7 +155,7 @@ export default function NovoAtendimentoPage() {
       </p>
     </div>
     <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
-      © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+      © 2026 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
     </div>
   </div>
 `,

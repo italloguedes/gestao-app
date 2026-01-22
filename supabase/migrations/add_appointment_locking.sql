@@ -1,6 +1,6 @@
 -- Migration: Add appointment locking fields
 -- Description: Adds fields to track which attendant is currently serving an appointment
--- Created: 2025-11-26
+-- Created: 2026-11-26
 
 -- Add new columns to agendamentos table
 ALTER TABLE agendamentos 

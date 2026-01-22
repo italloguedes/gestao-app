@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       <p>Para dúvidas, entre em contato pelo telefone (85) 2180-6587.</p>
       <p>Retiradas por terceiros podem ser feitas por parentes de 1º ou 2º grau (pai, mãe, filho, irmãos, tios ou avós) mediante apresentação de documento original com foto e certidão de nascimento ou casamento do titular.</p>
       <p><a href="https://www.gov.br/">Acessar gov.br</a></p>
-      <p>© 2025 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
+      <p>© 2026 Sala Sensorial - ALECE. Todos os direitos reservados.</p>
     `;
 
     const mailOptions = {
