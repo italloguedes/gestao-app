@@ -306,7 +306,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       </p>
     </div>
     <div style="text-align: center; margin-top: 24px; color: #888; font-size: 13px;">
-      © 2025 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
+      © 2026 <span style="color: #bfa13a; font-weight: bold;">Sala</span> Sensorial - ALECE. Todos os direitos reservados.
     </div>
   </div>
 `,
