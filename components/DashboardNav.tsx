@@ -227,10 +227,10 @@ export default function DashboardNav() {
               <Link href="/dashboard" className="flex items-center space-x-2 group">
                 <div className="relative w-8 h-8 transition-transform duration-300 group-hover:scale-110">
                   <Image
-                    src="/logoautismo.png"
+                    src="/logo-sala-sensorial.png"
                     alt="Logo Sala Sensorial / ALECE"
                     fill
-                    className="rounded-full object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
