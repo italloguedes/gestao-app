@@ -98,7 +98,7 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 100
     }
   }
@@ -408,8 +408,8 @@ export default function AcoesItinerantesPage() {
                   key={year}
                   onClick={() => setSelectedYear(year)}
                   className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${selectedYear === year
-                      ? 'bg-white text-blue-600 shadow-md transform scale-105'
-                      : 'text-slate-400 hover:text-slate-600'
+                    ? 'bg-white text-blue-600 shadow-md transform scale-105'
+                    : 'text-slate-400 hover:text-slate-600'
                     }`}
                 >
                   {year}
