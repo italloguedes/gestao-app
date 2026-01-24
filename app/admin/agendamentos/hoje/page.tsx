@@ -311,6 +311,16 @@ export default function AgendamentosHojePage() {
     preferenciais: agendamentos.filter(a => a.atendimento_preferencial).length,
   }), [agendamentos]);
 
+  const occupiedSlots = useMemo(() =>
+    agendamentos.map(a => a.horario.substring(0, 5)),
+    [agendamentos]
+  );
+
+  const existingAppointments = useMemo(() =>
+    agendamentos.map(a => ({ cpf: a.cpf, nome: a.nome })),
+    [agendamentos]
+  );
+
   if (!user || !hasAccessToDashboard) return null;
 
   return (
@@ -566,12 +576,11 @@ export default function AgendamentosHojePage() {
           <EditAppointmentModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            agendamento={selectedAppointment}
-            onMainAction={() => { }} // Ação handled dentro do modal ou customizável
+            appointment={selectedAppointment}
+            action={modalAction as any}
+            onSave={handleEditAppointment}
             onStatusChange={handleStatusChange}
-            onEdit={handleEditAppointment}
             onDelete={handleDeleteAppointment}
-            user={{ id: user?.id, name: user?.user_metadata?.name }}
           />
         )}
       </AnimatePresence>
@@ -581,7 +590,10 @@ export default function AgendamentosHojePage() {
           <CreateAppointmentModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
-            onConfirm={handleCreateAppointment}
+            onSave={handleCreateAppointment}
+            selectedDate={selectedDate}
+            occupiedSlots={occupiedSlots}
+            existingAppointments={existingAppointments}
           />
         )}
       </AnimatePresence>
