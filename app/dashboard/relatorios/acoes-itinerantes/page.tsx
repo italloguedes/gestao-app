@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   FiMapPin,
   FiTrendingUp,
@@ -60,7 +61,8 @@ interface TimelineData {
 }
 
 interface ChronologicalItem {
-  data: string;
+  dataInicio: string;
+  dataFim: string;
   acao: string;
   total: number;
 }
@@ -94,6 +96,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AcoesItinerantesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [acoes, setAcoes] = useState<AcaoData[]>([]);
   const [statusData, setStatusData] = useState<StatusData[]>([]);
@@ -188,9 +191,9 @@ export default function AcoesItinerantesPage() {
         }
         // Normalizar o solicitante: remover espaços extras, converter para minúsculas e remover acentos
         const solicitante = a.solicitante.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        // Verificar se contém "acao" (sem acento após normalização) ou usar regex case-insensitive no original
-        // Isso garante que captura: "AÇÃO", "ação", "acao", "Acao", "Ação Itinerante", etc.
-        const isAcao = solicitante.includes('acao') || /acao|ação/i.test(a.solicitante.trim());
+        // Verificar se COMEÇA com "acao" (para evitar palavras como "comunicação" que contém "acao")
+        // Isso garante que captura: "AÇÃO", "ação", "Ação Itinerante", etc.
+        const isAcao = solicitante.startsWith('acao') || /^a[çc][ãa]o/i.test(a.solicitante.trim());
         return isAcao;
       });
 
@@ -215,30 +218,40 @@ export default function AcoesItinerantesPage() {
 
       setTotalAtendimentos(atendimentosAcoes.length);
 
-      // Processamento cronológico: Agrupar por data e solicitante
-      const cronoMap = new Map<string, number>();
+      // Processamento cronológico: Agrupar por ação (consolidar datas)
+      const cronoMap = new Map<string, { dataInicio: string; dataFim: string; total: number }>();
 
       atendimentosAcoes.forEach((at: any) => {
         const data = at.dia_atual || at.created_at?.split('T')[0];
         const nome = at.solicitante;
 
         if (data && nome) {
-          // Chave composta para agrupar
-          const key = `${data}|${nome}`;
-          cronoMap.set(key, (cronoMap.get(key) || 0) + 1);
+          if (!cronoMap.has(nome)) {
+            cronoMap.set(nome, { dataInicio: data, dataFim: data, total: 1 });
+          } else {
+            const existing = cronoMap.get(nome)!;
+            existing.total++;
+            // Atualizar data de início se for anterior
+            if (data < existing.dataInicio) {
+              existing.dataInicio = data;
+            }
+            // Atualizar data de fim se for posterior
+            if (data > existing.dataFim) {
+              existing.dataFim = data;
+            }
+          }
         }
       });
 
-      // Converter mapa para array e ordenar
-      const cronoArray: ChronologicalItem[] = Array.from(cronoMap.entries()).map(([key, total]) => {
-        const [data, acao] = key.split('|');
-        return { data, acao, total };
-      }).sort((a, b) => {
-        // Ordenar por data (crescente)
-        const dateCompare = a.data.localeCompare(b.data);
-        if (dateCompare !== 0) return dateCompare;
-        // Se mesma data, ordenar por nome da ação
-        return a.acao.localeCompare(b.acao);
+      // Converter mapa para array e ordenar por data de início
+      const cronoArray: ChronologicalItem[] = Array.from(cronoMap.entries()).map(([acao, dados]) => ({
+        acao,
+        dataInicio: dados.dataInicio,
+        dataFim: dados.dataFim,
+        total: dados.total
+      })).sort((a, b) => {
+        // Ordenar por data de início (crescente)
+        return a.dataInicio.localeCompare(b.dataInicio);
       });
 
       console.log(`Itens cronológicos gerados: ${cronoArray.length}`);
@@ -599,10 +612,11 @@ export default function AcoesItinerantesPage() {
   const generateChronologicalPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const aleceGreen: [number, number, number] = [0, 128, 0]; // Verde ALECE
 
     // Title
     doc.setFontSize(18);
-    doc.setTextColor(59, 130, 246); // Blue color
+    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
     doc.text('Cronograma de Ações Itinerantes', pageWidth / 2, 20, { align: 'center' });
 
     // Subtitle / Period
@@ -616,39 +630,59 @@ export default function AcoesItinerantesPage() {
     );
 
     // Table Data
-    const formattedData = chronologicalData.map(item => [
-      new Date(item.data).toLocaleDateString('pt-BR'),
-      item.acao,
-      item.total.toString()
-    ]);
+    const formattedData = chronologicalData.map(item => {
+      const dataInicioFormatted = new Date(item.dataInicio).toLocaleDateString('pt-BR');
+      const dataFimFormatted = new Date(item.dataFim).toLocaleDateString('pt-BR');
+
+      // Se data início e fim são iguais, mostrar apenas uma data
+      const periodo = item.dataInicio === item.dataFim
+        ? dataInicioFormatted
+        : `${dataInicioFormatted} até ${dataFimFormatted}`;
+
+      return [
+        item.acao,
+        periodo,
+        item.total.toString()
+      ];
+    });
 
     autoTable(doc, {
       startY: 35,
-      head: [['Data', 'Ação', 'Quantidade']],
+      head: [['Ação', 'Período', 'Quantidade']],
       body: formattedData,
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246], halign: 'center' },
+      headStyles: { fillColor: aleceGreen, halign: 'center' },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 30 }, // Data
-        1: { halign: 'left' }, // Ação
-        2: { halign: 'center', cellWidth: 30 }  // Quantidade
+        0: { halign: 'left' }, // Ação
+        1: { halign: 'center', cellWidth: 50 }, // Período
+        2: { halign: 'center', cellWidth: 25 }  // Quantidade
       },
       styles: { fontSize: 10, cellPadding: 3 },
-      didDrawPage: (data: any) => {
+      didDrawPage: () => {
         // Footer
         const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(10);
-        doc.setTextColor(150);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+
+        // User who generated
+        const userName = user?.email || 'Usuário';
         doc.text(
-          `Página ${pageCount}`,
-          pageWidth / 2,
-          doc.internal.pageSize.getHeight() - 10,
-          { align: 'center' }
+          `Gerado por: ${userName}`,
+          14,
+          doc.internal.pageSize.getHeight() - 15
         );
+
         doc.text(
           `Gerado em ${new Date().toLocaleString('pt-BR')}`,
           14,
           doc.internal.pageSize.getHeight() - 10
+        );
+
+        doc.text(
+          `Página ${pageCount}`,
+          pageWidth - 14,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'right' }
         );
       }
     });
