@@ -108,9 +108,9 @@ export default function AcoesItinerantesPage() {
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
 
   useEffect(() => {
-    // Definir datas padrão: início das ações (01/07/2025) até hoje
+    // Definir datas padrão: início das ações (01/06/2025) até hoje
     const hoje = new Date();
-    const dataInicioAcoes = new Date('2025-07-01'); // Data de início das ações itinerantes
+    const dataInicioAcoes = new Date('2025-06-01'); // Data de início das ações itinerantes
 
     setDataFim(hoje.toISOString().split('T')[0]);
     setDataInicio(dataInicioAcoes.toISOString().split('T')[0]);
