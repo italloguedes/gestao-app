@@ -35,7 +35,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface AcaoData {
   nome: string;
@@ -565,7 +565,7 @@ export default function AcoesItinerantesPage() {
       `${acao.percentualConclusao.toFixed(1)}%`
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 45,
       head: [['Ação', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
       body: tableData,
@@ -622,7 +622,7 @@ export default function AcoesItinerantesPage() {
       item.total.toString()
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 35,
       head: [['Data', 'Ação', 'Quantidade']],
       body: formattedData,
