@@ -59,6 +59,12 @@ interface TimelineData {
   atendimentos: number;
 }
 
+interface ChronologicalItem {
+  data: string;
+  acao: string;
+  total: number;
+}
+
 const COLORS = {
   primary: '#3B82F6',
   success: '#10B981',
@@ -96,6 +102,7 @@ export default function AcoesItinerantesPage() {
   const [dataFim, setDataFim] = useState('');
   const [totalAtendimentos, setTotalAtendimentos] = useState(0);
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
+  const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
 
   useEffect(() => {
     // Definir datas padrão: início das ações (01/07/2025) até hoje
@@ -119,7 +126,7 @@ export default function AcoesItinerantesPage() {
       // O Supabase tem limite padrão de 1000 registros, então precisamos buscar em lotes
       console.log('=== BUSCA DE ATENDIMENTOS ===');
       console.log(`Período: ${dataInicio} a ${dataFim}`);
-      
+
       let allAtendimentos: any[] = [];
       let page = 0;
       const pageSize = 1000; // Limite máximo do Supabase
@@ -145,7 +152,7 @@ export default function AcoesItinerantesPage() {
         if (atendimentos && atendimentos.length > 0) {
           allAtendimentos = [...allAtendimentos, ...atendimentos];
           console.log(`Página ${page + 1}: ${atendimentos.length} registros encontrados (Total acumulado: ${allAtendimentos.length})`);
-          
+
           // Se retornou menos que o pageSize, não há mais registros
           if (atendimentos.length < pageSize) {
             hasMore = false;
@@ -174,7 +181,7 @@ export default function AcoesItinerantesPage() {
       // Usar busca case-insensitive e mais flexível para capturar todos os registros fieis da tabela
       console.log('=== FILTRAGEM DE AÇÕES ===');
       console.log(`Total de atendimentos no período: ${atendimentos.length}`);
-      
+
       const atendimentosAcoes = atendimentos.filter((a: any) => {
         if (!a.solicitante) {
           return false;
@@ -186,16 +193,16 @@ export default function AcoesItinerantesPage() {
         const isAcao = solicitante.includes('acao') || /acao|ação/i.test(a.solicitante.trim());
         return isAcao;
       });
-      
+
       // Log detalhado para debug
       console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
-      
+
       // Verificar se há atendimentos sem solicitante que poderiam ser ações
       const atendimentosSemSolicitante = atendimentos.filter((a: any) => !a.solicitante);
       if (atendimentosSemSolicitante.length > 0) {
         console.warn(`Atenção: ${atendimentosSemSolicitante.length} atendimento(s) sem solicitante (não incluídos no relatório)`);
       }
-      
+
       // Mostrar exemplos de solicitantes encontrados
       const solicitantesUnicos = [...new Set(atendimentosAcoes.map((a: any) => a.solicitante))];
       console.log(`Solicitantes únicos encontrados: ${solicitantesUnicos.length}`);
@@ -208,6 +215,35 @@ export default function AcoesItinerantesPage() {
 
       setTotalAtendimentos(atendimentosAcoes.length);
 
+      // Processamento cronológico: Agrupar por data e solicitante
+      const cronoMap = new Map<string, number>();
+
+      atendimentosAcoes.forEach((at: any) => {
+        const data = at.dia_atual || at.created_at?.split('T')[0];
+        const nome = at.solicitante;
+
+        if (data && nome) {
+          // Chave composta para agrupar
+          const key = `${data}|${nome}`;
+          cronoMap.set(key, (cronoMap.get(key) || 0) + 1);
+        }
+      });
+
+      // Converter mapa para array e ordenar
+      const cronoArray: ChronologicalItem[] = Array.from(cronoMap.entries()).map(([key, total]) => {
+        const [data, acao] = key.split('|');
+        return { data, acao, total };
+      }).sort((a, b) => {
+        // Ordenar por data (crescente)
+        const dateCompare = a.data.localeCompare(b.data);
+        if (dateCompare !== 0) return dateCompare;
+        // Se mesma data, ordenar por nome da ação
+        return a.acao.localeCompare(b.acao);
+      });
+
+      console.log(`Itens cronológicos gerados: ${cronoArray.length}`);
+      setChronologicalData(cronoArray);
+
       // Agrupar por ação
       console.log('=== AGRUPAMENTO POR AÇÃO ===');
       const acoesMap = new Map<string, AcaoData>();
@@ -215,7 +251,7 @@ export default function AcoesItinerantesPage() {
 
       atendimentosAcoes.forEach((atendimento: any) => {
         const nomeAcao = atendimento.solicitante;
-        
+
         // Coletar todos os status únicos para análise
         if (atendimento.status) {
           statusEncontrados.add(String(atendimento.status).trim());
@@ -240,10 +276,10 @@ export default function AcoesItinerantesPage() {
         // Normalizar status para comparação (remover acentos e converter para minúsculas)
         // Tratar casos de null, undefined, empty string
         const statusRaw = atendimento.status;
-        const status = (statusRaw === null || statusRaw === undefined || statusRaw === '') 
-          ? '' 
+        const status = (statusRaw === null || statusRaw === undefined || statusRaw === '')
+          ? ''
           : String(statusRaw).trim();
-        
+
         const statusLower = status.toLowerCase();
         const statusNormalizado = statusLower
           .normalize('NFD')
@@ -253,10 +289,10 @@ export default function AcoesItinerantesPage() {
         // Verificar todas as variações de status - usar if separados para garantir contagem correta
         // IMPORTANTE: Cada atendimento deve ser contado em apenas uma categoria
         let statusContado = false;
-        
+
         // Concluído - todas as variações possíveis
         if (!statusContado && (
-          statusNormalizado.includes('concluido') || 
+          statusNormalizado.includes('concluido') ||
           statusLower.includes('concluído') ||
           statusLower === 'concluido' ||
           statusLower === 'concluído' ||
@@ -269,11 +305,11 @@ export default function AcoesItinerantesPage() {
           acao.concluidos++;
           statusContado = true;
         }
-        
+
         // Em Andamento - todas as variações possíveis
         if (!statusContado && (
-          statusNormalizado.includes('em_andamento') || 
-          statusNormalizado.includes('em andamento') || 
+          statusNormalizado.includes('em_andamento') ||
+          statusNormalizado.includes('em andamento') ||
           statusLower.includes('em andamento') ||
           statusLower === 'em andamento' ||
           statusLower === 'em_andamento' ||
@@ -285,10 +321,10 @@ export default function AcoesItinerantesPage() {
           acao.emAndamento++;
           statusContado = true;
         }
-        
+
         // Correção - todas as variações possíveis
         if (!statusContado && (
-          statusNormalizado.includes('correcao') || 
+          statusNormalizado.includes('correcao') ||
           statusLower.includes('correção') ||
           statusLower === 'correcao' ||
           statusLower === 'correção' ||
@@ -301,7 +337,7 @@ export default function AcoesItinerantesPage() {
           acao.correcao++;
           statusContado = true;
         }
-        
+
         // Bloqueado - todas as variações possíveis
         if (!statusContado && (
           statusNormalizado.includes('bloqueado') ||
@@ -312,7 +348,7 @@ export default function AcoesItinerantesPage() {
           acao.bloqueados++;
           statusContado = true;
         }
-        
+
         // Cancelado - adicionar também como categoria separada ou em Outros
         if (!statusContado && (
           statusNormalizado.includes('cancelado') ||
@@ -325,7 +361,7 @@ export default function AcoesItinerantesPage() {
           statusContado = true;
           console.warn(`Status "Cancelado" encontrado para ação "${nomeAcao}" - adicionado em "Outros"`);
         }
-        
+
         // Se não foi contado em nenhuma categoria (incluindo status vazio/null), adicionar à categoria "Outros"
         if (!statusContado) {
           acao.outros++;
@@ -336,24 +372,24 @@ export default function AcoesItinerantesPage() {
           }
         }
       });
-      
+
       // Log de status únicos encontrados
       console.log(`Status únicos encontrados nos atendimentos: ${statusEncontrados.size}`);
       if (statusEncontrados.size > 0) {
         console.log('Lista de status:', Array.from(statusEncontrados).sort());
       }
       console.log('============================');
-      
+
       // Calcular percentuais e ordenar com validação rigorosa
       const acoesArray = Array.from(acoesMap.values()).map(acao => {
         // Validar que a soma dos status seja igual ao total
         const somaStatus = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
-        
+
         // Se houver discrepância, corrigir automaticamente ajustando "Outros"
         if (somaStatus !== acao.total) {
           const diferenca = acao.total - somaStatus;
           console.error(`ERRO: Discrepância na ação "${acao.nome}": Total=${acao.total}, Soma Status=${somaStatus}, Diferença=${diferenca}`);
-          
+
           // Corrigir automaticamente: ajustar "Outros" para compensar a diferença
           if (diferenca > 0) {
             // Faltam atendimentos contados - adicionar em "Outros"
@@ -366,13 +402,13 @@ export default function AcoesItinerantesPage() {
             console.warn(`Correção automática: Removidos ${ajuste} atendimento(s) de "Outros" para ação "${acao.nome}"`);
           }
         }
-        
+
         // Validação final após correção
         const somaFinal = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
         if (somaFinal !== acao.total) {
           console.error(`ERRO CRÍTICO: Ainda há discrepância após correção na ação "${acao.nome}": Total=${acao.total}, Soma Final=${somaFinal}`);
         }
-        
+
         return {
           ...acao,
           percentualConclusao: acao.total > 0 ? (acao.concluidos / acao.total) * 100 : 0
@@ -380,13 +416,13 @@ export default function AcoesItinerantesPage() {
       }).sort((a, b) => b.total - a.total);
 
       setAcoes(acoesArray);
-      
+
       // Validação rigorosa final - verificar totais
       const totalGeral = acoesArray.reduce((sum, acao) => sum + acao.total, 0);
-      const somaStatusGeral = acoesArray.reduce((sum, acao) => 
+      const somaStatusGeral = acoesArray.reduce((sum, acao) =>
         sum + acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros, 0
       );
-      
+
       // Logs detalhados para debug
       console.log('=== VALIDAÇÃO DE DADOS ===');
       console.log(`Total de atendimentos no período: ${atendimentos.length}`);
@@ -394,18 +430,18 @@ export default function AcoesItinerantesPage() {
       console.log(`Total geral de atendimentos por ação: ${totalGeral}`);
       console.log(`Soma geral de status: ${somaStatusGeral}`);
       console.log(`Número de ações distintas: ${acoesArray.length}`);
-      
+
       // Verificar se todos os atendimentos foram agrupados
       if (totalGeral !== atendimentosAcoes.length) {
         console.error(`ERRO: Total geral (${totalGeral}) não corresponde ao número de atendimentos filtrados (${atendimentosAcoes.length})`);
         console.error(`Diferença: ${Math.abs(totalGeral - atendimentosAcoes.length)} atendimento(s)`);
       }
-      
+
       // Verificar se a soma dos status bate com o total
       if (totalGeral !== somaStatusGeral) {
         console.error(`ERRO: Total geral (${totalGeral}) não corresponde à soma de status (${somaStatusGeral})`);
         console.error(`Diferença: ${Math.abs(totalGeral - somaStatusGeral)} atendimento(s)`);
-        
+
         // Tentar identificar qual ação tem problema
         acoesArray.forEach(acao => {
           const somaAcao = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
@@ -416,7 +452,7 @@ export default function AcoesItinerantesPage() {
       } else {
         console.log('✓ Validação passou: Total geral corresponde à soma de status');
       }
-      
+
       // Estatísticas por status
       const statsPorStatus = {
         concluidos: acoesArray.reduce((sum, acao) => sum + acao.concluidos, 0),
@@ -460,7 +496,7 @@ export default function AcoesItinerantesPage() {
         }));
 
       setStatusData(statusArray);
-      
+
       // Log detalhado para gráfico de status
       console.log('=== GRÁFICO DE STATUS ===');
       const totalStatusGrafico = statusArray.reduce((sum, item) => sum + item.value, 0);
@@ -468,7 +504,7 @@ export default function AcoesItinerantesPage() {
       console.log(`Total no gráfico: ${totalStatusGrafico}`);
       console.log(`Total de ações filtradas: ${totalAcoesFiltradas}`);
       console.log('Distribuição:', statusArray.map(s => `${s.name}: ${s.value}`).join(', '));
-      
+
       if (totalStatusGrafico !== totalAcoesFiltradas) {
         console.error(`ERRO no gráfico: Total (${totalStatusGrafico}) não corresponde ao total de ações (${totalAcoesFiltradas})`);
       } else {
@@ -480,7 +516,7 @@ export default function AcoesItinerantesPage() {
       const atendimentosParaTimeline = selectedAcao
         ? atendimentosAcoes.filter((a: any) => a.solicitante === selectedAcao)
         : atendimentosAcoes;
-        
+
       const timelineMap = new Map<string, number>();
       atendimentosParaTimeline.forEach((atendimento: any) => {
         const data = atendimento.dia_atual || atendimento.created_at?.split('T')[0];
@@ -560,6 +596,66 @@ export default function AcoesItinerantesPage() {
     doc.save(`acoes-itinerantes-${dataInicio}-${dataFim}.pdf`);
   };
 
+  const generateChronologicalPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(18);
+    doc.setTextColor(59, 130, 246); // Blue color
+    doc.text('Cronograma de Ações Itinerantes', pageWidth / 2, 20, { align: 'center' });
+
+    // Subtitle / Period
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(
+      `Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`,
+      pageWidth / 2,
+      28,
+      { align: 'center' }
+    );
+
+    // Table Data
+    const formattedData = chronologicalData.map(item => [
+      new Date(item.data).toLocaleDateString('pt-BR'),
+      item.acao,
+      item.total.toString()
+    ]);
+
+    (doc as any).autoTable({
+      startY: 35,
+      head: [['Data', 'Ação', 'Quantidade']],
+      body: formattedData,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246], halign: 'center' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 30 }, // Data
+        1: { halign: 'left' }, // Ação
+        2: { halign: 'center', cellWidth: 30 }  // Quantidade
+      },
+      styles: { fontSize: 10, cellPadding: 3 },
+      didDrawPage: (data: any) => {
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(10);
+        doc.setTextColor(150);
+        doc.text(
+          `Página ${pageCount}`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' }
+        );
+        doc.text(
+          `Gerado em ${new Date().toLocaleString('pt-BR')}`,
+          14,
+          doc.internal.pageSize.getHeight() - 10
+        );
+      }
+    });
+
+    doc.save(`acoes-itinerantes-cronologica-${dataInicio}-${dataFim}.pdf`);
+  };
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -613,13 +709,23 @@ export default function AcoesItinerantesPage() {
               </p>
             </div>
 
-            <button
-              onClick={generatePDF}
-              className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-200" />
-              Exportar PDF
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={generateChronologicalPDF}
+                className="group flex items-center gap-2 px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <FiClock className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                Lista Cronológica
+              </button>
+
+              <button
+                onClick={generatePDF}
+                className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-200" />
+                Exportar PDF
+              </button>
+            </div>
           </div>
         </div>
 
@@ -843,9 +949,8 @@ export default function AcoesItinerantesPage() {
                 {acoes.map((acao, index) => (
                   <tr
                     key={acao.nome}
-                    className={`border-b border-slate-100 hover:bg-blue-50 transition-colors duration-150 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
-                    }`}
+                    className={`border-b border-slate-100 hover:bg-blue-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
+                      }`}
                   >
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{acao.nome}</td>
                     <td className="px-6 py-4 text-center">
