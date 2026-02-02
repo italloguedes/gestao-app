@@ -2,6 +2,9 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+// Configuração de runtime para Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {

@@ -13,19 +13,45 @@ export default function ClientLayout({
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     setIsMounted(true);
+
     const init = async () => {
       try {
+        // Timeout de 10 segundos para evitar requisições penduradas
+        const timeoutId = setTimeout(() => {
+          if (isMounted) {
+            console.warn('Database initialization timed out after 10s');
+            abortController.abort();
+          }
+        }, 10000);
+
         const result = await initializeDatabase();
+        clearTimeout(timeoutId);
+
+        if (!isMounted) return;
+
         if (!result.success) {
           console.error('Failed to initialize database:', result.error);
         }
       } catch (error) {
+        if (!isMounted) return;
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn('Database initialization was aborted');
+          return;
+        }
         console.error('Error initializing database:', error);
       }
     };
 
     init();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   if (!isMounted) {

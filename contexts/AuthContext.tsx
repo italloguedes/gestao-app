@@ -137,9 +137,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSession]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
         if (session) {
           setUser(session.user);
 
@@ -157,9 +161,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error) {
+        if (!isMounted) return;
         console.error('Erro ao inicializar autenticação:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -169,8 +174,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearInterval(expiryCheckIntervalRef.current);
     }
 
+    // Intervalo separado para o timer visual (apenas se houver warning ativo)
+    const timerIntervalRef = setInterval(() => {
+      if (!isMounted) return;
+      const loginTimestampStr = localStorage.getItem('auth_login_timestamp');
+      if (loginTimestampStr && showSessionWarning) {
+        const loginTimestamp = parseInt(loginTimestampStr);
+        const now = Date.now();
+        const sessionDuration = now - loginTimestamp;
+        const timeRemaining = AUTH_CONFIG.SESSION_TIMEOUT - sessionDuration;
+        setTimeUntilAutoLogout(timeRemaining);
+      }
+    }, 1000);
+
+    // Reduzido de 1s para 30s - verificação de sessão menos agressiva
     expiryCheckIntervalRef.current = setInterval(async () => {
+      if (!isMounted) return;
+
       const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
       const loginTimestampStr = localStorage.getItem('auth_login_timestamp');
 
       // Verificação de Timeout Hard (2 horas)
@@ -178,24 +201,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const loginTimestamp = parseInt(loginTimestampStr);
         const now = Date.now();
         const sessionDuration = now - loginTimestamp;
-        const timeRemaining = AUTH_CONFIG.SESSION_TIMEOUT - sessionDuration;
 
         // Se passou do tempo limite (2h)
         if (sessionDuration > AUTH_CONFIG.SESSION_TIMEOUT) {
           console.warn('Sessão excedeu o limite de 2 horas. Realizando logout forçado...');
-          setShowSessionWarning(false);
+          if (isMounted) setShowSessionWarning(false);
           await signOut();
           return;
         }
 
         // Se está no período de aviso (últimos 10 min)
         if (sessionDuration > (AUTH_CONFIG.SESSION_TIMEOUT - AUTH_CONFIG.SESSION_WARNING_THRESHOLD)) {
-          if (!showSessionWarning) {
+          if (isMounted && !showSessionWarning) {
             setShowSessionWarning(true);
           }
-          setTimeUntilAutoLogout(timeRemaining);
         } else {
-          if (showSessionWarning) {
+          if (isMounted && showSessionWarning) {
             setShowSessionWarning(false);
           }
         }
@@ -204,8 +225,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isSessionValid(session)) {
         console.error('Sessão inválida detectada no intervalo de background');
         const refreshed = await refreshSession();
+        if (!isMounted) return;
+
         if (!refreshed) {
           const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!isMounted) return;
+
           if (!isSessionValid(retrySession)) {
             console.error('Sessão expirou e não pôde ser renovada. Fazendo logout...');
             if (expiryCheckIntervalRef.current) {
@@ -224,9 +249,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
         console.log('Auto-renovando sessão próxima da expiração...');
         const refreshed = await refreshSession();
+        if (!isMounted) return;
+
         if (!refreshed) {
           console.error('Falha ao renovar sessão no intervalo de background');
           const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!isMounted) return;
+
           if (!isSessionValid(retrySession)) {
             console.error('Sessão expirou durante refresh em background');
             if (expiryCheckIntervalRef.current) {
@@ -236,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-    }, 1000); // Verificação a cada segundo para o timer ficar preciso
+    }, 30000); // Reduzido de 1s para 30s - evita sobrecarga de requisições
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       setUser(session?.user ?? null);
@@ -272,7 +301,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
+      clearInterval(timerIntervalRef);
       if (expiryCheckIntervalRef.current) {
         clearInterval(expiryCheckIntervalRef.current);
       }

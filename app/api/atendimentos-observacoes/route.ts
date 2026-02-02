@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
+// Configuração de runtime para Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 segundos (máximo no plano gratuito)
+
 // GET - Listar observações de um atendimento
 export async function GET(request: NextRequest) {
   // Verificar autenticação e permissões (requer atendente, admin ou superadmin)

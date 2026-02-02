@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
+// Configuração de runtime para Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 30;
+
 /**
  * API Route para criar usuários no Supabase Auth
  * Requer autenticação e role: superadmin

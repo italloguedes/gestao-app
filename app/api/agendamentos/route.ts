@@ -3,6 +3,10 @@ import { supabaseServer as supabase } from '@/lib/supabase-server';
 import { sendEmailConfirmation } from '@/lib/emailService';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
+// Configuração de runtime para Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 30;
+
 export async function POST(request: NextRequest) {
   // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
   const authCheck = await checkAuth(request, 'atendente');

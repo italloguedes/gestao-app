@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, createUser } from '@/lib/models/User';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
+// Configuração de runtime para Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 segundos (máximo no plano gratuito)
+
 export async function GET(request: NextRequest) {
   try {
     // Verificar autenticação e permissões (requer admin ou superadmin)
