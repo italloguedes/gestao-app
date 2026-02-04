@@ -92,8 +92,8 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
           />
         </div>
         <span className={`text-xs font-medium min-w-[70px] text-right ${strength.level <= 1 ? 'text-red-600' :
-            strength.level === 2 ? 'text-amber-600' :
-              'text-emerald-600'
+          strength.level === 2 ? 'text-amber-600' :
+            'text-emerald-600'
           }`}>
           {strength.label}
         </span>
@@ -296,19 +296,10 @@ export default function Home() {
         if (data.session) {
           await supabase.auth.refreshSession();
 
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('email', sanitizedEmail)
-            .single();
+          // Ler role diretamente do user_metadata
+          const userRole = data.session.user.user_metadata?.role;
 
-          if (userError) {
-            console.warn('Erro ao verificar permissões do usuário');
-            router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
-            return;
-          }
-
-          if (userData?.role === 'admin' || userData?.role === 'atendente' || userData?.role === 'superadmin') {
+          if (userRole === 'admin' || userRole === 'atendente' || userRole === 'superadmin') {
             router.push(AUTH_CONFIG.REDIRECT_URLS.DASHBOARD);
           } else {
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
@@ -528,8 +519,8 @@ export default function Home() {
                       whileHover={!isSubmitDisabled ? { scale: 1.01 } : {}}
                       whileTap={!isSubmitDisabled ? { scale: 0.99 } : {}}
                       className={`w-full py-3.5 rounded-xl font-semibold text-base transition-all duration-200 flex items-center justify-center gap-2 ${isSubmitDisabled
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30'
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30'
                         }`}
                     >
                       {loading ? (
