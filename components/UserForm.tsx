@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiLink, FiPhone, FiLock, FiCheck, FiSave, FiX, FiUserPlus } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface UserFormProps {
   user?: User;
@@ -20,84 +20,21 @@ type UserFormData = {
   phone?: string;
   role: User['role'];
   status: User['status'];
-  auth_id?: string;
   password?: string;
-  syncWithAuth?: boolean;
-};
-
-type AuthUser = {
-  id: string;
-  email: string;
-  phone?: string;
-  created_at: string;
-  user_metadata?: {
-    full_name?: string;
-    name?: string;
-    phone?: string;
-  };
 };
 
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const [formData, setFormData] = useState<UserFormData>({
     name: user?.name || '',
     email: user?.email || '',
-    phone: '',
+    phone: user?.phone || '',
     role: user?.role || 'user',
     status: user?.status || 'active',
-    auth_id: user?.auth_id || '',
-    password: '',
-    syncWithAuth: false
+    password: ''
   });
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [authUsers, setAuthUsers] = useState<AuthUser[]>([]);
-  const [loadingAuthUsers, setLoadingAuthUsers] = useState(false);
-  const [selectedAuthUser, setSelectedAuthUser] = useState<string>('');
-  const [showAuthUsers, setShowAuthUsers] = useState(!user);
-
-  const fetchAuthUsers = async () => {
-    try {
-      setLoadingAuthUsers(true);
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        setError('Você precisa estar logado para gerenciar usuários.');
-        return;
-      }
-
-      const response = await fetch('/api/auth/list-users', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao buscar usuários do Auth:', errorData);
-        setError('Erro ao carregar usuários do Supabase Auth.');
-        return;
-      }
-
-      const data = await response.json();
-      const availableUsers = data.users.filter((authUser: any) =>
-        !authUser.is_linked || authUser.id === user?.auth_id
-      );
-
-      setAuthUsers(availableUsers);
-    } catch (err) {
-      console.error('Erro ao buscar usuários do Auth:', err);
-      setError('Erro de conexão ao buscar usuários.');
-    } finally {
-      setLoadingAuthUsers(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showAuthUsers) {
-      fetchAuthUsers();
-    }
-  }, [showAuthUsers]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -105,29 +42,6 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handleAuthUserSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const authUserId = e.target.value;
-    setSelectedAuthUser(authUserId);
-
-    if (authUserId) {
-      const authUser = authUsers.find(u => u.id === authUserId);
-      if (authUser) {
-        setFormData(prev => ({
-          ...prev,
-          email: authUser.email || prev.email,
-          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || prev.name,
-          auth_id: authUser.id,
-          phone: authUser.phone || authUser.user_metadata?.phone || prev.phone
-        }));
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        auth_id: undefined
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,43 +56,25 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) throw new Error('Formato de email inválido');
 
-      if (!user && !selectedAuthUser && (!formData.password || formData.password.length < 6)) {
-        throw new Error('Senha obrigatória (mínimo 6 caracteres) ou selecione um usuário existente');
+      // Para novo usuário, senha é obrigatória
+      if (!user && (!formData.password || formData.password.length < 6)) {
+        throw new Error('Senha obrigatória (mínimo 6 caracteres)');
       }
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Sessão expirada');
 
       if (user?.id) {
-        // Update existing user logic
-        if (formData.syncWithAuth && user.auth_id) {
-          const updateAuthData: any = { userId: user.auth_id };
-          if (formData.email !== user.email) updateAuthData.email = formData.email;
-          if (formData.phone) updateAuthData.phone = formData.phone;
-          if (formData.password) updateAuthData.password = formData.password;
-
-          const authResponse = await fetch('/api/auth/update-user', {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updateAuthData)
-          });
-
-          if (!authResponse.ok) {
-            const errorData = await authResponse.json();
-            throw new Error(errorData.error || 'Erro ao atualizar Auth');
-          }
-        }
-
-        const updateData = {
+        // Atualizar usuário existente via /api/users/[id]
+        const updateData: any = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-          status: formData.status,
-          updated_at: new Date().toISOString()
+          status: formData.status
         };
+
+        if (formData.phone) updateData.phone = formData.phone;
+        if (formData.password) updateData.password = formData.password;
 
         const response = await fetch(`/api/users/${user.id}`, {
           method: 'PUT',
@@ -189,46 +85,21 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           body: JSON.stringify(updateData)
         });
 
-        if (!response.ok) throw new Error('Erro ao atualizar usuário');
-
-      } else {
-        // Create new user logic
-        let authId = formData.auth_id || selectedAuthUser;
-
-        if (!authId && formData.email && formData.password) {
-          const createAuthData = {
-            email: formData.email,
-            password: formData.password,
-            phone: formData.phone,
-            user_metadata: { full_name: formData.name, name: formData.name }
-          };
-
-          const authResponse = await fetch('/api/auth/create-user', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(createAuthData)
-          });
-
-          if (!authResponse.ok) {
-            const errorData = await authResponse.json();
-            throw new Error(errorData.error || 'Erro ao criar usuário no Auth');
-          }
-
-          const authData = await authResponse.json();
-          authId = authData.user.id;
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.details || 'Erro ao atualizar usuário');
         }
 
-        const createData: any = {
+      } else {
+        // Criar novo usuário via /api/users (que cria no Auth com user_metadata)
+        const createData = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-          status: formData.status
+          status: formData.status,
+          phone: formData.phone,
+          password: formData.password
         };
-
-        if (authId) createData.auth_id = authId;
 
         const response = await fetch('/api/users', {
           method: 'POST',
@@ -239,7 +110,10 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           body: JSON.stringify(createData)
         });
 
-        if (!response.ok) throw new Error('Erro ao criar usuário');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.details || 'Erro ao criar usuário');
+        }
       }
 
       onSuccess?.();
@@ -283,47 +157,6 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 <h4 className="text-sm font-bold text-red-800">Erro ao salvar</h4>
                 <p className="text-sm text-red-600 mt-1">{error}</p>
               </div>
-            </div>
-          )}
-
-          {/* Auth Link Section (Only for new users) */}
-          {!user && (
-            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-6 transition-all hover:border-blue-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                    <FiLink className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800">Vincular Conta Existente</h3>
-                    <p className="text-xs text-slate-500">Opcional: Selecione um usuário do Supabase Auth</p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={fetchAuthUsers}
-                  disabled={loadingAuthUsers}
-                  className="text-blue-600 hover:bg-blue-100"
-                >
-                  <FiRefreshCw className={`h-4 w-4 mr-2 ${loadingAuthUsers ? 'animate-spin' : ''}`} />
-                  Atualizar Lista
-                </Button>
-              </div>
-
-              <select
-                value={selectedAuthUser}
-                onChange={handleAuthUserSelect}
-                className="w-full h-11 rounded-lg border-slate-200 bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Criar novo login manualmente</option>
-                {authUsers.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.email} {u.user_metadata?.full_name ? `(${u.user_metadata.full_name})` : ''}
-                  </option>
-                ))}
-              </select>
             </div>
           )}
 
@@ -375,23 +208,21 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               </div>
 
               {/* Password Field */}
-              {(!user || formData.syncWithAuth) && !selectedAuthUser && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <FiLock className="text-slate-400" /> Senha {!user && <span className="text-red-500">*</span>}
-                  </label>
-                  <Input
-                    name="password"
-                    type="password"
-                    value={formData.password || ''}
-                    onChange={handleChange}
-                    placeholder={user ? "Deixe em branco para manter" : "Mínimo 6 caracteres"}
-                    className="h-11"
-                    required={!user}
-                    minLength={6}
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <FiLock className="text-slate-400" /> Senha {!user && <span className="text-red-500">*</span>}
+                </label>
+                <Input
+                  name="password"
+                  type="password"
+                  value={formData.password || ''}
+                  onChange={handleChange}
+                  placeholder={user ? "Deixe em branco para manter" : "Mínimo 6 caracteres"}
+                  className="h-11"
+                  required={!user}
+                  minLength={6}
+                />
+              </div>
             </div>
 
             <div className="h-px bg-slate-100 my-2"></div>
@@ -436,27 +267,6 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 </select>
               </div>
             </div>
-
-            {/* Sync Checkbox */}
-            {user && user.auth_id && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="syncWithAuth"
-                  checked={formData.syncWithAuth}
-                  onChange={(e) => setFormData(prev => ({ ...prev, syncWithAuth: e.target.checked }))}
-                  className="mt-1 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                />
-                <div>
-                  <label htmlFor="syncWithAuth" className="text-sm font-bold text-slate-800 block">
-                    Sincronizar com Login
-                  </label>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Atualizar também o email e senha de acesso do usuário.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
@@ -484,4 +294,4 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       </CardContent>
     </Card>
   );
-} 
+}

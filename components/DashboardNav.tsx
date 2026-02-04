@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import { getUserByAuthId, createUser, hasAccessToDashboard, isAdmin, type UserRole } from '@/lib/models/User';
+import { hasAccessToDashboard, isAdmin, getUserRole, getUserName, type UserRole } from '@/lib/models/User';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -92,80 +92,22 @@ export default function DashboardNav() {
           return;
         }
 
-        try {
-          const user = await getUserByAuthId(session.user.id);
+        // Obter role e nome diretamente do user_metadata
+        const userRole = getUserRole(session.user) as UserRole;
+        const name = getUserName(session.user);
 
-          if (!user) {
-            const { data: existingUser, error: emailError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('email', session.user.email)
-              .single();
+        const canAccessDashboard = hasAccessToDashboard(userRole);
+        const isAdminRole = isAdmin(userRole);
 
-            if (emailError && emailError.code !== 'PGRST116') {
-              throw emailError;
-            }
+        setIsAdminUser(isAdminRole);
+        setHasAccess(canAccessDashboard);
+        setUserName(name);
 
-            if (existingUser) {
-              const { data: updatedUser, error: updateError } = await supabase
-                .from('users')
-                .update({ auth_id: session.user.id })
-                .eq('id', existingUser.id)
-                .select()
-                .single();
-
-              if (updateError) throw updateError;
-              if (updatedUser) {
-                const userRole = updatedUser.role as UserRole;
-                const canAccessDashboard = hasAccessToDashboard(userRole);
-                const isAdminRole = isAdmin(userRole);
-
-                setIsAdminUser(isAdminRole);
-                setHasAccess(canAccessDashboard);
-                setUserName(updatedUser.name);
-
-                if (!canAccessDashboard) {
-                  router.push('/');
-                }
-                setLoading(false);
-                return;
-              }
-            }
-
-            const userData = {
-              auth_id: session.user.id,
-              name: session.user.user_metadata?.full_name || session.user.email || 'Usuário',
-              email: session.user.email!,
-              role: 'user' as const,
-              status: 'active' as const
-            };
-
-            await createUser(userData);
-            setUserName(userData.name);
-
-            setHasAccess(false);
-            router.push('/');
-            setLoading(false);
-            return;
-          } else {
-            const canAccessDashboard = hasAccessToDashboard(user.role);
-            const isAdminRole = isAdmin(user.role);
-
-            setIsAdminUser(isAdminRole);
-            setHasAccess(canAccessDashboard);
-            setUserName(user.name);
-
-            if (!canAccessDashboard) {
-              router.push('/');
-            }
-            setLoading(false);
-          }
-        } catch (userError) {
-          console.error('Erro ao buscar usuário:', userError);
-          setError('Erro ao carregar seu perfil de usuário');
-          setLoading(false);
+        if (!canAccessDashboard) {
           router.push('/');
         }
+
+        setLoading(false);
       } catch (error) {
         console.error('Erro ao verificar permissões:', error);
         setError('Erro ao verificar suas permissões');
@@ -269,15 +211,9 @@ export default function DashboardNav() {
             </button>
           </div>
 
-
-  // ... existing code
-
-          return (
-          // ... existing code
           {/* Desktop user menu */}
           <div className="hidden sm:flex items-center space-x-4">
             {isClient && (
-              // ... existing code
               <div className="mr-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-medium text-emerald-700 flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -381,4 +317,4 @@ function MobileNavLink({ href, active, children }: { href: string; active: boole
       {children}
     </Link>
   );
-} 
+}

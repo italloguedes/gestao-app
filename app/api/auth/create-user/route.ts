@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, user_metadata, phone, email_confirm = true } = body;
+    const { email, password, user_metadata, phone, email_confirm = true, name, role = 'user', status = 'active' } = body;
 
     // Validar dados obrigatórios
     if (!email) {
@@ -55,15 +55,24 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Preparar user_metadata com role e status
+    const finalMetadata = {
+      ...(user_metadata || {}),
+      full_name: name || user_metadata?.full_name || user_metadata?.name || email.split('@')[0],
+      name: name || user_metadata?.name || email.split('@')[0],
+      role: role,
+      status: status
+    };
+
     // Preparar dados para criação
     const createData: any = {
       email,
       email_confirm, // Se true, não envia email de confirmação
+      user_metadata: finalMetadata
     };
 
     if (password) createData.password = password;
     if (phone) createData.phone = phone;
-    if (user_metadata) createData.user_metadata = user_metadata;
 
     // Criar usuário no Auth
     const { data, error } = await supabaseAdmin.auth.admin.createUser(createData);

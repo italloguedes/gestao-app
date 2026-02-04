@@ -276,19 +276,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user && window.location.pathname === '/' && _event === 'SIGNED_IN') {
         try {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('email', session.user.email)
-            .single();
+          // Usar role do user_metadata diretamente
+          const userRole = session.user.user_metadata?.role || 'user';
 
-          if (userError) {
-            console.error('Erro ao buscar dados do usuário:', userError);
-            router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
-            return;
-          }
-
-          if (hasAccessToDashboard(userData.role)) {
+          if (hasAccessToDashboard(userRole)) {
             router.push('/dashboard');
           } else {
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);

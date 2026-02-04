@@ -62,7 +62,7 @@ export default function UserList() {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (userId: number) => {
+  const handleDelete = async (userId: string) => {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
@@ -230,9 +230,9 @@ export default function UserList() {
                       {/* Avatar */}
                       <div className="relative">
                         <div className={`h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-lg transition-transform group-hover:scale-105 ${user.role === 'superadmin' ? 'bg-gradient-to-br from-purple-500 to-purple-700 shadow-purple-200' :
-                            user.role === 'admin' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-200' :
-                              user.role === 'atendente' ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-200' :
-                                'bg-gradient-to-br from-slate-400 to-slate-600 shadow-slate-200'
+                          user.role === 'admin' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-200' :
+                            user.role === 'atendente' ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-200' :
+                              'bg-gradient-to-br from-slate-400 to-slate-600 shadow-slate-200'
                           }`}>
                           {user.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
@@ -255,12 +255,6 @@ export default function UserList() {
                             <FiMail className="h-3.5 w-3.5" />
                             {user.email}
                           </div>
-                          {user.auth_id && (
-                            <div className="flex items-center gap-1.5 text-xs bg-slate-50 px-2 py-0.5 rounded border border-slate-100" title="Usuário vinculado ao Auth">
-                              <FiShield className="h-3 w-3 text-slate-400" />
-                              <span className="font-mono text-slate-400">Auth Linked</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>

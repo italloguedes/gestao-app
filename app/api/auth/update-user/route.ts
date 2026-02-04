@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, email, password, user_metadata, phone } = body;
+    const { userId, email, password, user_metadata, phone, name, role, status } = body;
 
     // Validar userId
     if (!userId) {
@@ -51,13 +51,32 @@ export async function PUT(request: NextRequest) {
       }
     });
 
+    // Buscar usuário atual para mesclar user_metadata
+    const { data: currentUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const currentMetadata = currentUser?.user?.user_metadata || {};
+
+    // Mesclar user_metadata
+    const finalMetadata = {
+      ...currentMetadata,
+      ...(user_metadata || {})
+    };
+
+    // Atualizar campos específicos
+    if (name !== undefined) {
+      finalMetadata.full_name = name;
+      finalMetadata.name = name;
+    }
+    if (role !== undefined) finalMetadata.role = role;
+    if (status !== undefined) finalMetadata.status = status;
+
     // Preparar dados para atualização
-    const updateData: any = {};
+    const updateData: any = {
+      user_metadata: finalMetadata
+    };
 
     if (email) updateData.email = email;
     if (password) updateData.password = password;
     if (phone) updateData.phone = phone;
-    if (user_metadata) updateData.user_metadata = user_metadata;
 
     // Atualizar usuário no Auth
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(

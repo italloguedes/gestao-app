@@ -9,8 +9,7 @@ import { NextRequest } from 'next/server';
 export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
 
 export interface AuthenticatedUser {
-  id: number;
-  auth_id: string;
+  id: string;
   email: string;
   name: string;
   role: UserRole;
@@ -78,20 +77,14 @@ export async function checkAuth(
       };
     }
 
-    // Buscar dados completos do usuário na tabela users
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, auth_id, email, name, role, status')
-      .eq('auth_id', authUser.id)
-      .single();
-
-    if (userError || !userData) {
-      return {
-        authenticated: true,
-        authorized: false,
-        error: 'Usuário não encontrado no sistema'
-      };
-    }
+    // Extrair dados do user_metadata
+    const userData: AuthenticatedUser = {
+      id: authUser.id,
+      email: authUser.email || '',
+      name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+      role: authUser.user_metadata?.role || 'user',
+      status: authUser.user_metadata?.status || 'active'
+    };
 
     // Verificar se usuário está ativo
     if (userData.status !== 'active') {
@@ -116,7 +109,7 @@ export async function checkAuth(
     return {
       authenticated: true,
       authorized: true,
-      user: userData as AuthenticatedUser
+      user: userData
     };
 
   } catch (error) {

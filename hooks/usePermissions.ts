@@ -1,11 +1,11 @@
 /**
  * Hook para gerenciar permissões do usuário
+ * Usa user_metadata do Supabase Auth para obter a role
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   UserRole,
@@ -32,12 +32,12 @@ interface UsePermissionsReturn {
 }
 
 export function usePermissions(): UsePermissionsReturn {
-  const { user, loading: authLoading, ensureValidSession } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserRole = () => {
       try {
         if (!user) {
           setRole(null);
@@ -45,45 +45,9 @@ export function usePermissions(): UsePermissionsReturn {
           return;
         }
 
-        const sessionValid = await ensureValidSession();
-        if (!sessionValid) {
-          setRole(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('auth_id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Erro ao buscar role do usuário:', error);
-          setRole(null);
-          setLoading(false);
-          return;
-        }
-
-        if (!userData) {
-          const { data: userByEmail } = await supabase
-            .from('users')
-            .select('role')
-            .eq('email', user.email)
-            .single();
-
-          if (userByEmail) {
-            setRole(userByEmail.role as UserRole);
-            setLoading(false);
-            return;
-          }
-
-          setRole('user');
-          setLoading(false);
-          return;
-        }
-
-        setRole(userData.role as UserRole);
+        // Obter role diretamente do user_metadata
+        const userRole = user.user_metadata?.role as UserRole || 'user';
+        setRole(userRole);
         setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar permissões:', error);
@@ -95,7 +59,7 @@ export function usePermissions(): UsePermissionsReturn {
     if (!authLoading) {
       fetchUserRole();
     }
-  }, [user, authLoading, ensureValidSession]);
+  }, [user, authLoading]);
 
   return {
     role,
