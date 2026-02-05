@@ -84,20 +84,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const fetchCurrentUserName = async () => {
     if (!user) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('name, email')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (!error && data) {
-        setCurrentUserName(data.name);
-        setCurrentUserEmail(data.email);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar nome do usuário:', err);
-    }
+    setCurrentUserName(user.user_metadata?.name || user.user_metadata?.full_name || 'Usuário');
+    setCurrentUserEmail(user.email || '');
   };
 
   const fetchObservacoes = async () => {
@@ -718,9 +706,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
                     type="text"
                     value={editedAtendimento.nome || ''}
                     onChange={(e) => handleInputChange('nome', e.target.value)}
-                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${
-                      validationErrors.nome ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${validationErrors.nome ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
+                      }`}
                   />
                 ) : (
                   <p className="text-lg font-semibold text-slate-800 bg-slate-50 px-4 py-3 rounded-xl">{atendimento.nome}</p>
@@ -739,9 +726,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
                     type="text"
                     value={editedAtendimento.cpf || ''}
                     onChange={(e) => handleInputChange('cpf', e.target.value)}
-                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${
-                      validationErrors.cpf ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${validationErrors.cpf ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
+                      }`}
                   />
                 ) : (
                   <p className="text-lg font-semibold text-slate-800 bg-slate-50 px-4 py-3 rounded-xl">{atendimento.cpf}</p>
@@ -760,9 +746,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
                     type="email"
                     value={editedAtendimento.email || ''}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${
-                      validationErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 font-semibold ${validationErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
+                      }`}
                   />
                 ) : (
                   <p className="text-lg font-semibold text-slate-800 bg-slate-50 px-4 py-3 rounded-xl break-all">{atendimento.email}</p>

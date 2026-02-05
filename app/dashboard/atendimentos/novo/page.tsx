@@ -67,15 +67,7 @@ export default function NovoAtendimentoPage() {
     const horario = now.toTimeString().split(' ')[0];
 
     // Buscar nome do atendente para salvar no registro
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('name')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (userError) {
-      console.error('Erro ao buscar dados do atendente:', userError);
-    }
+    const atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
 
     const { error } = await supabase.from('atendimentos').insert([
       {
@@ -86,7 +78,7 @@ export default function NovoAtendimentoPage() {
         horario,
         dia_atual: diaAtual,
         usuario_id: user.id,
-        atendente_nome: userData?.name || 'Não identificado',
+        atendente_nome: atendenteNome,
         protocolo,
         status: 'em_andamento',
       },

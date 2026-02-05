@@ -41,19 +41,9 @@ export default function AtendimentosPage() {
       }
 
       try {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('email', user.email)
-          .single();
+        const userRole = user.user_metadata?.role || user.app_metadata?.role || 'user';
 
-        if (userError || !userData) {
-          console.error('Erro ao buscar dados do usuário:', userError);
-          router.push('/');
-          return;
-        }
-
-        if (!hasAccessToDashboard(userData.role)) {
+        if (!hasAccessToDashboard(userRole)) {
           router.push('/agendamento');
           return;
         }
@@ -473,8 +463,8 @@ export default function AtendimentosPage() {
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
                       className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum
-                          ? 'bg-slate-900 text-white shadow-md'
-                          : 'text-slate-500 hover:bg-slate-100'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-slate-100'
                         }`}
                     >
                       {pageNum}
