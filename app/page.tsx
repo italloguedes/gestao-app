@@ -376,13 +376,13 @@ export default function Home() {
                 <motion.div variants={itemVariants} className="flex flex-col items-center mb-10">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
-                    className="relative w-24 h-24 mb-6 bg-white rounded-2xl shadow-lg shadow-teal-100/50 flex items-center justify-center"
+                    className="relative w-40 h-40 mb-8 bg-white rounded-3xl shadow-xl shadow-teal-100/50 flex items-center justify-center"
                   >
                     <Image
                       src="/logoautismo.png"
                       alt="Logo CIADI"
-                      width={72}
-                      height={72}
+                      width={120}
+                      height={120}
                       className="object-contain"
                       priority
                     />
