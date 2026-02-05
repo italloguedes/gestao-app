@@ -7,42 +7,22 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code');
   const origin = requestUrl.origin;
 
-  console.log('[Auth Callback] Iniciando, origin:', origin);
-
   if (code) {
     try {
       const supabase = createRouteHandlerClient({ cookies });
-      const { data: { session }, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
-      if (sessionError) {
-        console.error('[Auth Callback] Erro ao trocar código:', sessionError);
-        return NextResponse.redirect(new URL('/agendamento', origin));
-      }
+      // Apenas troca o código por sessão - NÃO faz lógica de role aqui
+      // O callback rápido evita "stale session" error
+      await supabase.auth.exchangeCodeForSession(code);
 
-      if (session?.user) {
-        // Usa APENAS user_metadata.role do Supabase Auth
-        const userRole = session.user.user_metadata?.role || 'user';
-
-        console.log('[Auth Callback] Email:', session.user.email);
-        console.log('[Auth Callback] Role (user_metadata):', userRole);
-
-        // Redirecionar baseado na role
-        if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'atendente') {
-          console.log('[Auth Callback] Redirecionando para /dashboard');
-          return NextResponse.redirect(new URL('/dashboard', origin));
-        } else if (userRole === 'recepcao') {
-          console.log('[Auth Callback] Redirecionando para /admin/agendamentos/hoje');
-          return NextResponse.redirect(new URL('/admin/agendamentos/hoje', origin));
-        } else {
-          console.log('[Auth Callback] Redirecionando para /agendamento (role:', userRole, ')');
-          return NextResponse.redirect(new URL('/agendamento', origin));
-        }
-      }
+      // Redireciona para raiz - o AuthContext vai detectar SIGNED_IN
+      // e fazer o redirect baseado na role no client-side
+      return NextResponse.redirect(new URL('/', origin));
     } catch (error) {
-      console.error('[Auth Callback] Erro geral:', error);
+      console.error('[Auth Callback] Erro:', error);
     }
   }
 
-  console.log('[Auth Callback] Fallback - redirecionando para /agendamento');
-  return NextResponse.redirect(new URL('/agendamento', origin));
+  // Fallback: sempre vai para raiz, deixa o cliente decidir
+  return NextResponse.redirect(new URL('/', origin));
 }
