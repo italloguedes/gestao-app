@@ -276,8 +276,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user && window.location.pathname === '/' && _event === 'SIGNED_IN') {
         try {
-          // Usar role do user_metadata diretamente
-          const userRole = session.user.user_metadata?.role || 'user';
+          // Primeiro tenta pegar a role do user_metadata
+          let userRole = session.user.user_metadata?.role;
+
+          // Se não houver role no metadata, busca na tabela users
+          if (!userRole || userRole === 'user') {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('role')
+              .eq('auth_id', session.user.id)
+              .single();
+
+            if (userData?.role) {
+              userRole = userData.role;
+            }
+          }
+
+          // Fallback para 'user' se ainda não encontrou
+          userRole = userRole || 'user';
+
+          console.log('Redirecionando usuário com role:', userRole);
 
           if (hasAccessToDashboard(userRole)) {
             router.push('/dashboard');
