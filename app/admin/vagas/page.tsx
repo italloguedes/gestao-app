@@ -38,34 +38,17 @@ export default function GestaoVagas() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Primeiro tenta buscar da tabela users
-        let userRole = null;
-        let dbId = null;
+        // Usa APENAS user_metadata.role do Supabase Auth
+        const userRole = user.user_metadata?.role || 'user';
 
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role, id')
-          .eq('auth_id', user.id)
-          .single();
-
-        if (!userError && userData) {
-          userRole = userData.role;
-          dbId = userData.id;
-        }
-
-        // Fallback para user_metadata se não encontrou na tabela
-        if (!userRole) {
-          userRole = user.user_metadata?.role;
-        }
-
-        console.log('Role do usuário em vagas:', userRole);
+        console.log('[Vagas] Role do usuário:', userRole);
 
         const isUserAdmin = userRole === 'admin' || userRole === 'superadmin' || userRole === 'atendente';
         setIsAdmin(isUserAdmin);
 
         setUser({
           ...user,
-          dbId: dbId,
+          dbId: undefined,
           auth_id: user.id
         });
       } else {
