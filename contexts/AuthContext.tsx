@@ -281,6 +281,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (hasAccessToDashboard(userRole)) {
             router.push('/dashboard');
+          } else if (userRole === 'recepcao') {
+            router.push('/admin/agendamentos/hoje');
           } else {
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
           }
