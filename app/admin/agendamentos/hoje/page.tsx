@@ -84,7 +84,7 @@ const HORARIOS = (() => {
 export default function AgendamentosHojePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { hasAccessToDashboard, loading: permissionsLoading } = usePermissions();
+  const { hasAgendamentosHojeAccess, isRecepcao, loading: permissionsLoading } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -361,12 +361,12 @@ export default function AgendamentosHojePage() {
   useEffect(() => {
     const checkUser = async () => {
       if (permissionsLoading) return;
-      if (!user || !hasAccessToDashboard) {
+      if (!user || !hasAgendamentosHojeAccess) {
         router.push("/admin/login");
       }
     };
     checkUser();
-  }, [user, hasAccessToDashboard, permissionsLoading, router]);
+  }, [user, hasAgendamentosHojeAccess, permissionsLoading, router]);
 
   useEffect(() => {
     loadAgendamentos();
@@ -461,7 +461,7 @@ export default function AgendamentosHojePage() {
     [agendamentos]
   );
 
-  if (!user || !hasAccessToDashboard) {
+  if (!user || !hasAgendamentosHojeAccess) {
     // Show loading state while checking permissions
     if (permissionsLoading) {
       return (
@@ -547,13 +547,15 @@ export default function AgendamentosHojePage() {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Ações Principais */}
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="group flex items-center px-6 py-3 text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-bold"
-                >
-                  <FiPlus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                  Novo Agendamento
-                </button>
+                {!isRecepcao && (
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="group flex items-center px-6 py-3 text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-bold"
+                  >
+                    <FiPlus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                    Novo Agendamento
+                  </button>
+                )}
 
                 <button
                   onClick={generateReport}
@@ -756,17 +758,21 @@ export default function AgendamentosHojePage() {
                                 <div className="pt-2 flex flex-col gap-2">
                                   <button
                                     onClick={() => {
+                                      if (isRecepcao) {
+                                        alert('Você não tem permissão para gerenciar agendamentos.');
+                                        return;
+                                      }
                                       setSelectedAppointment(agendamento);
                                       setModalAction("edit");
                                       setIsModalOpen(true);
                                     }}
                                     className="w-full px-4 py-2 text-sm rounded-xl bg-slate-50 hover:bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-all duration-200 flex items-center justify-center font-bold"
                                   >
-                                    <FiEdit className="w-4 h-4 mr-2" />
-                                    Detalhes
+                                    <FiEye className="w-4 h-4 mr-2" />
+                                    {isRecepcao ? 'Ver Detalhes' : 'Gerenciar'}
                                   </button>
 
-                                  {agendamento.status === "confirmado" && (
+                                  {agendamento.status === "confirmado" && !isRecepcao && (
                                     <button
                                       onClick={async () => {
                                         if (!user) return;
@@ -818,30 +824,32 @@ export default function AgendamentosHojePage() {
                                       Iniciar Atendimento
                                     </button>
                                   )}
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("ausente");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                    >
-                                      <FiXCircle className="w-3.5 h-3.5 mr-1" />
-                                      Ausente
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(agendamento);
-                                        setModalAction("cancelar");
-                                        setIsModalOpen(true);
-                                      }}
-                                      className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
-                                    >
-                                      <FiSlash className="w-3.5 h-3.5 mr-1" />
-                                      Cancelar
-                                    </button>
-                                  </div>
+                                  {!isRecepcao && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("ausente");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      >
+                                        <FiXCircle className="w-3.5 h-3.5 mr-1" />
+                                        Ausente
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("cancelar");
+                                          setIsModalOpen(true);
+                                        }}
+                                        className="px-2 py-2 text-xs rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 flex items-center justify-center font-bold shadow-md"
+                                      >
+                                        <FiSlash className="w-3.5 h-3.5 mr-1" />
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}

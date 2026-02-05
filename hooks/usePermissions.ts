@@ -27,6 +27,8 @@ interface UsePermissionsReturn {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   hasAccessToDashboard: boolean;
+  hasAgendamentosHojeAccess: boolean;
+  isRecepcao: boolean;
   roleDisplayName: string;
   permissions: Permission[];
 }
@@ -61,6 +63,10 @@ export function usePermissions(): UsePermissionsReturn {
     }
   }, [user, authLoading]);
 
+  const isRecepcaoRole = role === 'recepcao';
+  const hasDashboardAccess = role ? hasAccessToDashboard(role) : false;
+  const hasAgendamentosHoje = role ? hasPermission(role, 'view_agendamentos_hoje') : false;
+
   return {
     role,
     loading,
@@ -68,8 +74,11 @@ export function usePermissions(): UsePermissionsReturn {
     hasRouteAccess: (route: string) => role ? hasRouteAccess(role, route) : false,
     isAdmin: role ? isAdmin(role) : false,
     isSuperAdmin: role ? isSuperAdmin(role) : false,
-    hasAccessToDashboard: role ? hasAccessToDashboard(role) : false,
+    hasAccessToDashboard: hasDashboardAccess,
+    hasAgendamentosHojeAccess: hasDashboardAccess || hasAgendamentosHoje,
+    isRecepcao: isRecepcaoRole,
     roleDisplayName: role ? getRoleDisplayName(role) : 'Visitante',
     permissions: role ? getRolePermissions(role) : [],
   };
 }
+
