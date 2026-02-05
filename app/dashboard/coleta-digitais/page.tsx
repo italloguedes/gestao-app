@@ -153,17 +153,40 @@ export default function ColetaDigitaisPage() {
 
       const rawData = data || [];
 
-      // Separar em duas filas
-      const preferenciais = rawData.filter((a: any) => a.atendimento_preferencial);
-      const normais = rawData.filter((a: any) => !a.atendimento_preferencial);
+      // Separar em duas filas com check explícito de boolean
+      const preferenciais = rawData.filter((a: any) => a.atendimento_preferencial === true);
+      const normais = rawData.filter((a: any) => !a.atendimento_preferencial || a.atendimento_preferencial === false);
 
-      // Intercalar: 1 Preferencial, 1 Normal, etc.
-      const filaIntercalada = [];
-      const maxLen = Math.max(preferenciais.length, normais.length);
+      // Intercalar corretamente: alterna 1 preferencial, 1 normal
+      // Resultado esperado: P1, N1, P2, N2, P3, N3...
+      const filaIntercalada: any[] = [];
+      let prefIndex = 0;
+      let normIndex = 0;
+      let turnoPreferencial = true; // Começa com preferencial
 
-      for (let i = 0; i < maxLen; i++) {
-        if (i < preferenciais.length) filaIntercalada.push(preferenciais[i]);
-        if (i < normais.length) filaIntercalada.push(normais[i]);
+      while (prefIndex < preferenciais.length || normIndex < normais.length) {
+        if (turnoPreferencial) {
+          // Turno do preferencial
+          if (prefIndex < preferenciais.length) {
+            filaIntercalada.push(preferenciais[prefIndex]);
+            prefIndex++;
+          } else if (normIndex < normais.length) {
+            // Não há mais preferenciais, pega normal
+            filaIntercalada.push(normais[normIndex]);
+            normIndex++;
+          }
+        } else {
+          // Turno do normal
+          if (normIndex < normais.length) {
+            filaIntercalada.push(normais[normIndex]);
+            normIndex++;
+          } else if (prefIndex < preferenciais.length) {
+            // Não há mais normais, pega preferencial
+            filaIntercalada.push(preferenciais[prefIndex]);
+            prefIndex++;
+          }
+        }
+        turnoPreferencial = !turnoPreferencial; // Alterna o turno
       }
 
       // Mapear para o formato esperado pela interface
@@ -178,7 +201,7 @@ export default function ColetaDigitaisPage() {
         horario: atendimento.horario,
         status: atendimento.status,
         fotos_coletadas: atendimento.fotos_coletadas || false,
-        atendimento_preferencial: atendimento.atendimento_preferencial || false
+        atendimento_preferencial: atendimento.atendimento_preferencial === true
       }));
 
       setFila(atendimentosMapeados);
