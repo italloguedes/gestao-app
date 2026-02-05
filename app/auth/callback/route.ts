@@ -11,19 +11,35 @@ export async function GET(request: Request) {
     const { data: { session } } = await supabase.auth.exchangeCodeForSession(code);
 
     if (session?.user) {
-      // Busca o usuário no banco de dados
+      // Primeiro tenta buscar role na tabela users via auth_id
+      let userRole = null;
+
       const { data: userData, error } = await supabase
         .from('users')
         .select('role')
-        .eq('email', session.user.email)
+        .eq('auth_id', session.user.id)
         .single();
 
-      if (!error && (userData?.role === 'admin' || userData?.role === 'atendente')) {
+      if (!error && userData?.role) {
+        userRole = userData.role;
+      }
+
+      // Fallback para user_metadata se não encontrou na tabela
+      if (!userRole) {
+        userRole = session.user.user_metadata?.role;
+      }
+
+      console.log('Auth callback - role detectada:', userRole);
+
+      // Redirecionar baseado na role
+      if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'atendente') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
+      } else if (userRole === 'recepcao') {
+        return NextResponse.redirect(new URL('/admin/agendamentos/hoje', request.url));
       }
     }
   }
 
   // Para outros usuários ou em caso de erro, redireciona para o agendamento
   return NextResponse.redirect(new URL('/agendamento', request.url));
-} 
+}

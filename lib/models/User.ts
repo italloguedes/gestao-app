@@ -1,235 +1,63 @@
-import { supabase } from '../supabase-client';
+/**
+ * Modelo de Usuário - Usa Supabase Auth com user_metadata
+ * 
+ * Os dados do usuário são armazenados em auth.users com:
+ * - id: UUID do Supabase Auth
+ * - email: email do usuário
+ * - user_metadata.full_name: nome completo
+ * - user_metadata.role: 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user'
+ * - user_metadata.status: 'active' | 'inactive'
+ * - user_metadata.avatar_url: URL da foto de perfil
+ * - user_metadata.phone: telefone
+ */
 
-export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user';
 
 export interface User {
-  id?: number;  // Changed from string (UUID) to number (SERIAL)
-  auth_id?: string;  // Changed from UUID to TEXT
-  name: string;
+  id: string;  // UUID do auth.users
   email: string;
+  name: string;
   role: UserRole;
   status: 'active' | 'inactive';
+  phone?: string;
+  avatar_url?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-export async function initializeDatabase() {
-  try {
-    console.log('Iniciando inicialização do banco de dados...');
-    console.log('Verificando conexão com o Supabase...');
-
-    // Test connection first
-    const { data: testData, error: testError } = await supabase
-      .from('users')
-      .select('count')
-      .limit(1);
-
-    if (testError) {
-      console.error('Erro na conexão com o Supabase:', {
-        code: testError.code,
-        message: testError.message,
-        details: testError.details,
-        hint: testError.hint
-      });
-      return { success: false, error: testError };
-    }
-
-    console.log('Conexão com o Supabase estabelecida com sucesso');
-    return { success: true };
-  } catch (error) {
-    console.error('Erro na inicialização do banco:', error);
-    return { success: false, error };
-  }
+/**
+ * Mapeia usuário do Supabase Auth para interface User
+ */
+export function mapAuthUserToUser(authUser: any): User {
+  return {
+    id: authUser.id,
+    email: authUser.email || '',
+    name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+    role: authUser.user_metadata?.role || 'user',
+    status: authUser.user_metadata?.status || 'active',
+    phone: authUser.phone || authUser.user_metadata?.phone || '',
+    avatar_url: authUser.user_metadata?.avatar_url || '',
+    created_at: authUser.created_at,
+    updated_at: authUser.updated_at
+  };
 }
 
-export async function getUsers() {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+/**
+ * Converte dados do User para formato de user_metadata do Auth
+ */
+export function userToMetadata(user: Partial<User>): Record<string, any> {
+  const metadata: Record<string, any> = {};
 
-    if (error) throw error;
-    return data as User[];
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error;
+  if (user.name !== undefined) {
+    metadata.full_name = user.name;
+    metadata.name = user.name;
   }
-}
+  if (user.role !== undefined) metadata.role = user.role;
+  if (user.status !== undefined) metadata.status = user.status;
+  if (user.avatar_url !== undefined) metadata.avatar_url = user.avatar_url;
+  if (user.phone !== undefined) metadata.phone = user.phone;
 
-export async function getUserById(id: number) {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as User;
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    throw error;
-  }
-}
-
-export async function getUserByAuthId(authId: string) {
-  try {
-    if (!authId) {
-      throw new Error('Auth ID is required');
-    }
-
-    console.log('Fetching user with auth_id:', authId);
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', authId)
-      .single();
-
-    console.log('Supabase response:', {
-      data: data ? 'found' : 'not found',
-      error: error ? {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      } : null
-    });
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.log('No user found with this auth_id - this is normal for new users');
-        return null;
-      }
-      throw error;
-    }
-
-    return data as User;
-  } catch (error) {
-    console.error('Error fetching user by auth_id:', error);
-    throw error;
-  }
-}
-
-export async function createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>) {
-  try {
-    console.log('Iniciando criação de usuário com dados:', userData);
-
-    // Validate required fields
-    if (!userData.name || !userData.email || !userData.role || !userData.status) {
-      const error = new Error('Todos os campos são obrigatórios');
-      console.error('Erro de validação:', error);
-      throw error;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(userData.email)) {
-      const error = new Error('Formato de email inválido');
-      console.error('Erro de validação de email:', error);
-      throw error;
-    }
-
-    // Validate role
-    const validRoles = ['superadmin', 'admin', 'atendente', 'user'];
-    if (!validRoles.includes(userData.role)) {
-      const error = new Error('Função inválida');
-      console.error('Erro de validação de função:', error);
-      throw error;
-    }
-
-    // Validate status
-    const validStatuses = ['active', 'inactive'];
-    if (!validStatuses.includes(userData.status)) {
-      const error = new Error('Status inválido');
-      console.error('Erro de validação de status:', error);
-      throw error;
-    }
-
-    console.log('Dados validados com sucesso, tentando inserir no banco...');
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert([{
-        ...userData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    console.log('Resposta do Supabase:', {
-      success: !!data,
-      error: error ? {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      } : null,
-      data
-    });
-
-    if (error) {
-      console.error('Erro ao criar usuário no Supabase:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
-      
-      // Handle specific error cases
-      if (error.code === '23505') {
-        throw new Error('Este email já está em uso');
-      }
-      throw error;
-    }
-
-    if (!data) {
-      const error = new Error('Nenhum dado retornado após a criação do usuário');
-      console.error('Erro na criação do usuário:', error);
-      throw error;
-    }
-
-    console.log('Usuário criado com sucesso:', data);
-    return data as User;
-  } catch (error) {
-    console.error('Erro na função createUser:', error);
-    throw error;
-  }
-}
-
-export async function updateUser(id: number, userData: Partial<User>) {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .update(userData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as User;
-  } catch (error) {
-    console.error('Error updating user:', error);
-    throw error;
-  }
-}
-
-export async function deleteUser(id: number) {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as User;
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    throw error;
-  }
+  return metadata;
 }
 
 // Função para verificar se o usuário tem acesso ao dashboard
@@ -245,4 +73,31 @@ export const isAdmin = (role: UserRole): boolean => {
 // Função para verificar se o usuário tem permissões de superadmin
 export const isSuperAdmin = (role: UserRole): boolean => {
   return role === 'superadmin';
-}; 
+};
+
+/**
+ * Extrai a role do usuário a partir do user_metadata
+ * @param user - Objeto User do Supabase Auth (session.user)
+ */
+export function getUserRole(user: any): UserRole {
+  return user?.user_metadata?.role || 'user';
+}
+
+/**
+ * Extrai o nome do usuário a partir do user_metadata
+ * @param user - Objeto User do Supabase Auth (session.user)
+ */
+export function getUserName(user: any): string {
+  return user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'Usuário';
+}
+
+/**
+ * Verifica se o usuário está ativo
+ * @param user - Objeto User do Supabase Auth (session.user)
+ */
+export function isUserActive(user: any): boolean {
+  return user?.user_metadata?.status !== 'inactive';
+}

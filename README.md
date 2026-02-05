@@ -34,12 +34,32 @@ npm install
 ```
 
 3. Configure as variáveis de ambiente:
-Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+Copie o arquivo `.env.example` para `.env.local` e preencha com suas credenciais:
+```bash
+cp .env.example .env.local
+```
+
+Edite o arquivo `.env.local` com suas credenciais:
 ```env
+# Supabase (obrigatório)
 NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-RESEND_API_KEY=sua_chave_do_resend
+
+# Email Gmail (obrigatório para notificações)
+GMAIL_USER=seu_email@gmail.com
+GMAIL_PASSWORD=sua_senha_de_aplicativo
+
+# Configurações de Email Alternativas (opcional)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=seu_email@gmail.com
+EMAIL_PASSWORD=sua_senha
+EMAIL_FROM=seu_email@gmail.com
 ```
+
+**Notas importantes:**
+- Para Gmail: Use uma [senha de aplicativo](https://myaccount.google.com/apppasswords), não sua senha regular
+- Obtenha as credenciais do Supabase em: [https://app.supabase.com/project/_/settings/api](https://app.supabase.com/project/_/settings/api)
 
 ## 🏗️ Estrutura do Projeto
 
@@ -115,47 +135,95 @@ git push origin main
 ## 📱 Funcionalidades Principais
 
 ### Área Administrativa
-- Gestão de agendamentos
-- Visualização de agenda diária
-- Controle de status de agendamentos
-- Impressão de comprovantes
-- Gerenciamento de usuários
+- ✅ Gestão completa de atendimentos (CIN - Carteira de Identidade Nacional)
+- ✅ Dashboard com estatísticas em tempo real
+- ✅ Visualização de agenda diária e semanal
+- ✅ Controle de status de atendimentos (Pendente, Em Andamento, Concluído, Bloqueado, Correção)
+- ✅ Geração e impressão de comprovantes em PDF
+- ✅ Sistema de entrega de CIN com comprovante
+- ✅ Gerenciamento de usuários e permissões
+- ✅ Relatórios personalizados
+- ✅ Sistema de chamadas (Painel de senhas)
 
 ### Área do Cliente
-- Agendamento online
-- Visualização de horários disponíveis
-- Confirmação de agendamentos
-- Cancelamento de agendamentos
+- ✅ Agendamento online com seleção de data e horário
+- ✅ Consulta de atendimentos por CPF ou protocolo
+- ✅ Visualização de horários disponíveis em tempo real
+- ✅ Confirmação automática por email
+- ✅ Notificações de status do atendimento
 
 ## 🔒 Autenticação e Autorização
 
-O sistema utiliza Supabase Auth para gerenciar autenticação e autorização. Existem dois níveis de acesso:
+O sistema utiliza Supabase Auth para gerenciar autenticação e autorização com políticas RLS (Row Level Security). Existem três níveis de acesso:
 
-1. **Administradores**
-   - Acesso completo ao sistema
-   - Gerenciamento de agendamentos
-   - Controle de usuários
+1. **Super Administrador**
+   - Acesso total ao sistema
+   - Gerenciamento de usuários e permissões
+   - Configurações do sistema
 
-2. **Clientes**
+2. **Administradores**
+   - Acesso completo ao dashboard
+   - Gerenciamento de atendimentos
+   - Geração de relatórios
+   - Visualização de estatísticas
+
+3. **Usuários/Clientes**
    - Agendamento de horários
-   - Visualização de seus próprios agendamentos
-   - Gerenciamento de seus dados
+   - Consulta de atendimentos
+   - Visualização de status
+
+## 🔐 Segurança e Boas Práticas
+
+### Configuração de Segurança
+- ✅ Variáveis de ambiente protegidas (nunca commitadas)
+- ✅ Autenticação via Supabase com tokens JWT
+- ✅ Row Level Security (RLS) no banco de dados
+- ✅ Validação de dados no cliente e servidor
+- ✅ Proteção contra XSS e CSRF
+- ✅ Rate limiting nas APIs
+
+### Boas Práticas de Uso
+1. **Nunca compartilhe o arquivo `.env.local`**
+2. **Use senhas fortes para contas administrativas**
+3. **Mantenha as dependências atualizadas**
+4. **Faça backup regular do banco de dados**
+5. **Use HTTPS em produção (habilitado automaticamente no Vercel)**
+6. **Configure políticas de senha no Supabase**
 
 ## 📊 Banco de Dados
 
-O sistema utiliza Supabase como backend, com as seguintes tabelas principais:
+O sistema utiliza Supabase (PostgreSQL) como backend, com as seguintes tabelas principais:
 
-- `users`: Usuários do sistema
-- `agendamentos`: Registro de agendamentos
-- `configuracoes`: Configurações do sistema
+- **`atendimentos`**: Registro de todos os atendimentos de CIN
+  - Informações do cidadão (nome, CPF, email, telefone)
+  - Status do atendimento
+  - Protocolo único
+  - Data e horário do agendamento
+  - Informações de entrega
+
+- **`agendamentos`**: Controle de agendamentos
+  - Disponibilidade de vagas
+  - Horários confirmados e cancelados
+  - Integração com atendimentos
+
+- **`users`** (Supabase Auth): Usuários do sistema
+  - Informações de autenticação
+  - Perfis e permissões (role)
+  - Metadados do usuário
 
 ## 📧 Notificações
 
-O sistema envia notificações por email utilizando o Resend para:
-- Confirmação de agendamento
-- Lembretes de agendamento
-- Cancelamentos
-- Alterações de status
+O sistema envia notificações por email utilizando Gmail/SMTP (Nodemailer) para:
+- ✉️ Confirmação de agendamento
+- ✉️ Notificação de CIN pronta para retirada
+- ✉️ Conclusão de atendimento
+- ✉️ Alterações de status
+- ✉️ Lembretes automáticos
+
+**Configuração de Email:**
+- Suporta Gmail com senha de aplicativo
+- Configurável para qualquer servidor SMTP
+- Emails em formato HTML responsivo
 
 ## 🛠️ Desenvolvimento
 

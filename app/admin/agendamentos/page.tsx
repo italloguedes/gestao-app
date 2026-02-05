@@ -22,7 +22,7 @@ interface Agendamento {
 export default function AgendamentosPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -37,16 +37,16 @@ export default function AgendamentosPage() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (hasAccess) {
       loadAgendamentos();
     }
-  }, [isAdmin, dateFilter, statusFilter]);
+  }, [hasAccess, dateFilter, statusFilter]);
 
   const checkUser = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      
+
       if (user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -56,15 +56,20 @@ export default function AgendamentosPage() {
 
         if (userError) {
           console.error('Erro ao verificar permissões:', userError);
-          setIsAdmin(false);
+          setHasAccess(false);
           return;
         }
-        
-        setIsAdmin(userData?.role === 'admin' || userData?.role === 'superadmin');
+
+        // Atendente, admin e superadmin têm acesso
+        setHasAccess(
+          userData?.role === 'atendente' ||
+          userData?.role === 'admin' ||
+          userData?.role === 'superadmin'
+        );
       }
     } catch (err) {
       console.error('Erro ao verificar usuário:', err);
-      setIsAdmin(false);
+      setHasAccess(false);
     }
   };
 
@@ -194,12 +199,13 @@ export default function AgendamentosPage() {
     [agendamentos, searchTerm]
   );
 
-  if (!user || !isAdmin) {
+  if (!user || !hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600">Acesso Negado</h1>
           <p className="mt-2 text-gray-600">Você não tem permissão para acessar esta página.</p>
+          <p className="mt-1 text-sm text-gray-500">Apenas atendentes, administradores e super administradores.</p>
         </div>
       </div>
     );

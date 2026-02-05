@@ -1,117 +1,335 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { AUTH_CONFIG } from '@/lib/auth-config';
 import { hasAccessToDashboard } from '@/lib/models/User';
+import { SessionWarningModal } from '@/components/SessionWarningModal';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+  ensureValidSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signOut: async () => {},
+  signOut: async () => { },
+  refreshSession: async () => false,
+  ensureValidSession: async () => false,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [timeUntilAutoLogout, setTimeUntilAutoLogout] = useState(0);
   const router = useRouter();
+  const refreshingRef = useRef<Promise<boolean> | null>(null);
+  const expiryCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Verifica se a sessão expirou
-  const checkSessionExpiry = () => {
-    const expiryTime = localStorage.getItem('session-expiry');
-    if (expiryTime && parseInt(expiryTime) < Date.now()) {
-      // Sessão expirou, faz logout
-      signOut();
-      return true;
+  const isSessionValid = useCallback((session: any): boolean => {
+    if (!session) return false;
+
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
+    if (!expiresAt) return false;
+
+    const now = Date.now();
+    return expiresAt > now;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      if (expiryCheckIntervalRef.current) {
+        clearInterval(expiryCheckIntervalRef.current);
+      }
+      if (expiryCheckIntervalRef.current) {
+        clearInterval(expiryCheckIntervalRef.current);
+      }
+      localStorage.removeItem('app-session');
+      localStorage.removeItem('auth_login_timestamp');
+      await supabase.auth.signOut();
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
     }
-    return false;
-  };
+  }, [router]);
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    if (refreshingRef.current) {
+      console.log('Aguardando refresh de sessão em andamento...');
+      return await refreshingRef.current;
+    }
+
+    const refreshPromise = (async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+
+        if (error || !session) {
+          console.error('Falha ao renovar sessão:', error);
+          return false;
+        }
+
+        setUser(session.user);
+        console.log('Sessão renovada com sucesso');
+        return true;
+      } catch (error) {
+        console.error('Erro ao renovar sessão:', error);
+        return false;
+      } finally {
+        refreshingRef.current = null;
+      }
+    })();
+
+    refreshingRef.current = refreshPromise;
+    return await refreshPromise;
+  }, []);
+
+  const ensureValidSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session || !isSessionValid(session)) {
+        const refreshed = await refreshSession();
+
+        if (!refreshed) {
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!isSessionValid(retrySession)) {
+            console.warn('Sessão expirada e não foi possível renovar');
+            await signOut();
+            return false;
+          }
+        }
+
+        const { data: { session: finalSession } } = await supabase.auth.getSession();
+        return isSessionValid(finalSession);
+      }
+
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
+      const now = Date.now();
+      const timeUntilExpiry = expiresAt ? expiresAt - now : null;
+
+      if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
+        console.log('Sessão próxima da expiração, renovando preventivamente...');
+        await refreshSession();
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+        return isSessionValid(refreshedSession);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao verificar sessão:', error);
+      const { data: { session } } = await supabase.auth.getSession();
+      return isSessionValid(session);
+    }
+  }, [refreshSession, signOut, isSessionValid]);
+
+  const handleRenewSession = useCallback(async () => {
+    setShowSessionWarning(false);
+    localStorage.setItem('auth_login_timestamp', Date.now().toString());
+    await refreshSession();
+  }, [refreshSession]);
 
   useEffect(() => {
-    // Inicializa verificando a sessão atual
+    let isMounted = true;
+
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        // Atualiza o timestamp de expiração se a sessão for válida (3 horas)
-        localStorage.setItem('session-expiry', String(Date.now() + 10800000));
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (session) {
+          setUser(session.user);
+
+          // Inicializar timestamp de login se não existir
+          if (!localStorage.getItem('auth_login_timestamp')) {
+            localStorage.setItem('auth_login_timestamp', Date.now().toString());
+          }
+
+          const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
+          const now = Date.now();
+          const timeUntilExpiry = expiresAt ? expiresAt - now : null;
+
+          if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
+            await refreshSession();
+          }
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Erro ao inicializar autenticação:', error);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     initializeAuth();
 
-    // Verifica a expiração da sessão a cada minuto
-    const interval = setInterval(checkSessionExpiry, 60000);
+    if (expiryCheckIntervalRef.current) {
+      clearInterval(expiryCheckIntervalRef.current);
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (checkSessionExpiry()) return; // Se a sessão expirou, não faz nada
-
-      setUser(session?.user ?? null);
-      // Atualiza expiração sempre que houver uma nova sessão (3 horas)
-      if (session) {
-        localStorage.setItem('session-expiry', String(Date.now() + 10800000));
+    // Intervalo separado para o timer visual (apenas se houver warning ativo)
+    const timerIntervalRef = setInterval(() => {
+      if (!isMounted) return;
+      const loginTimestampStr = localStorage.getItem('auth_login_timestamp');
+      if (loginTimestampStr && showSessionWarning) {
+        const loginTimestamp = parseInt(loginTimestampStr);
+        const now = Date.now();
+        const sessionDuration = now - loginTimestamp;
+        const timeRemaining = AUTH_CONFIG.SESSION_TIMEOUT - sessionDuration;
+        setTimeUntilAutoLogout(timeRemaining);
       }
-      
-      if (session?.user && window.location.pathname === '/') {
-        try {
-          // Busca o usuário no banco de dados
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('email', session.user.email)
-            .single();
+    }, 1000);
 
-          if (userError) {
-            console.error('Erro ao buscar dados do usuário:', userError);
-            router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
-            return;
+    // Reduzido de 1s para 30s - verificação de sessão menos agressiva
+    expiryCheckIntervalRef.current = setInterval(async () => {
+      if (!isMounted) return;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      const loginTimestampStr = localStorage.getItem('auth_login_timestamp');
+
+      // Verificação de Timeout Hard (2 horas)
+      if (loginTimestampStr) {
+        const loginTimestamp = parseInt(loginTimestampStr);
+        const now = Date.now();
+        const sessionDuration = now - loginTimestamp;
+
+        // Se passou do tempo limite (2h)
+        if (sessionDuration > AUTH_CONFIG.SESSION_TIMEOUT) {
+          console.warn('Sessão excedeu o limite de 2 horas. Realizando logout forçado...');
+          if (isMounted) setShowSessionWarning(false);
+          await signOut();
+          return;
+        }
+
+        // Se está no período de aviso (últimos 10 min)
+        if (sessionDuration > (AUTH_CONFIG.SESSION_TIMEOUT - AUTH_CONFIG.SESSION_WARNING_THRESHOLD)) {
+          if (isMounted && !showSessionWarning) {
+            setShowSessionWarning(true);
+          }
+        } else {
+          if (isMounted && showSessionWarning) {
+            setShowSessionWarning(false);
+          }
+        }
+      }
+
+      if (!isSessionValid(session)) {
+        console.error('Sessão inválida detectada no intervalo de background');
+        const refreshed = await refreshSession();
+        if (!isMounted) return;
+
+        if (!refreshed) {
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!isMounted) return;
+
+          if (!isSessionValid(retrySession)) {
+            console.error('Sessão expirou e não pôde ser renovada. Fazendo logout...');
+            if (expiryCheckIntervalRef.current) {
+              clearInterval(expiryCheckIntervalRef.current);
+            }
+            await signOut();
+          }
+        }
+        return;
+      }
+
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : null;
+      const now = Date.now();
+      const timeUntilExpiry = expiresAt ? expiresAt - now : null;
+
+      if (timeUntilExpiry && timeUntilExpiry < 5 * 60 * 1000) {
+        console.log('Auto-renovando sessão próxima da expiração...');
+        const refreshed = await refreshSession();
+        if (!isMounted) return;
+
+        if (!refreshed) {
+          console.error('Falha ao renovar sessão no intervalo de background');
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!isMounted) return;
+
+          if (!isSessionValid(retrySession)) {
+            console.error('Sessão expirou durante refresh em background');
+            if (expiryCheckIntervalRef.current) {
+              clearInterval(expiryCheckIntervalRef.current);
+            }
+            await signOut();
+          }
+        }
+      }
+    }, 30000); // Reduzido de 1s para 30s - evita sobrecarga de requisições
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+      setUser(session?.user ?? null);
+
+      if (_event === 'SIGNED_IN') {
+        localStorage.setItem('auth_login_timestamp', Date.now().toString());
+      }
+
+      if (session?.user && window.location.pathname === '/' && _event === 'SIGNED_IN') {
+        try {
+          // Primeiro tenta pegar a role do user_metadata
+          let userRole = session.user.user_metadata?.role;
+
+          // Se não houver role no metadata, busca na tabela users
+          if (!userRole || userRole === 'user') {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('role')
+              .eq('auth_id', session.user.id)
+              .single();
+
+            if (userData?.role) {
+              userRole = userData.role;
+            }
           }
 
-          // Verifica se o usuário tem acesso ao dashboard
-          if (hasAccessToDashboard(userData.role)) {
-            // Redireciona admin e atendente para o dashboard
+          // Fallback para 'user' se ainda não encontrou
+          userRole = userRole || 'user';
+
+          console.log('Redirecionando usuário com role:', userRole);
+
+          if (hasAccessToDashboard(userRole)) {
             router.push('/dashboard');
+          } else if (userRole === 'recepcao') {
+            router.push('/admin/agendamentos/hoje');
           } else {
-            // Para outros usuários, redireciona para o agendamento
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
           }
         } catch (error) {
           console.error('Erro ao verificar permissões:', error);
-          // Em caso de erro, redireciona para o agendamento por padrão
           router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
         }
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
-      clearInterval(interval);
+      clearInterval(timerIntervalRef);
+      if (expiryCheckIntervalRef.current) {
+        clearInterval(expiryCheckIntervalRef.current);
+      }
     };
-  }, [router]);
-
-  const signOut = async () => {
-    try {
-      localStorage.removeItem('session-expiry');
-      localStorage.removeItem('app-session');
-      await supabase.auth.signOut();
-      router.push('/');
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    }
-  };
+  }, [refreshSession, router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut, refreshSession, ensureValidSession }}>
       {children}
+      <SessionWarningModal
+        isOpen={showSessionWarning}
+        onRenew={handleRenewSession}
+        onLogout={signOut}
+        expiresIn={timeUntilAutoLogout}
+      />
     </AuthContext.Provider>
   );
 }

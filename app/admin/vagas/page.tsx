@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { FiCheck, FiX, FiLock, FiUnlock } from 'react-icons/fi';
+import { FiCheck, FiX, FiLock, FiUnlock, FiCalendar, FiClock, FiUser } from 'react-icons/fi';
 import DashboardHeader from '@/components/DashboardHeader';
-
-const HORARIOS = [
-  "08:00","8:30", "09:00", "10:00", "11:00", // manhã
-  "13:00","13:30", "14:00","14:30", "15:00", // tardee
-];
+import { HORARIOS_MANHA, HORARIOS_TARDE } from '@/lib/constants';
 
 interface User {
   id: string;
@@ -21,46 +17,60 @@ export default function GestaoVagas() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [vagasLiberadas, setVagasLiberadas] = useState<{[key: string]: boolean}>({});
+  const [slotStatuses, setSlotStatuses] = useState<{ [key: string]: 'livre' | 'ocupado' | 'bloqueado' }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [stats, setStats] = useState({ total: 0, available: 0, blocked: 0, booked: 0 });
 
   useEffect(() => {
     checkUser();
-    if (selectedDate) {
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate && user) {
       loadVagasStatus();
     }
-  }, [selectedDate]);
+  }, [selectedDate, user]);
 
   const checkUser = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
+
       if (user) {
-        // Busca o usuário na tabela users usando auth_id
+        // Primeiro tenta buscar da tabela users
+        let userRole = null;
+        let dbId = null;
+
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('role, id')
           .eq('auth_id', user.id)
           .single();
 
-        if (userError) {
-          console.error('Erro ao verificar permissões:', userError);
-          setIsAdmin(false);
-          return;
+        if (!userError && userData) {
+          userRole = userData.role;
+          dbId = userData.id;
         }
-        
-        setIsAdmin(userData?.role === 'admin' || userData?.role === 'superadmin');
-        // Guarda o ID da tabela users
-        if (user) {
-          setUser({
-            ...user,
-            dbId: userData.id,
-            auth_id: user.id
-          });
+
+        // Fallback para user_metadata se não encontrou na tabela
+        if (!userRole) {
+          userRole = user.user_metadata?.role;
         }
+
+        console.log('Role do usuário em vagas:', userRole);
+
+        const isUserAdmin = userRole === 'admin' || userRole === 'superadmin' || userRole === 'atendente';
+        setIsAdmin(isUserAdmin);
+
+        setUser({
+          ...user,
+          dbId: dbId,
+          auth_id: user.id
+        });
+      } else {
+        setUser(null);
+        setIsAdmin(false);
       }
     } catch (err) {
       console.error('Erro ao verificar usuário:', err);
@@ -68,12 +78,24 @@ export default function GestaoVagas() {
     }
   };
 
+  const formatDateForDB = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Fortaleza',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   const loadVagasStatus = async () => {
     setLoading(true);
     try {
       const dataFormatada = formatDateForDB(selectedDate);
-      
-      // Busca todos os agendamentos para a data (confirmados e bloqueados)
+
       const { data: agendamentos, error } = await supabase
         .from('agendamentos')
         .select('horario, status')
@@ -81,39 +103,61 @@ export default function GestaoVagas() {
 
       if (error) throw error;
 
-      // Verifica se é um dia permitido
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-      
+
       const dataVerificar = new Date(selectedDate);
       dataVerificar.setHours(0, 0, 0, 0);
 
-      // Permitir agendamentos até 10 dias úteis à frente
       const maxDate = new Date(hoje);
-      let daysToAdd = 14; // 2 semanas para garantir 10 dias úteis
-      maxDate.setDate(hoje.getDate() + daysToAdd);
+      maxDate.setDate(hoje.getDate() + 14);
       maxDate.setHours(23, 59, 59, 999);
 
-      // Define o status de cada horário
-      const vagasStatus: {[key: string]: boolean} = {};
-      HORARIOS.forEach(horario => {
-        // Verifica se é um dia válido (não é fim de semana e está dentro do período permitido)
-        const isDiaValido = 
-          dataVerificar >= hoje && 
-          dataVerificar <= maxDate &&
-          selectedDate.getDay() !== 0 && 
-          selectedDate.getDay() !== 6;
+      const isDiaValido =
+        dataVerificar >= hoje &&
+        dataVerificar <= maxDate &&
+        selectedDate.getDay() !== 0 &&
+        selectedDate.getDay() !== 6;
 
+      const vagasStatus: { [key: string]: 'livre' | 'ocupado' | 'bloqueado' } = {};
+      let availableCount = 0;
+      let blockedCount = 0;
+      let bookedCount = 0;
+
+      const allSlots = [...HORARIOS_MANHA, ...HORARIOS_TARDE];
+
+      allSlots.forEach(horario => {
         const horarioCompleto = horario + ':00';
-        const agendamentoExistente = agendamentos?.find(a => a.horario === horarioCompleto);
+        const agendamento = agendamentos?.find((a: any) => a.horario === horarioCompleto);
 
-        // Uma vaga está liberada se:
-        // 1. É um dia válido E
-        // 2. Não existe agendamento OU não está bloqueada
-        vagasStatus[horario] = isDiaValido && (!agendamentoExistente || agendamentoExistente.status !== 'bloqueado');
+        const isBooked = agendamento && agendamento.status === 'confirmado';
+        const isBlocked = agendamento && agendamento.status === 'bloqueado';
+
+        let status: 'livre' | 'ocupado' | 'bloqueado' = 'livre';
+
+        if (isBooked) {
+          status = 'ocupado';
+          bookedCount++;
+        } else if (isBlocked) {
+          status = 'bloqueado';
+          blockedCount++;
+        } else if (!isDiaValido) {
+          status = 'bloqueado';
+        } else {
+          availableCount++;
+        }
+
+        vagasStatus[horario] = status;
       });
 
-      setVagasLiberadas(vagasStatus);
+      setSlotStatuses(vagasStatus);
+      setStats({
+        total: allSlots.length,
+        available: availableCount,
+        blocked: blockedCount,
+        booked: bookedCount
+      });
+
     } catch (err) {
       console.error('Erro ao carregar status das vagas:', err);
       setError('Erro ao carregar status das vagas');
@@ -124,16 +168,36 @@ export default function GestaoVagas() {
 
   const toggleVaga = async (horario: string) => {
     try {
-      const isLiberada = vagasLiberadas[horario];
       const dataFormatada = formatDateForDB(selectedDate);
+      const horarioCompleto = horario + ':00';
 
-      if (isLiberada) {
-        // Se está liberada, vamos bloquear
+      const { data: existingSlot } = await supabase
+        .from('agendamentos')
+        .select('status, id')
+        .eq('data', dataFormatada)
+        .eq('horario', horarioCompleto)
+        .single();
+
+      if (existingSlot) {
+        if (existingSlot.status === 'bloqueado') {
+          const { error } = await supabase
+            .from('agendamentos')
+            .delete()
+            .eq('id', existingSlot.id);
+
+          if (error) throw error;
+          setSuccess('Vaga liberada com sucesso!');
+        } else {
+          setError('Não é possível bloquear uma vaga já agendada por um usuário.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+      } else {
         const { error } = await supabase
           .from('agendamentos')
           .insert({
             data: dataFormatada,
-            horario: horario + ':00',
+            horario: horarioCompleto,
             user_id: user?.auth_id,
             nome: 'BLOQUEIO ADMINISTRATIVO',
             email: 'admin@sistema.com',
@@ -144,22 +208,10 @@ export default function GestaoVagas() {
           });
 
         if (error) throw error;
-      } else {
-        // Se está bloqueada, vamos liberar (remover o bloqueio)
-        const { error } = await supabase
-          .from('agendamentos')
-          .delete()
-          .eq('data', dataFormatada)
-          .eq('horario', horario + ':00')
-          .eq('status', 'bloqueado');
-
-        if (error) throw error;
+        setSuccess('Vaga bloqueada com sucesso!');
       }
 
-      // Recarrega o status das vagas após a alteração
       await loadVagasStatus();
-
-      setSuccess(`Vaga ${isLiberada ? 'bloqueada' : 'liberada'} com sucesso!`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Erro ao alterar status da vaga:', err);
@@ -168,29 +220,100 @@ export default function GestaoVagas() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const blockAllSlots = async () => {
+    if (!confirm('Tem certeza que deseja bloquear todas as vagas disponíveis para este dia?')) return;
+
+    setLoading(true);
     try {
-      return date.toLocaleDateString('pt-BR', {
-        timeZone: 'America/Fortaleza',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Erro ao formatar data:', error);
-      return date.toISOString().split('T')[0];
+      const dataFormatada = formatDateForDB(selectedDate);
+      const allSlots = [...HORARIOS_MANHA, ...HORARIOS_TARDE];
+
+      const { data: existingAppointments, error: fetchError } = await supabase
+        .from('agendamentos')
+        .select('horario')
+        .eq('data', dataFormatada);
+
+      if (fetchError) throw fetchError;
+
+      const existingTimes = new Set(existingAppointments?.map((a: any) => a.horario.slice(0, 5)));
+      const slotsToBlock = allSlots.filter(horario => !existingTimes.has(horario));
+
+      if (slotsToBlock.length === 0) {
+        setError('Não há vagas disponíveis para bloquear neste dia.');
+        setLoading(false);
+        return;
+      }
+
+      const recordsToInsert = slotsToBlock.map(horario => ({
+        data: dataFormatada,
+        horario: horario + ':00',
+        user_id: user?.auth_id,
+        nome: 'BLOQUEIO ADMINISTRATIVO',
+        email: 'admin@sistema.com',
+        cpf: '00000000000',
+        telefone: '00000000000',
+        data_nascimento: '2000-01-01',
+        status: 'bloqueado'
+      }));
+
+      const { error: insertError } = await supabase
+        .from('agendamentos')
+        .insert(recordsToInsert);
+
+      if (insertError) throw insertError;
+
+      await loadVagasStatus();
+      setSuccess(`${slotsToBlock.length} vagas bloqueadas com sucesso!`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Erro ao bloquear todas as vagas:', err);
+      setError('Erro ao bloquear vagas.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDateForDB = (date: Date) => {
-    return date.toISOString().split('T')[0];
+  const unblockAllSlots = async () => {
+    if (!confirm('Tem certeza que deseja desbloquear todas as vagas bloqueadas administrativamente para este dia?')) return;
+
+    setLoading(true);
+    try {
+      const dataFormatada = formatDateForDB(selectedDate);
+
+      const { error: deleteError } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq('data', dataFormatada)
+        .eq('status', 'bloqueado');
+
+      if (deleteError) throw deleteError;
+
+      await loadVagasStatus();
+      setSuccess('Todas as vagas bloqueadas foram liberadas!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Erro ao desbloquear todas as vagas:', err);
+      setError('Erro ao desbloquear vagas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getSlotStatusColor = (horario: string) => {
+    const status = slotStatuses[horario];
+    if (status === 'ocupado') return 'bg-blue-50 border-blue-200 text-blue-700 cursor-not-allowed';
+    if (status === 'bloqueado') return 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100';
+    return 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100';
   };
 
   if (!user || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Acesso Negado</h1>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-xl shadow-lg">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <FiLock className="h-6 w-6 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Acesso Negado</h1>
           <p className="mt-2 text-gray-600">Você não tem permissão para acessar esta página.</p>
         </div>
       </div>
@@ -200,94 +323,195 @@ export default function GestaoVagas() {
   return (
     <>
       <DashboardHeader />
-      <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-emerald-700 mb-6">Gestão de Vagas</h1>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Selecione a data
-              </label>
-              <input
-                type="date"
-                className="border rounded-lg px-3 py-2"
-                value={formatDateForDB(selectedDate)}
-                onChange={(e) => {
-                  const newDate = new Date(e.target.value + 'T00:00:00');
-                  setSelectedDate(newDate);
-                }}
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                Data selecionada: {formatDate(selectedDate)}
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                As vagas são liberadas automaticamente para a semana atual e a próxima semana.
-                Você pode bloquear manualmente vagas específicas.
-              </p>
+      <div className="min-h-screen bg-gray-50 py-8 px-4 pt-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Gestão de Vagas</h1>
+              <p className="text-gray-600 mt-1">Gerencie a disponibilidade de horários para agendamento.</p>
+            </div>
+            <div className="mt-4 md:mt-0 flex items-center space-x-4 bg-white p-3 rounded-lg shadow-sm border">
+              <div className="text-center px-4 border-r">
+                <div className="text-2xl font-bold text-emerald-600">{stats.available}</div>
+                <div className="text-xs text-gray-500 uppercase font-semibold">Livres</div>
+              </div>
+              <div className="text-center px-4 border-r">
+                <div className="text-2xl font-bold text-blue-600">{stats.booked}</div>
+                <div className="text-xs text-gray-500 uppercase font-semibold">Agendados</div>
+              </div>
+              <div className="text-center px-4">
+                <div className="text-2xl font-bold text-red-600">{stats.blocked}</div>
+                <div className="text-xs text-gray-500 uppercase font-semibold">Bloqueados</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar de Filtros */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <FiCalendar className="mr-2" /> Selecione a Data
+                </label>
+                <input
+                  type="date"
+                  className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 p-2.5 border"
+                  value={formatDateForDB(selectedDate)}
+                  onChange={(e) => {
+                    const newDate = new Date(e.target.value + 'T00:00:00');
+                    setSelectedDate(newDate);
+                  }}
+                />
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
+                  <h4 className="text-sm font-semibold text-blue-800 mb-2">Informações</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-xs text-gray-600">
+                      <div className="w-3 h-3 bg-emerald-100 border border-emerald-200 rounded mr-2"></div>
+                      Livre (Clique para bloquear)
+                    </div>
+                    <div className="flex items-center text-xs text-gray-600">
+                      <div className="w-3 h-3 bg-red-100 border border-red-200 rounded mr-2"></div>
+                      Bloqueado (Clique para liberar)
+                    </div>
+                    <div className="flex items-center text-xs text-gray-600">
+                      <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded mr-2"></div>
+                      Agendado (Não editável)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    onClick={blockAllSlots}
+                    disabled={loading}
+                    className="w-full py-2 px-4 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium flex items-center justify-center"
+                  >
+                    <FiLock className="mr-2" /> Bloqueiar Dia Inteiro
+                  </button>
+                  <button
+                    onClick={unblockAllSlots}
+                    disabled={loading}
+                    className="w-full py-2 px-4 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-medium flex items-center justify-center"
+                  >
+                    <FiUnlock className="mr-2" /> Desbloquear Dia Inteiro
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-700"></div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {HORARIOS.map(horario => {
-                    const isLiberada = vagasLiberadas[horario];
-                    return (
-                      <button
-                        key={horario}
-                        onClick={() => toggleVaga(horario)}
-                        className={`
-                          p-4 rounded-lg border flex items-center justify-between
-                          ${isLiberada 
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
-                            : 'bg-red-50 border-red-200 text-red-700'}
-                          hover:bg-opacity-75 transition-colors
-                        `}
-                      >
-                        <span className="font-medium">{horario}</span>
-                        {isLiberada ? (
-                          <FiUnlock className="w-5 h-5" title="Vaga disponível" />
-                        ) : (
-                          <FiLock className="w-5 h-5" title="Vaga bloqueada" />
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* Main Content - Slots */}
+            <div className="lg:col-span-3 space-y-6">
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
                 </div>
+              ) : (
+                <>
+                  {/* Manhã */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-800 flex items-center">
+                        <FiClock className="mr-2 text-emerald-500" /> Manhã
+                      </h3>
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        08:00 - 12:00
+                      </span>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {HORARIOS_MANHA.map(horario => (
+                          <button
+                            key={horario}
+                            onClick={() => toggleVaga(horario)}
+                            disabled={slotStatuses[horario] === 'ocupado'}
+                            className={`
+                                                relative p-3 rounded-lg border transition-all duration-200 flex flex-col items-center justify-center gap-2
+                                                ${getSlotStatusColor(horario)}
+                                            `}
+                          >
+                            <span className="font-bold text-lg">{horario}</span>
+                            {slotStatuses[horario] === 'livre' && (
+                              <div className="flex items-center text-xs font-medium text-emerald-700">
+                                <FiUnlock className="mr-1" /> Livre
+                              </div>
+                            )}
+                            {slotStatuses[horario] === 'ocupado' && (
+                              <div className="flex items-center text-xs font-medium text-blue-700">
+                                <FiUser className="mr-1" /> Agendado
+                              </div>
+                            )}
+                            {slotStatuses[horario] === 'bloqueado' && (
+                              <div className="flex items-center text-xs font-medium text-red-700">
+                                <FiLock className="mr-1" /> Bloqueado
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="mt-4 flex gap-2 items-center text-sm text-gray-600">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 mr-1"></div>
-                    <span>Disponível</span>
+                  {/* Tarde */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-800 flex items-center">
+                        <FiClock className="mr-2 text-orange-500" /> Tarde
+                      </h3>
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                        13:00 - 16:00
+                      </span>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {HORARIOS_TARDE.map(horario => (
+                          <button
+                            key={horario}
+                            onClick={() => toggleVaga(horario)}
+                            disabled={slotStatuses[horario] === 'ocupado'}
+                            className={`
+                                                relative p-3 rounded-lg border transition-all duration-200 flex flex-col items-center justify-center gap-2
+                                                ${getSlotStatusColor(horario)}
+                                            `}
+                          >
+                            <span className="font-bold text-lg">{horario}</span>
+                            {slotStatuses[horario] === 'livre' && (
+                              <div className="flex items-center text-xs font-medium text-emerald-700">
+                                <FiUnlock className="mr-1" /> Livre
+                              </div>
+                            )}
+                            {slotStatuses[horario] === 'ocupado' && (
+                              <div className="flex items-center text-xs font-medium text-blue-700">
+                                <FiUser className="mr-1" /> Agendado
+                              </div>
+                            )}
+                            {slotStatuses[horario] === 'bloqueado' && (
+                              <div className="flex items-center text-xs font-medium text-red-700">
+                                <FiLock className="mr-1" /> Bloqueado
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-                    <span>Bloqueada/Ocupada</span>
-                  </div>
+                </>
+              )}
+
+              {error && (
+                <div className="fixed bottom-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center animate-slide-up z-50">
+                  <FiX className="mr-2" /> {error}
                 </div>
-              </div>
-            )}
+              )}
 
-            {error && (
-              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg flex items-center">
-                <FiX className="w-5 h-5 mr-2" />
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-lg flex items-center">
-                <FiCheck className="w-5 h-5 mr-2" />
-                {success}
-              </div>
-            )}
+              {success && (
+                <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center animate-slide-up z-50">
+                  <FiCheck className="mr-2" /> {success}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </>
   );
-} 
+}

@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import MultiSelectAsync from '@/components/MultiSelectAsync';
+import { searchApplicants } from '../actions';
 
 interface Atendimento {
   id: string;
@@ -20,6 +22,15 @@ interface Atendimento {
   solicitante: string;
 }
 
+const statusOptions = [
+  { value: '', label: 'Todos', count: 0 },
+  { value: 'confirmado', label: 'Confirmado', count: 0 },
+  { value: 'concluido', label: 'Concluído', count: 0 },
+  { value: 'cancelado', label: 'Cancelado', count: 0 },
+  { value: 'ausente', label: 'Ausente', count: 0 },
+  { value: 'bloqueado', label: 'Bloqueado', count: 0 },
+];
+
 export default function GerarRelatorioPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -27,11 +38,13 @@ export default function GerarRelatorioPage() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [nome, setNome] = useState('');
-  const [solicitante, setSolicitante] = useState('');
+  const [solicitantes, setSolicitantes] = useState<string[]>([]);
   const [status, setStatus] = useState('');
   const [ordenacao, setOrdenacao] = useState<'padrao' | 'nome'>('padrao');
   const [tipoRelatorio, setTipoRelatorio] = useState<'completo' | 'assinatura'>('completo');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [atendimentosFiltrados, setAtendimentosFiltrados] = useState<Atendimento[]>([]);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
@@ -45,16 +58,32 @@ export default function GerarRelatorioPage() {
   };
 
   const generatePDF = async (atendimentos: Atendimento[]) => {
+    // Buscar nome do atendente para o rodapé
+    let atendenteNome = 'Não identificado';
+    if (user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
+      }
+    }
+
     const doc = new jsPDF();
-    
+
     // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
     const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro para melhor legibilidade
-    
+
     // Calcula a largura total da tabela
     const tableWidth = 150; // Soma das larguras das colunas
     const marginLeft = (doc.internal.pageSize.width - tableWidth) / 2;
-    
+
     // Cabeçalho mais compacto e centralizado
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
@@ -64,20 +93,20 @@ export default function GerarRelatorioPage() {
     const title = 'Relatório de Atendimentos - Sala Sensorial / ALECE';
     const titleWidth = doc.getStringUnitWidth(title) * titleFontSize / doc.internal.scaleFactor;
     doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
-    
+
     // Informações do período mais compactas e centralizadas
     doc.setTextColor(90, 90, 90);
     const infoFontSize = 9;
     doc.setFontSize(infoFontSize);
     const periodo = `Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`;
     const total = `Total de Atendimentos: ${atendimentos.length}`;
-    
+
     // Centraliza as informações do período
     const periodoWidth = doc.getStringUnitWidth(periodo) * infoFontSize / doc.internal.scaleFactor;
     const totalWidth = doc.getStringUnitWidth(total) * infoFontSize / doc.internal.scaleFactor;
     const infosWidth = periodoWidth + 20 + totalWidth; // 20 é o espaço entre os textos
     const infosStartX = (doc.internal.pageSize.width - infosWidth) / 2;
-    
+
     doc.text(periodo, infosStartX, 30);
     doc.text(total, infosStartX + periodoWidth + 20, 30);
 
@@ -87,7 +116,7 @@ export default function GerarRelatorioPage() {
     doc.setDrawColor(230, 230, 230);
     doc.setLineWidth(0.3);
     doc.line(lineStartX, 33, lineStartX + lineWidth, 33);
-    
+
     // Configuração da tabela otimizada
     const tableColumn = ['Data', 'Nome', 'CPF', 'Solicitante', 'Status'];
     const tableRows = atendimentos.map(atendimento => [
@@ -148,17 +177,22 @@ export default function GerarRelatorioPage() {
       const footerFontSize = 7;
       doc.setFontSize(footerFontSize);
       doc.setTextColor(128, 128, 128);
-      
+
       // Linha separadora do rodapé centralizada
       doc.setDrawColor(230, 230, 230);
       doc.setLineWidth(0.3);
       doc.line(lineStartX, doc.internal.pageSize.height - 15, lineStartX + lineWidth, doc.internal.pageSize.height - 15);
-      
+
       // Data e hora de geração
       const now = new Date();
       const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
       doc.text(dataHoraGeracao, marginLeft, doc.internal.pageSize.height - 8);
-      
+
+      // Nome do atendente (centralizado)
+      const atendenteText = `Atendente: ${atendenteNome}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * footerFontSize / doc.internal.scaleFactor;
+      doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 8);
+
       // Número da página
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * footerFontSize / doc.internal.scaleFactor;
@@ -171,111 +205,169 @@ export default function GerarRelatorioPage() {
   };
 
   const generateSignaturePDF = async (atendimentos: Atendimento[]) => {
-    const doc = new jsPDF();
-    
-    // Configurações de estilo
-    const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
-    
-    // Cabeçalho
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    const title = 'Lista de Entrega - Sala Sensorial / ALECE';
-    const titleWidth = doc.getStringUnitWidth(title) * 18 / doc.internal.scaleFactor;
-    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 20);
-    
-    // Informações do período
-    doc.setTextColor(90, 90, 90);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    const periodo = `do dia ${formatDate(dataInicio)} até dia ${formatDate(dataInicio)}`;
-    const periodoWidth = doc.getStringUnitWidth(periodo) * 12 / doc.internal.scaleFactor;
-    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 35);
-    
-    // Linha separadora
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.5);
-    doc.line(20, 40, doc.internal.pageSize.width - 20, 40);
-    
-    // Cabeçalho da tabela
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(50, 50, 50);
-    
-    // Posições das colunas
-    const col1 = 25; // Número
-    const col2 = 40; // Nome
-    const col3 = 100; // CPF
-    const col4 = 140; // Assinatura
-    
-    // Cabeçalhos
-    doc.text('Nº', col1, 50);
-    doc.text('Nome Completo', col2, 50);
-    doc.text('CPF', col3, 50);
-    doc.text('Assinatura', col4, 50);
-    
-    // Linha do cabeçalho
-    doc.setDrawColor(0, 135, 81);
-    doc.setLineWidth(1);
-    doc.line(20, 52, doc.internal.pageSize.width - 20, 52);
-    
-    // Linhas para os dados
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    
-    let currentY = 60;
-    const lineHeight = 8;
-    
-    atendimentos.forEach((atendimento, index) => {
-      // Verificar se precisa de nova página
-      if (currentY > doc.internal.pageSize.height - 40) {
-        doc.addPage();
-        currentY = 30;
+    // Buscar nome do atendente para o rodapé
+    let atendenteNome = 'Não identificado';
+    if (user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Erro ao buscar dados do atendente:', userError);
+      } else if (userData?.name) {
+        atendenteNome = userData.name;
       }
-      
-      // Número
-      doc.text((index + 1).toString(), col1, currentY);
-      
-      // Nome (truncado se muito longo)
-      const nome = atendimento.nome.length > 30 ? atendimento.nome.substring(0, 27) + '...' : atendimento.nome;
-      doc.text(nome, col2, currentY);
-      
-      // CPF formatado
-      const cpfFormatado = atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-      doc.text(cpfFormatado, col3, currentY);
-      
-      // Linha horizontal separadora
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(20, currentY + 2, doc.internal.pageSize.width - 20, currentY + 2);
-      
-      currentY += lineHeight;
-    });
-    
-    // Rodapé
-    const pageCount = (doc as any).getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      
-      // Data e hora de geração
-      const now = new Date();
-      const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
-      doc.text(dataHoraGeracao, 20, doc.internal.pageSize.height - 15);
-      
-      // Número da página
-      const pageText = `Página ${i} de ${pageCount}`;
-      const pageTextWidth = doc.getStringUnitWidth(pageText) * 8 / doc.internal.scaleFactor;
-      doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 20, doc.internal.pageSize.height - 15);
     }
 
+    const doc = new jsPDF();
+
+    // Configurações de estilo
+    const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+    const accentColor = [232, 245, 233] as [number, number, number]; // Verde claro
+    const borderColor = [200, 230, 201] as [number, number, number]; // Borda verde suave
+
+    // Cabeçalho moderno com gradiente visual
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'LISTA DE ENTREGA';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 14);
+
+    // Subtítulo
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Sala Sensorial / ALECE';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
+    doc.text(subtitle, (doc.internal.pageSize.width - subtitleWidth) / 2, 22);
+
+    // Box de informações do período
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.roundedRect(15, 40, doc.internal.pageSize.width - 30, 12, 2, 2, 'F');
+
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const periodo = dataInicio && dataFim && dataInicio !== dataFim
+      ? `PERÍODO: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+      : `DATA: ${formatDate(dataInicio || dataFim)}`;
+    const periodoWidth = doc.getStringUnitWidth(periodo) * 9 / doc.internal.scaleFactor;
+    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 47);
+
+    // Total de atendimentos
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
+    const totalWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
+    doc.text(totalText, doc.internal.pageSize.width - 20 - totalWidth, 47);
+
+    // Tabela otimizada com AutoTable
+    const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
+    const tableRows = atendimentos.map((atendimento, index) => [
+      (index + 1).toString(),
+      atendimento.nome, // Nome completo sem truncar
+      atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+      '' // Espaço para assinatura
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 57,
+      styles: {
+        fontSize: 9,
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+        lineColor: borderColor,
+        lineWidth: 0.1,
+        minCellHeight: 12,
+        textColor: [40, 40, 40],
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+        lineWidth: 0
+      },
+      columnStyles: {
+        0: {
+          cellWidth: 12,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [0, 135, 81]
+        }, // Nº
+        1: {
+          cellWidth: 85,
+          halign: 'left',
+          overflow: 'linebreak' // Permite quebra de linha para nomes longos
+        }, // Nome Completo
+        2: {
+          cellWidth: 35,
+          halign: 'center',
+          fontStyle: 'normal',
+          font: 'courier'
+        }, // CPF
+        3: {
+          cellWidth: 48,
+          halign: 'center',
+          fillColor: [250, 250, 250]
+        } // Assinatura
+      },
+      alternateRowStyles: {
+        fillColor: [252, 252, 252]
+      },
+      margin: { left: 15, right: 15 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage',
+      didDrawPage: (data) => {
+        // Adicionar rodapé em cada página dentro do autoTable
+        const pageCount = (doc as any).getNumberOfPages();
+        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+
+        // Linha separadora do rodapé
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.line(15, doc.internal.pageSize.height - 18, doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 18);
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(110, 110, 110);
+
+        // Data e hora de geração (esquerda)
+        const now = new Date();
+        const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 12);
+
+        // Nome do atendente (centro)
+        doc.setFont('helvetica', 'bold');
+        const atendenteText = `${atendenteNome}`;
+        const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+        doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 12);
+
+        // Número da página (direita)
+        doc.setFont('helvetica', 'normal');
+        const pageText = `Página ${currentPage} de ${pageCount}`;
+        const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+        doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 15, doc.internal.pageSize.height - 12);
+      }
+    });
+
     // Salvar o PDF
-    const fileName = `lista_entrega_${dataInicio}.pdf`;
+    const fileName = dataInicio && dataFim && dataInicio !== dataFim
+      ? `lista_entrega_${dataInicio}_a_${dataFim}.pdf`
+      : `lista_entrega_${dataInicio || dataFim}.pdf`;
     doc.save(fileName);
   };
 
@@ -290,15 +382,9 @@ export default function GerarRelatorioPage() {
         return;
       }
 
-      // Validação específica para lista de entrega
-      if (tipoRelatorio === 'assinatura' && !dataInicio) {
-        setMessage({ text: 'Para gerar a lista de entrega, é necessário selecionar uma data', type: 'error' });
-        return;
-      }
-
-      // Validação para relatório completo
-      if (tipoRelatorio === 'completo' && !dataInicio && !dataFim) {
-        setMessage({ text: 'Para gerar o relatório completo, é necessário selecionar pelo menos uma data', type: 'error' });
+      // Validação de datas
+      if (!dataInicio && !dataFim) {
+        setMessage({ text: 'É necessário selecionar pelo menos uma data', type: 'error' });
         return;
       }
 
@@ -306,33 +392,33 @@ export default function GerarRelatorioPage() {
         .from('atendimentos')
         .select('*');
 
-      // Aplicar filtros apenas se estiverem preenchidos
-      if (tipoRelatorio === 'assinatura') {
-        // Para lista de entrega, usar apenas a data inicial
-        if (dataInicio) {
-          const dataInicioAjustada = dataInicio + 'T00:00:00';
-          const dataFimAjustada = dataInicio + 'T23:59:59';
-          query = query
-            .gte('dia_atual', dataInicioAjustada)
-            .lte('dia_atual', dataFimAjustada);
-        }
-      } else {
-        // Para relatório completo, usar período
-        if (dataInicio && dataFim) {
-          const dataInicioAjustada = dataInicio + 'T00:00:00';
-          const dataFimAjustada = dataFim + 'T23:59:59';
-          query = query
-            .gte('dia_atual', dataInicioAjustada)
-            .lte('dia_atual', dataFimAjustada);
-        }
+      // Aplicar filtros de data
+      if (dataInicio && dataFim) {
+        // Se ambas as datas estão preenchidas, usar intervalo
+        const dataInicioAjustada = dataInicio + 'T00:00:00';
+        const dataFimAjustada = dataFim + 'T23:59:59';
+        query = query
+          .gte('dia_atual', dataInicioAjustada)
+          .lte('dia_atual', dataFimAjustada);
+      } else if (dataInicio) {
+        // Se apenas data inicial, usar do início deste dia até o fim
+        const dataInicioAjustada = dataInicio + 'T00:00:00';
+        const dataFimAjustada = dataInicio + 'T23:59:59';
+        query = query
+          .gte('dia_atual', dataInicioAjustada)
+          .lte('dia_atual', dataFimAjustada);
+      } else if (dataFim) {
+        // Se apenas data final, usar até o fim deste dia
+        const dataFimAjustada = dataFim + 'T23:59:59';
+        query = query.lte('dia_atual', dataFimAjustada);
       }
 
       if (nome) {
         query = query.ilike('nome', `%${nome}%`);
       }
 
-      if (solicitante) {
-        query = query.ilike('solicitante', `%${solicitante}%`);
+      if (solicitantes.length > 0) {
+        query = query.in('solicitante', solicitantes);
       }
 
       if (status) {
@@ -361,17 +447,25 @@ export default function GerarRelatorioPage() {
         return;
       }
 
+      // Calcular contadores de status
+      const counts: Record<string, number> = { total: atendimentos.length };
+      atendimentos.forEach((atendimento: any) => {
+        counts[atendimento.status] = (counts[atendimento.status] || 0) + 1;
+      });
+      setStatusCounts(counts);
+      setAtendimentosFiltrados(atendimentos);
+
       console.log('Gerando PDF para', atendimentos.length, 'atendimentos');
-      
+
       if (tipoRelatorio === 'assinatura') {
         await generateSignaturePDF(atendimentos);
-        setMessage({ 
+        setMessage({
           text: `Lista de entrega gerada com sucesso! Total de registros: ${atendimentos.length}`,
           type: 'success'
         });
       } else {
         await generatePDF(atendimentos);
-        setMessage({ 
+        setMessage({
           text: `Relatório gerado com sucesso! Total de registros: ${atendimentos.length}`,
           type: 'success'
         });
@@ -379,7 +473,7 @@ export default function GerarRelatorioPage() {
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
-      setMessage({ 
+      setMessage({
         text: 'Erro ao gerar relatório: ' + (error as Error).message,
         type: 'error'
       });
@@ -389,109 +483,67 @@ export default function GerarRelatorioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header com gradiente e ícone */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl shadow-lg mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerar Relatório</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Utilize os filtros abaixo para personalizar seu relatório de atendimentos da Sala Sensorial
+    <div className="min-h-screen bg-gray-50 py-8 px-4 pt-24">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Técnico */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Relatórios de Atendimentos
+          </h1>
+          <p className="text-sm text-gray-600">
+            Configure os filtros e gere relatórios em PDF
           </p>
         </div>
 
-        {/* Card principal com sombra e bordas arredondadas */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Header do card */}
-          <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Filtros de Relatório</h2>
-                <p className="text-primary-100 text-sm">Configure os parâmetros para sua consulta</p>
-              </div>
-            </div>
+        {/* Formulário de Filtros */}
+        <div className="bg-white border border-gray-200 rounded-lg mb-6">
+          <div className="border-b border-gray-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
           </div>
 
           {/* Mensagens de feedback */}
           {message && (
-            <div className={`mx-6 mt-4 p-2.5 rounded-lg border-l-2 text-sm ${
-              message.type === 'success' 
-                ? 'bg-green-50/80 text-green-700 border-green-300' 
-                : 'bg-red-50/80 text-red-700 border-red-300'
-            }`}>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${
-                  message.type === 'success' ? 'bg-green-400' : 'bg-red-400'
-                }`}>
-                  {message.type === 'success' ? (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <span className="font-medium text-xs">{message.text}</span>
-              </div>
+            <div className={`mx-6 mt-4 p-4 border rounded-lg ${message.type === 'success'
+              ? 'bg-green-50 text-green-800 border-green-200'
+              : 'bg-red-50 text-red-800 border-red-200'
+              }`}>
+              <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
 
-          {/* Formulário */}
           <form onSubmit={handleSubmit} className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {/* Data Inicial */}
-              <div className="space-y-2">
-                <label htmlFor="dataInicio" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {tipoRelatorio === 'assinatura' ? 'Data' : 'Data Inicial'}
+              <div>
+                <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data Inicial
                 </label>
                 <input
                   type="date"
                   id="dataInicio"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
                 />
               </div>
 
-              {/* Data Final - apenas para relatório completo */}
-              {tipoRelatorio === 'completo' && (
-                <div className="space-y-2">
-                  <label htmlFor="dataFim" className="flex items-center text-sm font-semibold text-gray-700">
-                    <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Data Final
-                  </label>
-                  <input
-                    type="date"
-                    id="dataFim"
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
-                  />
-                </div>
-              )}
+              {/* Data Final */}
+              <div>
+                <label htmlFor="dataFim" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data Final
+                </label>
+                <input
+                  type="date"
+                  id="dataFim"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none font-mono text-sm"
+                />
+              </div>
 
               {/* Nome do Cliente */}
-              <div className="space-y-2">
-                <label htmlFor="nome" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+              <div>
+                <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-2">
                   Nome do Cliente
                 </label>
                 <input
@@ -499,116 +551,228 @@ export default function GerarRelatorioPage() {
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Digite o nome do cliente"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+                  placeholder="Digite o nome..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 />
               </div>
 
               {/* Solicitante */}
-              <div className="space-y-2">
-                <label htmlFor="solicitante" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  Solicitante
-                </label>
-                <input
-                  type="text"
-                  id="solicitante"
-                  value={solicitante}
-                  onChange={(e) => setSolicitante(e.target.value)}
-                  placeholder="Digite o nome do solicitante"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 placeholder-gray-400 hover:border-gray-300"
+              <div>
+                <MultiSelectAsync
+                  label="Solicitantes"
+                  placeholder="Pesquisar solicitante..."
+                  fetchOptions={searchApplicants}
+                  value={solicitantes}
+                  onChange={setSolicitantes}
                 />
               </div>
 
-              {/* Status - Ocupa duas colunas */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="status" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Status do Atendimento
-                </label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
-                >
-                  <option value="">Todos os status</option>
-                  <option value="confirmado">✅ Confirmado</option>
-                  <option value="concluido">✅ Concluído</option>
-                  <option value="cancelado">❌ Cancelado</option>
-                  <option value="ausente">⏰ Ausente</option>
-                  <option value="bloqueado">🚫 Bloqueado</option>
-                </select>
-              </div>
               {/* Tipo de Relatório */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="tipoRelatorio" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+              <div>
+                <label htmlFor="tipoRelatorio" className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo de Relatório
                 </label>
                 <select
                   id="tipoRelatorio"
                   value={tipoRelatorio}
                   onChange={(e) => setTipoRelatorio(e.target.value as 'completo' | 'assinatura')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 >
-                  <option value="completo">Relatório Completo (Tabela com todos os dados)</option>
-                  <option value="assinatura">Lista de Entrega (Nome, CPF e campo para assinatura)</option>
+                  <option value="completo">Relatório Completo</option>
+                  <option value="assinatura">Lista de Entrega</option>
                 </select>
               </div>
 
               {/* Ordenação */}
-              <div className="md:col-span-2 space-y-2">
-                <label htmlFor="ordenacao" className="flex items-center text-sm font-semibold text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h6" />
-                  </svg>
+              <div>
+                <label htmlFor="ordenacao" className="block text-sm font-medium text-gray-700 mb-2">
                   Ordenar por
                 </label>
                 <select
                   id="ordenacao"
                   value={ordenacao}
                   onChange={(e) => setOrdenacao(e.target.value as 'padrao' | 'nome')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-200 text-gray-700 hover:border-gray-300 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-sm"
                 >
-                  <option value="padrao">Padrão (Data e Horário)</option>
+                  <option value="padrao">Data e Horário</option>
                   <option value="nome">Nome (A-Z)</option>
                 </select>
               </div>
             </div>
 
             {/* Botão de ação */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-200">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full md:w-auto inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl shadow-lg text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
+                className="w-full md:w-auto px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                    <span>{tipoRelatorio === 'assinatura' ? 'Gerando lista de entrega...' : 'Gerando relatório...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {tipoRelatorio === 'assinatura' ? 'Gerar Lista de Entrega PDF' : 'Gerar Relatório PDF'}
-                  </>
+                    {tipoRelatorio === 'assinatura' ? 'Gerando lista...' : 'Gerando relatório...'}
+                  </span>
+                ) : (
+                  <span>{tipoRelatorio === 'assinatura' ? 'Gerar Lista de Entrega' : 'Gerar Relatório'}</span>
                 )}
               </button>
             </div>
           </form>
         </div>
 
-        
+        {/* Filtros de Status (Chips) */}
+        {atendimentosFiltrados.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg mb-6">
+            <div className="px-6 py-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Filtrar por Status</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setStatus('')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === ''
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Todos
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.total || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('confirmado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'confirmado'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Confirmado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.confirmado || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('concluido')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'concluido'
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Concluído
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.concluido || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('cancelado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'cancelado'
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Cancelado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.cancelado || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('ausente')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'ausente'
+                    ? 'bg-yellow-600 text-white border-yellow-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Ausente
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.ausente || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setStatus('bloqueado')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${status === 'bloqueado'
+                    ? 'bg-gray-600 text-white border-gray-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Bloqueado
+                  <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs font-mono">
+                    {statusCounts.bloqueado || 0}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tabela de Atendimentos */}
+        {atendimentosFiltrados.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Atendimentos
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({atendimentosFiltrados.filter(a => !status || a.status === status).length} registros)
+                </span>
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Protocolo
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      CPF
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data/Hora
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {atendimentosFiltrados
+                    .filter(atendimento => !status || atendimento.status === status)
+                    .map((atendimento) => (
+                      <tr key={atendimento.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {atendimento.protocolo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {atendimento.nome}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {formatDate(atendimento.dia_atual)} {formatTime(atendimento.horario)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${atendimento.status === 'confirmado' ? 'bg-blue-100 text-blue-800' :
+                            atendimento.status === 'concluido' ? 'bg-green-100 text-green-800' :
+                              atendimento.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                                atendimento.status === 'ausente' ? 'bg-yellow-100 text-yellow-800' :
+                                  atendimento.status === 'bloqueado' ? 'bg-gray-100 text-gray-800' :
+                                    'bg-gray-100 text-gray-800'
+                            }`}>
+                            {atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

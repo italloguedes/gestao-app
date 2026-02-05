@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import { getUserByAuthId, createUser, hasAccessToDashboard, isAdmin, type UserRole } from '@/lib/models/User';
+import { hasAccessToDashboard, isAdmin, getUserRole, getUserName, type UserRole } from '@/lib/models/User';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -20,10 +20,6 @@ export default function DashboardNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [sessionError, setSessionError] = useState<string | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -37,7 +33,7 @@ export default function DashboardNav() {
     if (!isClient) return;
 
     const timer = setInterval(() => {
-      setSessionTime(prev => {
+      setSessionTime((prev: number) => {
         const newTime = prev - 1;
         localStorage.setItem('sessionTime', newTime.toString());
         if (newTime <= 0) {
@@ -74,7 +70,7 @@ export default function DashboardNav() {
       try {
         setError(null);
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error('Erro ao obter sessão:', sessionError);
           setError('Erro ao verificar sua sessão. Por favor, tente fazer login novamente.');
@@ -96,88 +92,24 @@ export default function DashboardNav() {
           return;
         }
 
-        try {
-          console.log('Buscando usuário com auth_id:', session.user.id);
-          const user = await getUserByAuthId(session.user.id);
-          console.log('Resultado da busca de usuário:', user);
-          
-          if (!user) {
-            console.log('Usuário não encontrado por auth_id, procurando por email:', session.user.email);
-            const { data: existingUser, error: emailError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('email', session.user.email)
-              .single();
+        // Obter role e nome diretamente do user_metadata
+        const userRole = getUserRole(session.user) as UserRole;
+        const name = getUserName(session.user);
 
-            if (emailError && emailError.code !== 'PGRST116') {
-              throw emailError;
-            }
+        const canAccessDashboard = hasAccessToDashboard(userRole);
+        const isAdminRole = isAdmin(userRole);
+        const isRecepcaoRole = userRole === 'recepcao';
 
-            if (existingUser) {
-              console.log('Usuário encontrado por email, atualizando auth_id');
-              const { data: updatedUser, error: updateError } = await supabase
-                .from('users')
-                .update({ auth_id: session.user.id })
-                .eq('id', existingUser.id)
-                .select()
-                .single();
+        setIsAdminUser(isAdminRole);
+        setHasAccess(canAccessDashboard || isRecepcaoRole);
+        setUserName(name);
 
-              if (updateError) throw updateError;
-              if (updatedUser) {
-                console.log('Auth_id atualizado com sucesso');
-                const userRole = updatedUser.role as UserRole;
-                const canAccessDashboard = hasAccessToDashboard(userRole);
-                const isAdminRole = isAdmin(userRole);
-                
-                setIsAdminUser(isAdminRole);
-                setHasAccess(canAccessDashboard);
-                setUserName(updatedUser.name);
-
-                if (!canAccessDashboard) {
-                  router.push('/');
-                }
-                setLoading(false);
-                return;
-              }
-            }
-
-            console.log('Criando novo usuário');
-            const userData = {
-              auth_id: session.user.id,
-              name: session.user.user_metadata?.full_name || session.user.email || 'Usuário',
-              email: session.user.email!,
-              role: 'user' as const,
-              status: 'active' as const
-            };
-            
-            const newUser = await createUser(userData);
-            setUserName(userData.name);
-            console.log('Novo usuário criado como user comum');
-            
-            setHasAccess(false);
-            router.push('/');
-            setLoading(false);
-            return;
-          } else {
-            console.log('Usuário encontrado, role:', user.role);
-            const canAccessDashboard = hasAccessToDashboard(user.role);
-            const isAdminRole = isAdmin(user.role);
-            
-            setIsAdminUser(isAdminRole);
-            setHasAccess(canAccessDashboard);
-            setUserName(user.name);
-
-            if (!canAccessDashboard) {
-              router.push('/');
-            }
-            setLoading(false);
-          }
-        } catch (userError) {
-          console.error('Erro ao buscar usuário:', userError);
-          setError('Erro ao carregar seu perfil de usuário');
-          setLoading(false);
+        // Recepcao só pode acessar a página de agendamentos hoje
+        if (!canAccessDashboard && !isRecepcaoRole) {
           router.push('/');
         }
+
+        setLoading(false);
       } catch (error) {
         console.error('Erro ao verificar permissões:', error);
         setError('Erro ao verificar suas permissões');
@@ -191,7 +123,7 @@ export default function DashboardNav() {
 
   if (loading) {
     return (
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -213,12 +145,13 @@ export default function DashboardNav() {
   const isHome = pathname === '/dashboard';
   const isUsersPage = pathname === '/admin/users';
   const isAgendamentosPage = pathname === '/dashboard/agendamentos';
+  const isColetaDigitaisPage = pathname === '/dashboard/coleta-digitais';
 
   return (
-    <nav className="bg-white shadow-sm">
+    <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 my-2 rounded-r-lg">
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 my-2 rounded-r-lg animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -231,66 +164,41 @@ export default function DashboardNav() {
             </div>
           </div>
         )}
-        
+
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <Image
-                  src="/logoautismo.png"
-                  alt="Logo Sala Sensorial / ALECE"
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
+              <Link href="/dashboard" className="flex items-center space-x-2 group">
+                <div className="relative w-8 h-8 transition-transform duration-300 group-hover:scale-110">
+                  <Image
+                    src="/logoautismo.png"
+                    alt="Logo Sala Sensorial / ALECE"
+                    fill
+                    className="rounded-full object-cover"
+                  />
+                </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                   Sala Sensorial
                 </span>
               </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link
-                href="/dashboard"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  isHome
-                    ? 'border-emerald-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Início
-              </Link>
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-1">
+              <NavLink href="/dashboard" active={isHome}>Início</NavLink>
               {isAdminUser && (
                 <>
-                  <Link
-                    href="/admin/users"
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      isUsersPage
-                        ? 'border-emerald-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Gestão de Usuários
-                  </Link>
-                  <Link
-                    href="/dashboard/agendamentos"
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      isAgendamentosPage
-                        ? 'border-emerald-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Gestão de Agendamentos
-                  </Link>
+                  <NavLink href="/admin/users" active={isUsersPage}>Gestão de Usuários</NavLink>
+                  <NavLink href="/dashboard/agendamentos" active={isAgendamentosPage}>Gestão de Agendamentos</NavLink>
+                  <NavLink href="/dashboard/coleta-digitais" active={isColetaDigitaisPage}>Coleta de Digitais</NavLink>
                 </>
               )}
             </div>
           </div>
-          
+
           {/* Mobile menu button */}
           <div className="flex items-center sm:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500"
+              className="inline-flex items-center justify-center p-2 rounded-xl text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-colors"
             >
               <span className="sr-only">Abrir menu principal</span>
               {!isMobileMenuOpen ? (
@@ -306,28 +214,35 @@ export default function DashboardNav() {
           </div>
 
           {/* Desktop user menu */}
-          <div className="flex items-center space-x-4">
+          <div className="hidden sm:flex items-center space-x-4">
             {isClient && (
-              <div className="mr-4 text-sm text-gray-600">
-                Tempo restante: {formatTime(sessionTime)}
+              <div className="mr-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-medium text-emerald-700 flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                {formatTime(sessionTime)}
               </div>
             )}
-            <div className="flex items-center px-4 py-2 bg-gray-50 rounded-lg">
+            <div className="flex items-center pl-4 border-l border-gray-200">
               <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <span className="text-emerald-600 font-medium text-sm">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center border-2 border-white shadow-sm">
+                  <span className="text-emerald-700 font-semibold text-sm">
                     {userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-700">{userName}</span>
+                  <span className="text-sm font-semibold text-gray-700">{userName}</span>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-4 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
+                title="Sair"
               >
-                Sair
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
               </button>
             </div>
           </div>
@@ -336,62 +251,36 @@ export default function DashboardNav() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden">
-          <div className="pt-2 pb-3 space-y-1">
-            <Link
-              href="/dashboard"
-              className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                isHome
-                  ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-              }`}
-            >
-              Início
-            </Link>
+        <div className="sm:hidden bg-white border-t border-gray-100 animate-in slide-in-from-top-5">
+          <div className="pt-2 pb-3 space-y-1 px-2">
+            <MobileNavLink href="/dashboard" active={isHome}>Início</MobileNavLink>
             {isAdminUser && (
               <>
-                <Link
-                  href="/admin/users"
-                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                    isUsersPage
-                      ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                      : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                  }`}
-                >
-                  Gestão de Usuários
-                </Link>
-                <Link
-                  href="/dashboard/agendamentos"
-                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                    isAgendamentosPage
-                      ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                      : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                  }`}
-                >
-                  Gestão de Agendamentos
-                </Link>
+                <MobileNavLink href="/admin/users" active={isUsersPage}>Gestão de Usuários</MobileNavLink>
+                <MobileNavLink href="/dashboard/agendamentos" active={isAgendamentosPage}>Gestão de Agendamentos</MobileNavLink>
+                <MobileNavLink href="/dashboard/coleta-digitais" active={isColetaDigitaisPage}>Coleta de Digitais</MobileNavLink>
               </>
             )}
           </div>
-          <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="px-4 py-3 bg-gray-50 rounded-lg mx-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-emerald-600 font-medium">
-                      {userName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="text-base font-medium text-gray-800">{userName}</div>
-                    <div className="text-sm text-gray-500">
-                      Sessão expira em: {formatTime(sessionTime)}
-                    </div>
+          <div className="pt-4 pb-4 border-t border-gray-100 bg-gray-50/50">
+            <div className="px-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm">
+                  <span className="text-emerald-600 font-bold">
+                    {userName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-sm font-semibold text-gray-900">{userName}</div>
+                  <div className="text-xs text-emerald-600 font-medium">
+                    Sessão: {formatTime(sessionTime)}
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                 >
                   Sair
                 </button>
@@ -402,4 +291,32 @@ export default function DashboardNav() {
       )}
     </nav>
   );
-} 
+}
+
+function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center px-4 pt-1 border-b-2 text-sm font-medium transition-all duration-200 ${active
+        ? 'border-emerald-500 text-emerald-700'
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50/50'
+        }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileNavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${active
+        ? 'bg-emerald-50 text-emerald-700'
+        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+        }`}
+    >
+      {children}
+    </Link>
+  );
+}

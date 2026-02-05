@@ -1,8 +1,20 @@
 // app/api/cin-pronta/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Verificar autenticação e permissões (requer atendente, admin ou superadmin)
+  const authCheck = await checkAuth(request, 'atendente');
+
+  if (!authCheck.authenticated) {
+    return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
+  }
+
+  if (!authCheck.authorized) {
+    return forbiddenResponse(authCheck.error || 'Apenas atendentes e administradores podem enviar emails');
+  }
+
   try {
     const { to, nome, cpf } = await request.json();
 
