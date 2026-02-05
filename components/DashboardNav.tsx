@@ -98,12 +98,14 @@ export default function DashboardNav() {
 
         const canAccessDashboard = hasAccessToDashboard(userRole);
         const isAdminRole = isAdmin(userRole);
+        const isRecepcaoRole = userRole === 'recepcao';
 
         setIsAdminUser(isAdminRole);
-        setHasAccess(canAccessDashboard);
+        setHasAccess(canAccessDashboard || isRecepcaoRole);
         setUserName(name);
 
-        if (!canAccessDashboard) {
+        // Recepcao só pode acessar a página de agendamentos hoje
+        if (!canAccessDashboard && !isRecepcaoRole) {
           router.push('/');
         }
 

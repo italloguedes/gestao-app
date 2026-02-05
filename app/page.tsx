@@ -301,6 +301,8 @@ export default function Home() {
 
           if (userRole === 'admin' || userRole === 'atendente' || userRole === 'superadmin') {
             router.push(AUTH_CONFIG.REDIRECT_URLS.DASHBOARD);
+          } else if (userRole === 'recepcao') {
+            router.push('/admin/agendamentos/hoje');
           } else {
             router.push(AUTH_CONFIG.REDIRECT_URLS.AGENDAMENTO);
           }

@@ -5,13 +5,13 @@
  * - id: UUID do Supabase Auth
  * - email: email do usuário
  * - user_metadata.full_name: nome completo
- * - user_metadata.role: 'superadmin' | 'admin' | 'atendente' | 'user'
+ * - user_metadata.role: 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user'
  * - user_metadata.status: 'active' | 'inactive'
  * - user_metadata.avatar_url: URL da foto de perfil
  * - user_metadata.phone: telefone
  */
 
-export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user';
 
 export interface User {
   id: string;  // UUID do auth.users

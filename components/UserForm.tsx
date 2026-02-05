@@ -240,6 +240,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   className="w-full h-11 rounded-lg border-slate-200 bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
                 >
                   <option value="user">Usuário (Padrão)</option>
+                  <option value="recepcao">Recepção</option>
                   <option value="atendente">Atendente</option>
                   <option value="admin">Administrador</option>
                   <option value="superadmin">Super Admin</option>
@@ -248,6 +249,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   {formData.role === 'superadmin' && 'Acesso total ao sistema.'}
                   {formData.role === 'admin' && 'Gerencia usuários e atendimentos.'}
                   {formData.role === 'atendente' && 'Gerencia apenas atendimentos.'}
+                  {formData.role === 'recepcao' && 'Apenas agendamentos do dia.'}
                   {formData.role === 'user' && 'Apenas agendamento.'}
                 </p>
               </div>

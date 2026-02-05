@@ -3,7 +3,7 @@
  * Define roles, permissões e verificações de acesso
  */
 
-export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user';
 
 export interface PermissionConfig {
   role: UserRole;
@@ -18,6 +18,7 @@ export type Permission =
   | 'manage_atendimentos' // Gerenciar atendimentos
   | 'view_relatorios'   // Visualizar relatórios
   | 'manage_agendamentos' // Gerenciar agendamentos
+  | 'view_agendamentos_hoje' // Ver apenas agendamentos do dia
   | 'view_estatisticas' // Ver estatísticas
   | 'manage_system'     // Configurações do sistema
   | 'public_access';    // Acesso público
@@ -62,6 +63,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionConfig> = {
       'view_estatisticas',
     ],
     routes: ['/dashboard', '/dashboard/atendimentos', '/dashboard/relatorios', '/agendamento'],
+  },
+  recepcao: {
+    role: 'recepcao',
+    displayName: 'Recepção',
+    permissions: [
+      'view_agendamentos_hoje',
+    ],
+    routes: ['/admin/agendamentos/hoje'],
   },
   user: {
     role: 'user',
@@ -128,6 +137,13 @@ export function isAdmin(role: UserRole): boolean {
 }
 
 /**
+ * Verifica se o usuário é recepção
+ */
+export function isRecepcao(role: UserRole): boolean {
+  return role === 'recepcao';
+}
+
+/**
  * Verifica se o usuário é superadmin
  */
 export function isSuperAdmin(role: UserRole): boolean {
@@ -162,5 +178,5 @@ export function getDefaultRouteForRole(role: UserRole): string {
  * Valida se uma role é válida
  */
 export function isValidRole(role: string): role is UserRole {
-  return ['superadmin', 'admin', 'atendente', 'user'].includes(role);
+  return ['superadmin', 'admin', 'atendente', 'recepcao', 'user'].includes(role);
 }
