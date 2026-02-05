@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 // DashboardHeader import removed (handled by layout)
-import NovoAtendimentoModal from './components/NovoAtendimentoModal';
 import AtendimentoModal from '@/components/AtendimentoModal';
 import SignaturePadCanvas from '@/components/SignaturePadCanvas';
 import ModoEntregaModal from '@/components/ModoEntregaModal';
@@ -20,6 +19,7 @@ import { FiPlus, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, Fi
 import { MdFingerprint } from 'react-icons/md';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type ModoEntrega = 'impressao' | 'digital';
 
@@ -111,9 +111,6 @@ export default function DashboardPage() {
   // Estados para o modal de edição de atendimento
   const [showEditAtendimentoModal, setShowEditAtendimentoModal] = useState(false);
   const [selectedAtendimentoForEdit, setSelectedAtendimentoForEdit] = useState<Atendimento | null>(null);
-
-  // Estados para o modal de novo atendimento
-  const [showNovoAtendimentoModal, setShowNovoAtendimentoModal] = useState(false);
 
   // Estado para busca global
   const [globalSearch, setGlobalSearch] = useState('');
@@ -396,16 +393,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {showNovoAtendimentoModal && (
-        <NovoAtendimentoModal
-          show={showNovoAtendimentoModal}
-          onClose={() => setShowNovoAtendimentoModal(false)}
-          onSuccess={() => {
-            setShowNovoAtendimentoModal(false);
-            fetchDashboardData();
-          }}
-        />
-      )}
+
 
       <ModoEntregaModal
         isOpen={showModoEntregaModal}
@@ -444,13 +432,13 @@ export default function DashboardPage() {
               onKeyDown={handleGlobalSearch}
             />
           </div>
-          <Button
-            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm shadow-emerald-200 hover:shadow-md transition-all duration-300 font-semibold px-4 text-xs"
-            onClick={() => setShowNovoAtendimentoModal(true)}
+          <Link
+            href="/dashboard/atendimentos/novo"
+            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm shadow-emerald-200 hover:shadow-md transition-all duration-300 font-semibold px-4 text-xs flex items-center"
           >
             <FiPlus className="mr-1.5 h-4 w-4" />
             Novo Atendimento
-          </Button>
+          </Link>
         </div>
       </div>
 
