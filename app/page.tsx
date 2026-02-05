@@ -388,228 +388,69 @@ export default function Home() {
                     />
                   </motion.div>
 
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={isRecovering ? 'recover' : isRegistering ? 'register' : 'login'}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-center"
-                    >
-                      <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                        {isRecovering ? 'Recuperar Acesso' : isRegistering ? 'Criar Conta' : 'Bem-vindo'}
-                      </h2>
-                      <p className="text-slate-500">
-                        {isRecovering
-                          ? 'Informe seu email para recuperar a senha.'
-                          : isRegistering
-                            ? 'Preencha os dados para criar sua conta.'
-                            : 'Entre com suas credenciais para continuar.'}
-                      </p>
-                    </motion.div>
-                  </AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-center"
+                  >
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                      Bem-vindo
+                    </h2>
+                    <p className="text-slate-500">
+                      Acesse o sistema com sua conta institucional
+                    </p>
+                  </motion.div>
                 </motion.div>
 
-                {/* Form */}
-                <form onSubmit={handleAuth} className="space-y-1">
-                  <InputField
-                    id="email"
-                    type="email"
-                    label="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    placeholder="seu.email@exemplo.com"
-                  />
-
-                  <AnimatePresence>
-                    {!isRecovering && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <InputField
-                          id="password"
-                          type="password"
-                          label="Senha"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          autoComplete={isRegistering ? 'new-password' : 'current-password'}
-                          placeholder="Digite sua senha"
-                          showPasswordToggle
-                          isPasswordVisible={showPassword}
-                          onTogglePassword={() => setShowPassword(!showPassword)}
+                {/* Google Login Button */}
+                <motion.div variants={itemVariants}>
+                  <motion.button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 rounded-xl bg-white border-2 border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 transition-all duration-200 text-slate-700 font-semibold flex items-center justify-center gap-3 shadow-lg shadow-slate-100"
+                  >
+                    {loading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full"
                         />
-                        {isRegistering && <PasswordStrengthIndicator password={password} />}
-                      </motion.div>
+                        <span>Conectando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FcGoogle size={24} />
+                        <span>Entrar com Google</span>
+                      </>
                     )}
-                  </AnimatePresence>
+                  </motion.button>
+                </motion.div>
 
-                  <AnimatePresence>
-                    {isRegistering && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <InputField
-                          id="confirmPassword"
-                          type="password"
-                          label="Confirmar Senha"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          autoComplete="new-password"
-                          placeholder="Confirme sua senha"
-                          showPasswordToggle
-                          isPasswordVisible={showConfirmPassword}
-                          onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Messages */}
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex items-start gap-3 bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl text-sm"
-                      >
-                        <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
-                        <span>{error}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <AnimatePresence>
-                    {message && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex items-start gap-3 bg-teal-50 border border-teal-100 text-teal-700 px-4 py-3 rounded-xl text-sm"
-                      >
-                        <FaCheckCircle className="mt-0.5 flex-shrink-0" />
-                        <span>{message}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <AnimatePresence>
-                    {isRateLimited && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center gap-3 bg-amber-50 border border-amber-100 text-amber-700 px-4 py-3 rounded-xl text-sm"
-                      >
-                        <FaShieldAlt className="flex-shrink-0" />
-                        <span>Aguarde {Math.ceil(cooldownRemaining / 1000)}s para tentar novamente</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Submit Button */}
-                  <motion.div variants={itemVariants} className="pt-4">
-                    <motion.button
-                      type="submit"
-                      disabled={isSubmitDisabled}
-                      whileHover={!isSubmitDisabled ? { scale: 1.01 } : {}}
-                      whileTap={!isSubmitDisabled ? { scale: 0.99 } : {}}
-                      className={`w-full py-3.5 rounded-xl font-semibold text-base transition-all duration-200 flex items-center justify-center gap-2 ${isSubmitDisabled
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30'
-                        }`}
-                    >
-                      {loading ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          />
-                          <span>Processando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaLock size={14} />
-                          <span>
-                            {isRecovering
-                              ? 'Enviar Instruções'
-                              : isRegistering
-                                ? 'Criar Conta'
-                                : 'Entrar'}
-                          </span>
-                        </>
-                      )}
-                    </motion.button>
-                  </motion.div>
-                </form>
-
-                {/* Google Login */}
+                {/* Error Message */}
                 <AnimatePresence>
-                  {!isRecovering && !isRegistering && (
+                  {error && (
                     <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: 0.2 }}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-4 flex items-start gap-3 bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl text-sm"
                     >
-                      <div className="flex items-center my-6">
-                        <div className="flex-1 h-px bg-slate-200" />
-                        <span className="px-4 text-sm text-slate-400">ou</span>
-                        <div className="flex-1 h-px bg-slate-200" />
-                      </div>
-
-                      <motion.button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        className="w-full py-3.5 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 text-slate-700 font-medium flex items-center justify-center gap-3"
-                      >
-                        <FcGoogle size={20} />
-                        <span>Continuar com Google</span>
-                      </motion.button>
+                      <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Links */}
-                <motion.div variants={itemVariants} className="mt-6 text-center text-sm">
-                  {!isRecovering && (
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-                      <button
-                        type="button"
-                        onClick={() => { setIsRegistering(!isRegistering); setError(null); setMessage(null); }}
-                        className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
-                      >
-                        {isRegistering ? 'Já tenho uma conta' : 'Criar nova conta'}
-                      </button>
-                      <span className="hidden sm:inline text-slate-300">|</span>
-                      <button
-                        type="button"
-                        onClick={() => { setIsRecovering(true); setError(null); setMessage(null); }}
-                        className="text-slate-500 hover:text-slate-700 transition-colors"
-                      >
-                        Esqueci minha senha
-                      </button>
-                    </div>
-                  )}
-                  {isRecovering && (
-                    <button
-                      type="button"
-                      onClick={() => { setIsRecovering(false); setError(null); setMessage(null); }}
-                      className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
-                    >
-                      Voltar para o login
-                    </button>
-                  )}
+                {/* Help Text */}
+                <motion.div variants={itemVariants} className="mt-8 text-center">
+                  <p className="text-sm text-slate-400">
+                    Use seu email institucional para acessar o sistema
+                  </p>
                 </motion.div>
               </div>
             </motion.div>
