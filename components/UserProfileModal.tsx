@@ -3,22 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase-client';
-import { FiCamera, FiUser } from 'react-icons/fi';
+import { FiCamera, FiUser, FiLock, FiPhone, FiMail, FiEdit2 } from 'react-icons/fi';
 
 interface UserProfile {
-  id?: number;
-  auth_id?: string;
   name: string;
   email: string;
   phone?: string;
-  department?: string;
-  position?: string;
   avatar_url?: string;
-  bio?: string;
-  role: 'superadmin' | 'admin' | 'atendente' | 'user';
-  status: 'active' | 'inactive';
-  created_at?: string;
-  updated_at?: string;
+  role: string;
 }
 
 interface UserProfileModalProps {
@@ -33,87 +25,55 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
     name: '',
     email: '',
     phone: '',
-    department: '',
-    position: '',
     avatar_url: '',
-    bio: '',
-    role: 'user',
-    status: 'active'
+    role: 'user'
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'security'>('personal');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+
+  // Password change
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Carregar dados do perfil
   useEffect(() => {
     if (show) {
-      loadAuthUser();
+      loadUserProfile();
     }
   }, [show]);
 
-  useEffect(() => {
-    if (authUser) {
-      fetchUserProfile();
-    }
-  }, [authUser]);
-
-  const loadAuthUser = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setAuthUser(user);
-    } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
-    }
-  };
-
-  const fetchUserProfile = async () => {
-    if (!authUser?.id) return;
-
+  const loadUserProfile = async () => {
     setLoading(true);
     try {
-      // Buscar dados do usuário na tabela users
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', authUser.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (userData) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setAuthUser(user);
         setProfile({
-          ...userData,
-          phone: userData.phone || '',
-          department: userData.department || '',
-          position: userData.position || '',
-          avatar_url: userData.avatar_url || '',
-          bio: userData.bio || ''
-        });
-      } else {
-        // Se não encontrou o usuário na tabela users, usar dados do auth
-        setProfile({
-          name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || '',
-          email: authUser.email || '',
-          phone: authUser.user_metadata?.phone || '',
-          department: '',
-          position: '',
-          avatar_url: authUser.user_metadata?.avatar_url || '',
-          bio: '',
-          role: 'user',
-          status: 'active'
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          phone: user.phone || user.user_metadata?.phone || '',
+          avatar_url: user.user_metadata?.avatar_url || '',
+          role: user.user_metadata?.role || 'user'
         });
       }
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-      setMessage('Erro ao carregar dados do perfil');
+      console.error('Erro ao carregar usuário:', error);
+      showMessage('Erro ao carregar perfil', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const showMessage = (msg: string, type: 'success' | 'error') => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(''), 4000);
   };
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
@@ -127,38 +87,39 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
-      setMessage('');
 
       if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('Você deve selecionar uma imagem para fazer upload.');
+        throw new Error('Selecione uma imagem');
       }
 
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${authUser.id}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
 
-      // Upload image to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
+      // Validar tamanho (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Imagem deve ter no máximo 2MB');
       }
 
-      // Get public URL
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${authUser.id}-${Date.now()}.${fileExt}`;
+
+      // Upload para o storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
-      // Update profile state
       setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
-      setMessage('Foto carregada com sucesso! Clique em Salvar para persistir.');
+      showMessage('Foto carregada! Clique em Salvar.', 'success');
 
     } catch (error: any) {
-      console.error('Erro ao fazer upload da imagem:', error);
-      setMessage(`Erro no upload: ${error.message}`);
+      console.error('Erro no upload:', error);
+      showMessage(error.message || 'Erro no upload da imagem', 'error');
     } finally {
       setUploading(false);
     }
@@ -169,84 +130,90 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
     if (!authUser?.id) return;
 
     setSaving(true);
-    setMessage('');
 
     try {
-      // Verificar se o usuário já existe na tabela users
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_id', authUser.id)
-        .single();
-
-      const profileData = {
-        auth_id: authUser.id,
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
-        department: profile.department,
-        position: profile.position,
-        avatar_url: profile.avatar_url,
-        bio: profile.bio,
-        role: profile.role,
-        status: profile.status,
-        updated_at: new Date().toISOString()
-      };
-
-      if (existingUser) {
-        // Atualizar usuário existente
-        const { error } = await supabase
-          .from('users')
-          .update(profileData)
-          .eq('auth_id', authUser.id);
-
-        if (error) throw error;
-      } else {
-        // Criar novo registro de usuário
-        const { error } = await supabase
-          .from('users')
-          .insert([{
-            ...profileData,
-            created_at: new Date().toISOString()
-          }]);
-
-        if (error) throw error;
-      }
-
-      // Atualizar metadados do usuário no Auth
-      const { error: authError } = await supabase.auth.updateUser({
+      // Atualizar user_metadata no Supabase Auth
+      const { error } = await supabase.auth.updateUser({
         data: {
           full_name: profile.name,
+          name: profile.name,
           phone: profile.phone,
           avatar_url: profile.avatar_url
         }
       });
 
-      if (authError) {
-        console.warn('Erro ao atualizar metadados do auth:', authError);
-      }
+      if (error) throw error;
 
-      setMessage('Perfil atualizado com sucesso!');
+      showMessage('Perfil atualizado com sucesso!', 'success');
       setTimeout(() => {
         onSuccess();
-        setMessage('');
       }, 1500);
 
-    } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
-      setMessage('Erro ao salvar perfil. Tente novamente.');
+    } catch (error: any) {
+      console.error('Erro ao salvar:', error);
+      showMessage(error.message || 'Erro ao salvar perfil', 'error');
     } finally {
       setSaving(false);
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      showMessage('Preencha todos os campos de senha', 'error');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showMessage('A senha deve ter no mínimo 6 caracteres', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showMessage('As senhas não coincidem', 'error');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      showMessage('Senha alterada com sucesso!', 'success');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordSection(false);
+
+    } catch (error: any) {
+      console.error('Erro ao alterar senha:', error);
+      showMessage(error.message || 'Erro ao alterar senha', 'error');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      superadmin: 'Super Admin',
+      admin: 'Administrador',
+      atendente: 'Atendente',
+      user: 'Usuário'
+    };
+    return labels[role] || role;
+  };
+
   if (!show) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto my-4 relative border border-gray-100 max-h-[90vh] min-h-[60vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto relative border border-gray-100 max-h-[90vh] overflow-hidden flex flex-col">
+
+        {/* Close button */}
         <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none z-10"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
           onClick={onClose}
           aria-label="Fechar"
         >
@@ -255,265 +222,209 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
           </svg>
         </button>
 
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-8 py-6 text-white text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row items-center">
-            {/* Avatar Section in Header */}
-            <div className="relative group mb-4 sm:mb-0 sm:mr-6 shrink-0">
-              <div className="w-24 h-24 rounded-full border-4 border-white/30 overflow-hidden bg-white shadow-lg cursor-pointer relative" onClick={handleAvatarClick}>
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
-                    <FiUser className="w-10 h-10" />
-                  </div>
-                )}
-
-                {/* Overlay on Hover */}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  {uploading ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                  ) : (
-                    <FiCamera className="w-8 h-8 text-white" />
-                  )}
+        {/* Header com Avatar */}
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-600 px-8 py-8 text-white text-center">
+          <div className="relative inline-block group cursor-pointer" onClick={handleAvatarClick}>
+            <div className="w-28 h-28 rounded-full border-4 border-white/30 overflow-hidden bg-white shadow-xl mx-auto">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
+                  <FiUser className="w-12 h-12" />
                 </div>
+              )}
+
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                ) : (
+                  <FiCamera className="w-8 h-8 text-white" />
+                )}
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleAvatarUpload}
-                accept="image/*"
-                className="hidden"
-              />
             </div>
-
-            <div>
-              <h2 className="text-2xl font-bold">{profile.name || 'Meu Perfil'}</h2>
-              <p className="text-emerald-100">{profile.email}</p>
-              {profile.position && <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-medium backdrop-blur-sm">{profile.position}</span>}
-            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarUpload}
+              accept="image/*"
+              className="hidden"
+            />
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="flex px-4 sm:px-8 overflow-x-auto">
-            {[
-              { id: 'personal', label: 'Pessoal', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-              { id: 'professional', label: 'Profissional', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6' },
-              { id: 'security', label: 'Segurança', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
-                </svg>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          <h2 className="text-xl font-bold mt-4">{profile.name || 'Meu Perfil'}</h2>
+          <p className="text-emerald-100 text-sm">{profile.email}</p>
+          <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-medium">
+            {getRoleLabel(profile.role)}
+          </span>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-8 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-              <span className="ml-3 text-gray-600">Carregando perfil...</span>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+
+              {/* Message */}
               {message && (
-                <div className={`flex items-center gap-3 p-4 rounded-lg border text-sm font-medium ${message.includes('sucesso')
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : 'bg-red-50 border-red-200 text-red-700'
+                <div className={`flex items-center gap-3 p-4 rounded-xl text-sm font-medium ${messageType === 'success'
+                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                    : 'bg-red-50 border border-red-200 text-red-700'
                   }`}>
-                  {message.includes('sucesso') ? (
-                    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {messageType === 'success' ? (
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                   <span>{message}</span>
                 </div>
               )}
 
-              {/* Tab Personal */}
-              {activeTab === 'personal' && (
-                <div className="space-y-5">
-                  <div className="flex items-center justify-center sm:hidden mb-4">
-                    <button type="button" onClick={handleAvatarClick} className="text-sm text-emerald-600 font-medium hover:text-emerald-700 flex items-center gap-2">
-                      <FiCamera /> Alterar Foto de Perfil
+              {/* Nome */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <FiUser className="text-gray-400" />
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={profile.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition bg-gray-50"
+                  placeholder="Seu nome completo"
+                  required
+                />
+              </div>
+
+              {/* Telefone */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <FiPhone className="text-gray-400" />
+                  Telefone
+                </label>
+                <input
+                  type="tel"
+                  value={profile.phone || ''}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition bg-gray-50"
+                  placeholder="(85) 99999-9999"
+                />
+              </div>
+
+              {/* Email (readonly) */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <FiMail className="text-gray-400" />
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  disabled
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-400 mt-1">O e-mail não pode ser alterado</p>
+              </div>
+
+              {/* Password Section */}
+              <div className="border-t border-gray-100 pt-5">
+                {!showPasswordSection ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordSection(true)}
+                    className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition"
+                  >
+                    <FiLock className="w-4 h-4" />
+                    Alterar Senha
+                  </button>
+                ) : (
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                        <FiLock className="w-4 h-4" />
+                        Alterar Senha
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPasswordSection(false);
+                          setNewPassword('');
+                          setConfirmPassword('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Nova Senha</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Confirmar Senha</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
+                        placeholder="Repita a nova senha"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePasswordChange}
+                      disabled={changingPassword}
+                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {changingPassword ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Alterando...
+                        </>
+                      ) : (
+                        'Alterar Senha'
+                      )}
                     </button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
-                      <input
-                        type="text"
-                        value={profile.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                        placeholder="Seu nome completo"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                        placeholder="seu@email.com"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                    <input
-                      type="tel"
-                      value={profile.phone || ''}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                      placeholder="(85) 99999-9999"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                    <textarea
-                      value={profile.bio || ''}
-                      onChange={(e) => handleInputChange('bio', e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                      placeholder="Conte um pouco sobre você..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Tab Professional */}
-              {activeTab === 'professional' && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
-                      <select
-                        value={profile.department || ''}
-                        onChange={(e) => handleInputChange('department', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                      >
-                        <option value="">Selecione o departamento</option>
-                        <option value="Sala Sensorial">Sala Sensorial</option>
-                        <option value="Administração">Administração</option>
-                        <option value="Atendimento">Atendimento</option>
-                        <option value="TI">Tecnologia da Informação</option>
-                        <option value="Recursos Humanos">Recursos Humanos</option>
-                        <option value="Financeiro">Financeiro</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                      <input
-                        type="text"
-                        value={profile.position || ''}
-                        onChange={(e) => handleInputChange('position', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                        placeholder="Seu cargo atual"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Função no Sistema</label>
-                    <select
-                      value={profile.role}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
-                      disabled={profile.role === 'superadmin'} // Não permitir alterar superadmin
-                    >
-                      <option value="user">Usuário</option>
-                      <option value="atendente">Atendente</option>
-                      <option value="admin">Administrador</option>
-                      {profile.role === 'superadmin' && <option value="superadmin">Super Administrador</option>}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab Security */}
-              {activeTab === 'security' && (
-                <div className="space-y-5">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start">
-                      <svg className="h-5 w-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <h4 className="text-sm font-medium text-blue-800">Informações de Segurança</h4>
-                        <p className="text-sm text-blue-700 mt-1">
-                          Para alterar sua senha, você receberá um e-mail com instruções.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">E-mail de Login</label>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        disabled
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">O e-mail não pode ser alterado por questões de segurança</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status da Conta</label>
-                      <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${profile.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {profile.status === 'active' ? 'Ativa' : 'Inativa'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Footer */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition"
                   disabled={saving}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-60"
+                  className="px-6 py-2.5 text-sm font-medium bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-emerald-200"
                   disabled={saving}
                 >
                   {saving ? (
                     <>
-                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       Salvando...
                     </>
                   ) : (
@@ -521,7 +432,7 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Salvar Alterações
+                      Salvar
                     </>
                   )}
                 </button>
@@ -533,7 +444,6 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
     </div>
   );
 
-  // Usar portal se estivermos no cliente
   if (typeof document !== 'undefined') {
     return createPortal(modalContent, document.body);
   }
