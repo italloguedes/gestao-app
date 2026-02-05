@@ -460,10 +460,24 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-full lg:w-1/2 p-8 md:p-12 lg:p-14 bg-gradient-to-br from-teal-500 to-emerald-600 flex flex-col justify-center relative overflow-hidden"
+              className="w-full lg:w-1/2 p-8 md:p-12 lg:p-14 relative overflow-hidden flex flex-col justify-center"
             >
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-10">
+              {/* Video Background for Right Column */}
+              <div className="absolute inset-0 z-0">
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                >
+                  <source src="/V%C3%ADdeo_em_Loop_Perfeito.mp4" type="video/mp4" />
+                </video>
+                <div className="absolute inset-0 bg-teal-900/40 backdrop-blur-[1px]" />
+              </div>
+
+              {/* Background Pattern (Optional - kept for texture if needed, or remove if video is enough) */}
+              <div className="absolute inset-0 opacity-10 z-0">
                 <div className="absolute top-10 right-10 w-32 h-32 border-2 border-white rounded-full" />
                 <div className="absolute bottom-20 left-10 w-24 h-24 border-2 border-white rounded-full" />
                 <div className="absolute top-1/2 right-1/4 w-16 h-16 border-2 border-white rounded-full" />
