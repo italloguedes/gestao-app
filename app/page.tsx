@@ -473,7 +473,7 @@ export default function Home() {
                 >
                   <source src="/V%C3%ADdeo_em_Loop_Perfeito.mp4" type="video/mp4" />
                 </video>
-                <div className="absolute inset-0 bg-teal-900/40 backdrop-blur-[1px]" />
+                <div className="absolute inset-0 bg-teal-950/70 backdrop-blur-[2px]" />
               </div>
 
               {/* Background Pattern (Optional - kept for texture if needed, or remove if video is enough) */}
@@ -498,9 +498,9 @@ export default function Home() {
                       variants={floatingVariants}
                       animate="animate"
                       transition={{ delay }}
-                      className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl"
+                      className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg ring-1 ring-white/20"
                     >
-                      <Icon size={28} />
+                      <Icon size={28} className="drop-shadow-md" />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -509,7 +509,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="text-3xl md:text-4xl font-bold mb-4 text-center"
+                  className="text-3xl md:text-4xl font-bold mb-4 text-center drop-shadow-lg tracking-tight"
                 >
                   Sala Sensorial ALECE
                 </motion.h3>
@@ -518,7 +518,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="text-white/90 text-lg mb-8 text-center leading-relaxed"
+                  className="text-white text-lg mb-8 text-center leading-relaxed drop-shadow-md font-medium"
                 >
                   Um ambiente projetado para o desenvolvimento e acolhimento de crianças com autismo, síndrome de Down e TDAH.
                 </motion.p>
