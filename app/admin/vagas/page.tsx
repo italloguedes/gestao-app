@@ -50,7 +50,7 @@ export default function GestaoVagas() {
           return;
         }
 
-        const isUserAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
+        const isUserAdmin = userData?.role === 'admin' || userData?.role === 'superadmin' || userData?.role === 'atendente';
         setIsAdmin(isUserAdmin);
 
         setUser({
