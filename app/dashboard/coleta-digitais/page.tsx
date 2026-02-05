@@ -99,28 +99,17 @@ export default function ColetaDigitaisPage() {
       return;
     }
 
-    try {
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', user.id)
-        .single();
+    // Use metadata for role check instead of querying database
+    const userRole = user.user_metadata?.role || user.app_metadata?.role || 'user';
 
-      if (error || !userData) {
-        router.push('/');
-        return;
-      }
-
-      if (!['admin', 'superadmin', 'atendente'].includes(userData.role)) {
-        router.push('/agendamento');
-        return;
-      }
-
-      await loadFila();
-      await loadStats();
-    } catch (error) {
-      router.push('/');
+    if (!['admin', 'superadmin', 'atendente'].includes(userRole)) {
+      router.push('/agendamento');
+      return;
     }
+
+    await loadFila();
+    await loadStats();
+
   };
 
   const loadFila = async () => {

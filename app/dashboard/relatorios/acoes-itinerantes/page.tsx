@@ -665,7 +665,7 @@ export default function AcoesItinerantesPage() {
         doc.setTextColor(100);
 
         // User who generated
-        const userName = user?.email || 'Usuário';
+        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
         doc.text(
           `Gerado por: ${userName}`,
           14,

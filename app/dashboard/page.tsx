@@ -260,16 +260,7 @@ export default function DashboardPage() {
     setGerandoComprovante(true);
     try {
       // Buscar nome do atendente
-      let atendenteNome = 'Não identificado';
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (!userError && userData?.name) {
-        atendenteNome = userData.name;
-      }
+      let atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
 
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];

@@ -47,6 +47,28 @@ export async function POST(request: NextRequest) {
         // The RPC returns an array, take the first item
         const nextPerson = data[0];
 
+        // UPDATE IDENTITY: Ensure atendente_nome is set from Auth metadata
+        // avoiding dependency on public.users table or triggers
+        try {
+            const atendenteNome = session.user.user_metadata?.name ||
+                session.user.user_metadata?.full_name ||
+                'Atendente';
+
+            // RPC chama 'chamar_proximo' que retorna SETOF agendamentos.
+            // Portanto a tabela é 'agendamentos'.
+            await supabase
+                .from('agendamentos')
+                .update({ atendente_nome: atendenteNome })
+                .eq('id', nextPerson.id);
+
+            // Update the local object to return correctly
+            nextPerson.atendente_nome = atendenteNome;
+
+        } catch (updateError) {
+            console.error('Error updating attendant name:', updateError);
+            // Don't fail the request, just log
+        }
+
         return NextResponse.json({
             success: true,
             data: nextPerson

@@ -61,17 +61,7 @@ export default function GerarRelatorioPage() {
     // Buscar nome do atendente para o rodapé
     let atendenteNome = 'Não identificado';
     if (user) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (userError) {
-        console.error('Erro ao buscar dados do atendente:', userError);
-      } else if (userData?.name) {
-        atendenteNome = userData.name;
-      }
+      atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
     }
 
     const doc = new jsPDF();
@@ -208,17 +198,7 @@ export default function GerarRelatorioPage() {
     // Buscar nome do atendente para o rodapé
     let atendenteNome = 'Não identificado';
     if (user) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (userError) {
-        console.error('Erro ao buscar dados do atendente:', userError);
-      } else if (userData?.name) {
-        atendenteNome = userData.name;
-      }
+      atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
     }
 
     const doc = new jsPDF();
