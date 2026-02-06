@@ -59,7 +59,14 @@ interface Agendamento {
   observacoes?: string;
   locked_by?: string;
   locked_at?: string;
+  posto?: string;
 }
+
+const POSTOS = [
+  { id: 'Sala Sensorial', nome: 'Sala Sensorial', color: 'emerald' },
+  { id: 'Alece Itinerante I', nome: 'Alece Itinerante I', color: 'blue' },
+  { id: 'Alece Itinerante II', nome: 'Alece Itinerante II', color: 'purple' },
+];
 
 const HORARIOS = (() => {
   const slots: string[] = [];
@@ -104,6 +111,7 @@ export default function AgendamentosHojePage() {
   const [showEmptySlots, setShowEmptySlots] = useState(true);
   const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
+  const [selectedPosto, setSelectedPosto] = useState('Sala Sensorial');
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -116,8 +124,9 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, locked_by, locked_at")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, locked_by, locked_at, posto")
         .eq("data", selectedDate)
+        .eq("posto", selectedPosto)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente", "chamando"])
         .order("horario", { ascending: true });
 
@@ -370,7 +379,7 @@ export default function AgendamentosHojePage() {
 
   useEffect(() => {
     loadAgendamentos();
-  }, [selectedDate]);
+  }, [selectedDate, selectedPosto]);
 
   const getStatusBadge = useCallback((status: AppointmentStatus): ReactElement | null => {
     const statusConfig: StatusConfigMap = {
@@ -539,6 +548,35 @@ export default function AgendamentosHojePage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+          {/* Tabs de Postos */}
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 mb-6">
+            <div className="flex flex-wrap gap-2">
+              {POSTOS.map((posto) => {
+                const isActive = selectedPosto === posto.id;
+                const colorClasses = {
+                  emerald: isActive
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-200/50'
+                    : 'bg-slate-50 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200',
+                  blue: isActive
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-200/50'
+                    : 'bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-200',
+                  purple: isActive
+                    ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white shadow-lg shadow-purple-200/50'
+                    : 'bg-slate-50 text-slate-600 hover:bg-purple-50 hover:text-purple-700 border border-slate-200',
+                }[posto.color];
+
+                return (
+                  <button
+                    key={posto.id}
+                    onClick={() => setSelectedPosto(posto.id)}
+                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${colorClasses}`}
+                  >
+                    {posto.nome}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -894,6 +932,7 @@ export default function AgendamentosHojePage() {
         selectedDate={selectedDate}
         occupiedSlots={occupiedSlots}
         existingAppointments={existingAppointments}
+        posto={selectedPosto}
       />
     </>
   );

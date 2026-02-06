@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { nome, cpf, telefone, email, data, horario, data_nascimento, atendimento_preferencial } = await request.json();
+    const { nome, cpf, telefone, email, data, horario, data_nascimento, atendimento_preferencial, posto } = await request.json();
 
     // Validações básicas
     if (!nome || !cpf || !telefone || !data || !horario || !data_nascimento) {
@@ -54,12 +54,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar quantos agendamentos já existem no mesmo horário
+    // Verificar quantos agendamentos já existem no mesmo horário e posto
+    const postoAtual = posto || 'Sala Sensorial';
     const { data: existingAppointments, error: checkError } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', data)
       .eq('horario', horario)
+      .eq('posto', postoAtual)
       .in('status', ['confirmado', 'bloqueado']);
 
     if (checkError) {
@@ -70,10 +72,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Permitir até 2 agendamentos por horário
+    // Permitir até 2 agendamentos por horário por posto
     if (existingAppointments && existingAppointments.length >= 2) {
       return NextResponse.json(
-        { error: 'Este horário já está completo (máximo 2 agendamentos por horário)' },
+        { error: 'Este horário já está completo neste posto (máximo 2 agendamentos por horário)' },
         { status: 409 }
       );
     }
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
         horario,
         data_nascimento,
         atendimento_preferencial: atendimento_preferencial || false,
+        posto: postoAtual,
         status: 'confirmado'
       })
       .select()

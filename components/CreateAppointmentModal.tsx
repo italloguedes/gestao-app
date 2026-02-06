@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { FiX, FiUser, FiCalendar, FiClock, FiPhone } from "react-icons/fi";
+import { FiX, FiUser, FiCalendar, FiClock, FiPhone, FiMapPin } from "react-icons/fi";
+
+const POSTOS = [
+  { id: 'Sala Sensorial', nome: 'Sala Sensorial' },
+  { id: 'Alece Itinerante I', nome: 'Alece Itinerante I' },
+  { id: 'Alece Itinerante II', nome: 'Alece Itinerante II' },
+];
 
 interface CreateAppointmentModalProps {
   isOpen: boolean;
@@ -15,11 +21,13 @@ interface CreateAppointmentModalProps {
     horario: string;
     data_nascimento: string;
     atendimento_preferencial?: boolean;
+    posto?: string;
   }) => void;
   selectedDate: string;
   selectedTime?: string;
   occupiedSlots: string[];
   existingAppointments?: Array<{ cpf: string, nome: string }>;
+  posto?: string;
 }
 
 export default function CreateAppointmentModal({
@@ -30,6 +38,7 @@ export default function CreateAppointmentModal({
   selectedTime = "",
   occupiedSlots,
   existingAppointments = [],
+  posto = "Sala Sensorial",
 }: CreateAppointmentModalProps) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -39,6 +48,7 @@ export default function CreateAppointmentModal({
   const defaultEmail = "default@example.com";
   const [preferential, setPreferential] = useState(false);
   const [horario, setHorario] = useState(selectedTime);
+  const [selectedPosto, setSelectedPosto] = useState(posto);
   const [errors, setErrors] = useState<{
     nome?: string;
     cpf?: string;
@@ -105,11 +115,13 @@ export default function CreateAppointmentModal({
       horario,
       data_nascimento: defaultBirthday,
       atendimento_preferencial: preferential,
+      posto: selectedPosto,
     });
     setNome("");
     setCpf("");
     setTelefone("");
     setHorario(selectedTime);
+    setSelectedPosto(posto);
     setErrors({});
     onClose();
   };
@@ -230,6 +242,27 @@ export default function CreateAppointmentModal({
             {errors.horario && (
               <p className="text-red-500 text-xs mt-1">{errors.horario}</p>
             )}
+          </div>
+
+          {/* Campo: Posto de Atendimento */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Posto de Atendimento *
+            </label>
+            <div className="relative">
+              <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                value={selectedPosto}
+                onChange={(e) => setSelectedPosto(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+              >
+                {POSTOS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* novo campo: atendimento preferencial */}
