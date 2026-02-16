@@ -122,12 +122,11 @@ export default function ConsultaPage() {
           icon: <FiClock className="w-12 h-12" />,
           title: 'Em Processamento',
           subtitle: 'Aguarde o Prazo de Entrega',
-          message: 'Seu documento está sendo processado pela Polícia Federal.',
+          message: 'Seu documento está sendo processado pela Perícia Forense do Estado do Ceará.',
           instructions: [
-            'Prazo normal de entrega: até 20 dias úteis',
+            'Prazo estimado de entrega: até 20 dias úteis',
             'Acompanhe o status regularmente por esta página',
-            'Você receberá um email quando o documento estiver pronto',
-            'Após 20 dias sem retorno, entre em contato: (85) 2180-6587'
+            'Caso já tenha ultrapassado 20 dias úteis, entre em contato: (85) 2180-6587'
           ],
           gradient: 'from-blue-500 to-indigo-600',
           bgGradient: 'from-blue-50/80 to-indigo-50/80',
@@ -144,12 +143,11 @@ export default function ConsultaPage() {
           icon: <FiAlertCircle className="w-12 h-12" />,
           title: 'Em Correção',
           subtitle: 'Atenção Necessária',
-          message: 'Seu documento precisa de correções antes de ser finalizado.',
+          message: 'Sua carteira foi encaminhada para correção e está sendo reprocessada.',
           instructions: [
-            'Entre em contato com a Sala Sensorial o quanto antes',
-            'Telefone para contato: (85) 2180-6587',
-            'Verifique se todos os documentos estão corretos',
-            'Pode ser necessário comparecer presencialmente'
+            'Aguarde o prazo de até 30 dias úteis após a entrada em correção',
+            'Acompanhe o status regularmente por esta página',
+            'Caso já tenha ultrapassado 30 dias, entre em contato: (85) 2180-6587'
           ],
           gradient: 'from-amber-500 to-orange-600',
           bgGradient: 'from-amber-50/80 to-orange-50/80',
@@ -165,12 +163,10 @@ export default function ConsultaPage() {
           icon: <FiLock className="w-12 h-12" />,
           title: 'Documento Bloqueado',
           subtitle: 'Entre em Contato',
-          message: 'Este documento foi bloqueado. É necessário entrar em contato com o setor.',
+          message: 'Este documento foi bloqueado. Entre em contato para mais informações.',
           instructions: [
-            'Entre em contato urgentemente: (85) 2180-6587',
-            'Informe seu número de protocolo',
-            'Verifique os motivos do bloqueio',
-            'Siga as orientações da equipe de atendimento'
+            'Entre em contato: (85) 2180-6587',
+            'Tenha em mãos seu CPF e número de protocolo'
           ],
           gradient: 'from-slate-600 to-gray-700',
           bgGradient: 'from-slate-50/80 to-gray-50/80',
