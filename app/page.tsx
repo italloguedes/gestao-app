@@ -477,7 +477,13 @@ export default function Home() {
                       transition={{ duration: 0.35, ease: 'easeInOut' }}
                       className="overflow-hidden"
                     >
-                      <form onSubmit={handleAuth} className="mt-5 space-y-1">
+                      <motion.form
+                        onSubmit={handleAuth}
+                        className="mt-5 space-y-1"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                      >
                         {/* Mode Title */}
                         <motion.p
                           initial={{ opacity: 0 }}
@@ -591,7 +597,7 @@ export default function Home() {
                             {isRecovering ? 'Voltar ao login' : 'Esqueci minha senha'}
                           </button>
                         </div>
-                      </form>
+                      </motion.form>
                     </motion.div>
                   )}
                 </AnimatePresence>
