@@ -28,33 +28,25 @@ const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.03, delayChildren: 0 },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: 'spring', stiffness: 180, damping: 22 },
+    transition: { duration: 0.25, ease: 'easeOut' },
   },
 };
 
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 30, scale: 0.97 },
+  hidden: { opacity: 0, y: 15 },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    transition: { type: 'spring', stiffness: 120, damping: 20 },
-  },
-};
-
-const pulseVariants: Variants = {
-  animate: {
-    scale: [1, 1.05, 1],
-    transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+    transition: { duration: 0.3, ease: 'easeOut' },
   },
 };
 
@@ -267,34 +259,11 @@ export default function ConsultaPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 relative overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
 
-      {/* Animated Background Blobs */}
+      {/* Background Blobs (CSS only, no JS animation) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            x: [0, 30, -20, 0],
-            y: [0, -20, 30, 0],
-            scale: [1, 1.1, 0.95, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-[-15%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-blue-200/40 to-indigo-200/30 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            x: [0, -30, 20, 0],
-            y: [0, 30, -20, 0],
-            scale: [1, 0.95, 1.1, 1],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute bottom-[-15%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-purple-200/30 to-pink-200/20 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            x: [0, 20, -15, 0],
-            y: [0, -15, 20, 0],
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-[40%] left-[20%] w-[350px] h-[350px] bg-gradient-to-br from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl"
-        />
+        <div className="absolute top-[-15%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-blue-200/40 to-indigo-200/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-15%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-purple-200/30 to-pink-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-[40%] left-[20%] w-[350px] h-[350px] bg-gradient-to-br from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl" />
       </div>
 
       {/* Main Container */}
@@ -455,13 +424,11 @@ export default function ConsultaPage() {
                         transition={{ delay: 0.2, type: 'spring' }}
                         className="relative z-10 flex flex-col items-center text-center"
                       >
-                        <motion.div
-                          variants={pulseVariants}
-                          animate="animate"
+                        <div
                           className="p-4 bg-white/20 backdrop-blur-md rounded-2xl shadow-inner mb-4 ring-1 ring-white/30"
                         >
                           {statusConfig.icon}
-                        </motion.div>
+                        </div>
                         <h2 className="text-2xl sm:text-3xl font-bold mb-1 tracking-tight">{statusConfig.title}</h2>
                         <p className="text-white/80 font-medium text-base">{statusConfig.subtitle}</p>
                       </motion.div>
@@ -529,7 +496,7 @@ export default function ConsultaPage() {
                               key={index}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.4 + index * 0.08 }}
+                              transition={{ delay: 0.1 + index * 0.04 }}
                               whileHover={{ x: 3 }}
                               className="flex items-start gap-3 p-3 bg-white/70 rounded-lg border border-slate-100/80 hover:border-slate-200 hover:shadow-sm transition-all duration-200 cursor-default group"
                             >
@@ -570,7 +537,7 @@ export default function ConsultaPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.2 }}
           className="mt-8 text-center space-y-4"
         >
           <Link

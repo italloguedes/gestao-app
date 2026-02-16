@@ -18,32 +18,20 @@ const containerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15,
+      staggerChildren: 0.03,
+      delayChildren: 0,
     },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      type: 'spring',
-      stiffness: 150,
-      damping: 20,
-    },
-  },
-};
-
-const floatingVariants: Variants = {
-  animate: {
-    y: [-4, 4, -4],
-    transition: {
-      duration: 4,
-      repeat: Infinity,
-      ease: 'easeInOut',
+      duration: 0.25,
+      ease: 'easeOut',
     },
   },
 };
@@ -689,26 +677,23 @@ export default function Home() {
                   className="mb-8 flex justify-center gap-4"
                 >
                   {[
-                    { Icon: FaPuzzlePiece, delay: 0 },
-                    { Icon: FaHandsHelping, delay: 0.1 },
-                    { Icon: FaInfinity, delay: 0.2 },
-                  ].map(({ Icon, delay }, index) => (
-                    <motion.div
+                    { Icon: FaPuzzlePiece },
+                    { Icon: FaHandsHelping },
+                    { Icon: FaInfinity },
+                  ].map(({ Icon }, index) => (
+                    <div
                       key={index}
-                      variants={floatingVariants}
-                      animate="animate"
-                      transition={{ delay }}
                       className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg ring-1 ring-white/20"
                     >
                       <Icon size={28} className="drop-shadow-md" />
-                    </motion.div>
+                    </div>
                   ))}
                 </motion.div>
 
                 <motion.h3
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.1 }}
                   className="text-3xl md:text-4xl font-bold mb-4 text-center drop-shadow-lg tracking-tight"
                 >
                   Sala Sensorial ALECE
@@ -717,7 +702,7 @@ export default function Home() {
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
+                  transition={{ delay: 0.15 }}
                   className="text-white text-lg mb-8 text-center leading-relaxed drop-shadow-md font-medium"
                 >
                   Um ambiente projetado para o desenvolvimento e acolhimento de crianças com autismo, síndrome de Down e TDAH.
@@ -727,7 +712,7 @@ export default function Home() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
+                  transition={{ delay: 0.2 }}
                   className="flex flex-wrap justify-center gap-3 mb-10"
                 >
                   {[
@@ -751,7 +736,7 @@ export default function Home() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
+                  transition={{ delay: 0.25 }}
                   className="text-center"
                 >
                   <p className="text-white/80 mb-4">Já realizou um atendimento?</p>
