@@ -10,6 +10,7 @@ import { supabase, checkSupabaseConnection, handleSupabaseError } from '../lib/s
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { FaPuzzlePiece, FaHandsHelping, FaInfinity, FaEye, FaEyeSlash, FaShieldAlt, FaLock, FaExclamationTriangle, FaCheckCircle, FaSearch, FaHeart, FaUsers, FaStar } from 'react-icons/fa';
+import { HiOutlineMail } from 'react-icons/hi';
 
 // Animações otimizadas
 const containerVariants: Variants = {
@@ -167,6 +168,7 @@ export default function Home() {
   const [loginAttempts, setLoginAttempts] = useState<number[]>([]);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [showCredentials, setShowCredentials] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -413,7 +415,7 @@ export default function Home() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full py-4 rounded-xl bg-white border-2 border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 transition-all duration-200 text-slate-700 font-semibold flex items-center justify-center gap-3 shadow-lg shadow-slate-100"
                   >
-                    {loading ? (
+                    {loading && !showCredentials ? (
                       <>
                         <motion.div
                           animate={{ rotate: 360 }}
@@ -431,7 +433,170 @@ export default function Home() {
                   </motion.button>
                 </motion.div>
 
-                {/* Error Message */}
+                {/* Divider */}
+                <motion.div variants={itemVariants} className="flex items-center gap-4 my-6">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">ou</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </motion.div>
+
+                {/* Toggle Credentials Button */}
+                <motion.div variants={itemVariants}>
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setShowCredentials(!showCredentials);
+                      setError(null);
+                      setMessage(null);
+                      setIsRegistering(false);
+                      setIsRecovering(false);
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="w-full py-3.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-teal-300 hover:bg-teal-50/30 transition-all duration-200 text-slate-500 hover:text-teal-600 font-medium flex items-center justify-center gap-2.5 text-sm"
+                  >
+                    <HiOutlineMail size={18} />
+                    <span>{showCredentials ? 'Ocultar credenciais' : 'Acessar com credenciais'}</span>
+                    <motion.span
+                      animate={{ rotate: showCredentials ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-xs"
+                    >
+                      ▼
+                    </motion.span>
+                  </motion.button>
+                </motion.div>
+
+                {/* Expandable Credentials Form */}
+                <AnimatePresence>
+                  {showCredentials && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.35, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <form onSubmit={handleAuth} className="mt-5 space-y-1">
+                        {/* Mode Title */}
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2"
+                        >
+                          <FaLock size={12} className="text-teal-500" />
+                          {isRecovering ? 'Recuperar senha' : isRegistering ? 'Criar nova conta' : 'Login com credenciais'}
+                        </motion.p>
+
+                        <InputField
+                          id="email"
+                          label="Email"
+                          type="email"
+                          value={email}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                          autoComplete="email"
+                          placeholder="seu@email.com"
+                        />
+
+                        {!isRecovering && (
+                          <>
+                            <InputField
+                              id="password"
+                              label="Senha"
+                              type="password"
+                              value={password}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                              autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                              placeholder="••••••••"
+                              showPasswordToggle
+                              onTogglePassword={() => setShowPassword(!showPassword)}
+                              isPasswordVisible={showPassword}
+                            />
+
+                            {isRegistering && (
+                              <AnimatePresence>
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                >
+                                  <PasswordStrengthIndicator password={password} />
+                                  <InputField
+                                    id="confirmPassword"
+                                    label="Confirmar Senha"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                                    autoComplete="new-password"
+                                    placeholder="••••••••"
+                                    showPasswordToggle
+                                    onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    isPasswordVisible={showConfirmPassword}
+                                  />
+                                </motion.div>
+                              </AnimatePresence>
+                            )}
+                          </>
+                        )}
+
+                        {/* Submit Button */}
+                        <motion.button
+                          type="submit"
+                          disabled={isSubmitDisabled}
+                          whileHover={!isSubmitDisabled ? { scale: 1.02 } : {}}
+                          whileTap={!isSubmitDisabled ? { scale: 0.98 } : {}}
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-300 text-white font-semibold shadow-lg shadow-teal-200/50 disabled:shadow-none transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                          {loading ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                            />
+                          ) : (
+                            <>
+                              <FaShieldAlt size={16} />
+                              <span>
+                                {isRecovering ? 'Enviar email de recuperação' : isRegistering ? 'Criar conta' : 'Entrar'}
+                              </span>
+                            </>
+                          )}
+                        </motion.button>
+
+                        {/* Links */}
+                        <div className="flex flex-col items-center gap-2 pt-3">
+                          {!isRecovering && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsRegistering(!isRegistering);
+                                setError(null);
+                                setMessage(null);
+                              }}
+                              className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                            >
+                              {isRegistering ? 'Já tenho uma conta' : 'Criar nova conta'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRecovering(!isRecovering);
+                              setIsRegistering(false);
+                              setError(null);
+                              setMessage(null);
+                            }}
+                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            {isRecovering ? 'Voltar ao login' : 'Esqueci minha senha'}
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Error / Success Messages */}
                 <AnimatePresence>
                   {error && (
                     <motion.div
@@ -446,8 +611,37 @@ export default function Home() {
                   )}
                 </AnimatePresence>
 
+                <AnimatePresence>
+                  {message && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-4 flex items-start gap-3 bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-xl text-sm"
+                    >
+                      <FaCheckCircle className="mt-0.5 flex-shrink-0" />
+                      <span>{message}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Rate Limited Warning */}
+                <AnimatePresence>
+                  {isRateLimited && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-3 flex items-start gap-3 bg-amber-50 border border-amber-100 text-amber-700 px-4 py-3 rounded-xl text-sm"
+                    >
+                      <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
+                      <span>Muitas tentativas. Aguarde {Math.ceil(cooldownRemaining / 1000)}s</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Help Text */}
-                <motion.div variants={itemVariants} className="mt-8 text-center">
+                <motion.div variants={itemVariants} className="mt-6 text-center">
                   <p className="text-sm text-slate-400">
                     Use seu email institucional para acessar o sistema
                   </p>
