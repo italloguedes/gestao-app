@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { supabaseServer as supabase } from '@/lib/supabase-server';
 
 import { HORARIOS_MANHA, HORARIOS_TARDE } from '@/lib/constants';
 

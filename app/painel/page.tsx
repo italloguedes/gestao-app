@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Chamada {
     id: number;
-    nome: string;
+    nome_publico: string;
     senha: number;
     tipo: 'normal' | 'preferencial';
     status: string;
-    atendente_id: string;
     atendente_nome?: string;
     horario_chamada: string;
     atendimento_preferencial?: boolean;
@@ -19,6 +17,7 @@ interface Chamada {
 export default function PainelPage() {
     const [chamadaAtual, setChamadaAtual] = useState<Chamada | null>(null);
     const [historico, setHistorico] = useState<Chamada[]>([]);
+    const previousCallId = useRef<number | null>(null);
 
     const playSound = () => {
         try {
@@ -42,73 +41,28 @@ export default function PainelPage() {
 
     useEffect(() => {
         fetchRecentCalls();
-
-        const channel = supabase
-            .channel('painel_chamadas')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'agendamentos',
-                    filter: "status=eq.chamando"
-                },
-                async (payload: any) => {
-                    const newCall = payload.new as Chamada;
-
-                    // Fetch attendant name
-                    if (newCall.atendente_id) {
-                        const { data } = await supabase
-                            .from('users')
-                            .select('name')
-                            .eq('auth_id', newCall.atendente_id)
-                            .single();
-                        if (data) {
-                            newCall.atendente_nome = data.name;
-                        }
-                    }
-
-                    playSound();
-
-                    setChamadaAtual(prev => {
-                        if (prev && prev.id !== newCall.id) {
-                            setHistorico(h => [prev, ...h].slice(0, 3));
-                        }
-                        return newCall;
-                    });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        const interval = setInterval(fetchRecentCalls, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchRecentCalls = async () => {
-        const { data } = await supabase
-            .from('agendamentos')
-            .select('*')
-            .in('status', ['chamando', 'concluido', 'atendendo'])
-            .order('horario_chamada', { ascending: false })
-            .limit(4);
+        try {
+            const response = await fetch('/api/painel/chamadas', { cache: 'no-store' });
+            if (!response.ok) return;
 
-        if (data && data.length > 0) {
-            // Fetch attendant names for all
-            const callsWithNames = await Promise.all(data.map(async (call: any) => {
-                if (call.atendente_id) {
-                    const { data: userData } = await supabase
-                        .from('users')
-                        .select('name')
-                        .eq('auth_id', call.atendente_id)
-                        .single();
-                    if (userData) call.atendente_nome = userData.name;
-                }
-                return call;
-            }));
+            const payload = await response.json();
+            const current: Chamada | null = payload.current;
+            const history: Chamada[] = payload.history || [];
 
-            setChamadaAtual(callsWithNames[0]);
-            setHistorico(callsWithNames.slice(1));
+            if (current && previousCallId.current !== null && previousCallId.current !== current.id) {
+                playSound();
+            }
+
+            previousCallId.current = current?.id ?? null;
+            setChamadaAtual(current);
+            setHistorico(history);
+        } catch (error) {
+            console.error('Falha ao carregar painel:', error);
         }
     };
 
@@ -175,7 +129,7 @@ export default function PainelPage() {
 
                                     <div className="mb-2 text-slate-400 uppercase tracking-widest text-lg">Cliente</div>
                                     <h2 className="text-5xl font-bold text-white mb-8 truncate w-full px-4">
-                                        {chamadaAtual.nome.split(' ')[0]} {chamadaAtual.nome.split(' ').length > 1 ? chamadaAtual.nome.split(' ')[1].substring(0, 1) + '.' : ''}
+                                        {chamadaAtual.nome_publico}
                                     </h2>
 
                                     <div className="flex items-center gap-3 text-slate-400 bg-black/20 px-6 py-3 rounded-full">
@@ -219,7 +173,7 @@ export default function PainelPage() {
                                             {String(call.senha || 0).padStart(3, '0')}
                                         </div>
                                         <div className="text-sm text-slate-500 truncate max-w-[150px]">
-                                            {call.nome}
+                                            {call.nome_publico}
                                         </div>
                                     </div>
                                     <div className={`w-3 h-3 rounded-full ${call.tipo === 'preferencial' || call.atendimento_preferencial ? 'bg-amber-500' : 'bg-blue-500'
