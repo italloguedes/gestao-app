@@ -7,6 +7,10 @@ DROP POLICY IF EXISTS "Permitir leitura para usuários autenticados" ON public.a
 DROP POLICY IF EXISTS "Permitir inserção para usuários autenticados" ON public.atendimento_observacoes_historico;
 DROP POLICY IF EXISTS "Permitir atualização para usuários autenticados" ON public.atendimento_observacoes_historico;
 DROP POLICY IF EXISTS "Permitir exclusão para usuários autenticados" ON public.atendimento_observacoes_historico;
+DROP POLICY IF EXISTS "Observacoes read authenticated" ON public.atendimento_observacoes_historico;
+DROP POLICY IF EXISTS "Observacoes insert authenticated" ON public.atendimento_observacoes_historico;
+DROP POLICY IF EXISTS "Observacoes update authenticated" ON public.atendimento_observacoes_historico;
+DROP POLICY IF EXISTS "Observacoes delete authenticated" ON public.atendimento_observacoes_historico;
 
 CREATE POLICY "Observacoes read authenticated"
 ON public.atendimento_observacoes_historico
