@@ -106,6 +106,13 @@ export default function AgendamentosHojePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalAction, setModalAction] = useState<"edit" | "iniciar" | "ausente" | "cancelar" | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportStatusFilters, setReportStatusFilters] = useState<Record<string, boolean>>({
+    confirmado: true,
+    ausente: true,
+    concluido: true,
+    cancelado: true,
+  });
 
   // Filter states
   const [showEmptySlots, setShowEmptySlots] = useState(true);
@@ -225,9 +232,27 @@ export default function AgendamentosHojePage() {
     }
   };
 
+  const toggleReportStatusFilter = (status: string) => {
+    setReportStatusFilters(prev => ({ ...prev, [status]: !prev[status] }));
+  };
+
   const generateReport = async () => {
+    setIsReportModalOpen(false);
     setActionLoading(true);
     try {
+      // Filtrar agendamentos pelos status selecionados
+      const activeFilters = Object.entries(reportStatusFilters)
+        .filter(([_, active]) => active)
+        .map(([status]) => status);
+
+      const filteredAgendamentos = agendamentos.filter(a => activeFilters.includes(a.status));
+
+      if (filteredAgendamentos.length === 0) {
+        alert('Nenhum agendamento encontrado com os filtros selecionados.');
+        setActionLoading(false);
+        return;
+      }
+
       // 1. Buscar dados do atendente
       let atendenteNome = 'Não identificado';
       if (user) {
@@ -251,7 +276,7 @@ export default function AgendamentosHojePage() {
       // --- CABEÇALHO ---
       // Fundo verde
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+      doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
 
       // Título
       doc.setTextColor(255, 255, 255);
@@ -268,27 +293,38 @@ export default function AgendamentosHojePage() {
       const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
       doc.text(subtitle, (doc.internal.pageSize.width - subtitleWidth) / 2, 22);
 
-      // Resumo de total
+      // Filtros aplicados
       doc.setFontSize(9);
-      const totalText = `Total: ${agendamentos.length} ${agendamentos.length === 1 ? 'registro' : 'registros'}`;
+      const statusLabels: Record<string, string> = {
+        confirmado: 'Confirmados',
+        ausente: 'Ausentes',
+        concluido: 'Concluídos',
+        cancelado: 'Cancelados',
+      };
+      const filterText = `Filtros: ${activeFilters.map(s => statusLabels[s] || s).join(', ')}`;
+      const filterWidth = doc.getStringUnitWidth(filterText) * 9 / doc.internal.scaleFactor;
+      doc.text(filterText, (doc.internal.pageSize.width - filterWidth) / 2, 28);
+
+      // Resumo de total
+      const totalText = `Total: ${filteredAgendamentos.length} ${filteredAgendamentos.length === 1 ? 'registro' : 'registros'}`;
       const totalWidth = doc.getStringUnitWidth(totalText) * 9 / doc.internal.scaleFactor;
-      doc.text(totalText, (doc.internal.pageSize.width - totalWidth) / 2, 28);
+      doc.text(totalText, (doc.internal.pageSize.width - totalWidth) / 2, 34);
 
 
       // --- TABELA ---
-      const tableColumn = ['Horário', 'Nome do Paciente', 'Telefone', 'Status', 'Preferencial'];
-      const tableRows = agendamentos.map(a => [
-        a.horario,
+      const tableColumn = ['Nome', 'CPF', 'Data', 'Telefone', 'Status'];
+      const tableRows = filteredAgendamentos.map(a => [
         a.nome,
+        a.cpf,
+        formatDate(a.data),
         a.telefone,
         a.status.charAt(0).toUpperCase() + a.status.slice(1),
-        a.atendimento_preferencial ? "Sim" : "Não"
       ]);
 
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: 40,
+        startY: 45,
         styles: {
           fontSize: 9,
           cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
@@ -306,11 +342,11 @@ export default function AgendamentosHojePage() {
           valign: 'middle'
         },
         columnStyles: {
-          0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // Horário
-          1: { cellWidth: 'auto', halign: 'left' },                  // Nome
-          2: { cellWidth: 35, halign: 'center' },                    // Telefone
-          3: { cellWidth: 25, halign: 'center' },                    // Status
-          4: { cellWidth: 25, halign: 'center' }                     // Preferencial
+          0: { cellWidth: 'auto', halign: 'left' },                  // Nome
+          1: { cellWidth: 35, halign: 'center' },                     // CPF
+          2: { cellWidth: 25, halign: 'center' },                     // Data
+          3: { cellWidth: 35, halign: 'center' },                     // Telefone
+          4: { cellWidth: 25, halign: 'center' },                     // Status
         },
         alternateRowStyles: {
           fillColor: secondaryColor
@@ -596,7 +632,7 @@ export default function AgendamentosHojePage() {
                 )}
 
                 <button
-                  onClick={generateReport}
+                  onClick={() => setIsReportModalOpen(true)}
                   disabled={agendamentos.length === 0 || actionLoading}
                   className="flex items-center px-6 py-3 text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none font-bold"
                 >
@@ -934,6 +970,98 @@ export default function AgendamentosHojePage() {
         existingAppointments={existingAppointments}
         posto={selectedPosto}
       />
+
+      {/* Modal de Filtros do Relatório */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <FiFileText className="w-6 h-6" />
+                Gerar Relatório PDF
+              </h2>
+              <p className="text-purple-100 text-sm mt-1">Selecione os status para incluir no relatório</p>
+            </div>
+
+            {/* Filtros */}
+            <div className="p-6 space-y-3">
+              {[
+                { key: 'confirmado', label: 'Confirmados', icon: <FiCheckCircle className="w-5 h-5" />, color: 'blue' },
+                { key: 'ausente', label: 'Ausentes', icon: <FiXCircle className="w-5 h-5" />, color: 'rose' },
+                { key: 'concluido', label: 'Concluídos', icon: <FiCheck className="w-5 h-5" />, color: 'emerald' },
+                { key: 'cancelado', label: 'Cancelados', icon: <FiSlash className="w-5 h-5" />, color: 'amber' },
+              ].map(({ key, label, icon, color }) => {
+                const isActive = reportStatusFilters[key];
+                const colorMap: Record<string, { active: string; inactive: string }> = {
+                  blue: {
+                    active: 'bg-blue-50 border-blue-300 text-blue-700',
+                    inactive: 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100',
+                  },
+                  rose: {
+                    active: 'bg-rose-50 border-rose-300 text-rose-700',
+                    inactive: 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100',
+                  },
+                  emerald: {
+                    active: 'bg-emerald-50 border-emerald-300 text-emerald-700',
+                    inactive: 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100',
+                  },
+                  amber: {
+                    active: 'bg-amber-50 border-amber-300 text-amber-700',
+                    inactive: 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100',
+                  },
+                };
+                const colors = colorMap[color];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleReportStatusFilter(key)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 font-semibold ${
+                      isActive ? colors.active : colors.inactive
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                      isActive ? 'bg-current border-current' : 'border-slate-300'
+                    }`}>
+                      {isActive && <FiCheck className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    {icon}
+                    <span className="text-sm">{label}</span>
+                    <span className="ml-auto text-xs font-bold opacity-75">
+                      {agendamentos.filter(a => a.status === key).length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Info */}
+            <div className="px-6 pb-2">
+              <p className="text-xs text-slate-500 text-center">
+                O relatório incluirá: <strong>Nome</strong>, <strong>CPF</strong>, <strong>Data</strong> e <strong>Telefone</strong>
+              </p>
+            </div>
+
+            {/* Ações */}
+            <div className="px-6 pb-6 pt-3 flex gap-3">
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={generateReport}
+                disabled={!Object.values(reportStatusFilters).some(v => v)}
+                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <FiPrinter className="w-4 h-4" />
+                Gerar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
