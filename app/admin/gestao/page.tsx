@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FiUsers, FiCalendar, FiClock, FiSettings, FiCheckCircle } from 'react-icons/fi';
 import { PreAgendamentoGestao } from './PreAgendamentoGestao';
+import SearchAgendamentos from './SearchAgendamentos';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,14 @@ export default function AdminGestaoPage() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Divider */}
+      <hr className="border-gray-200" />
+
+      {/* Search Section */}
+      <section>
+        <SearchAgendamentos />
       </section>
 
       {/* Divider */}
