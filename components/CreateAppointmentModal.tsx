@@ -22,7 +22,7 @@ interface CreateAppointmentModalProps {
     data_nascimento: string;
     atendimento_preferencial?: boolean;
     posto?: string;
-  }) => void;
+  }) => Promise<void>;
   selectedDate: string;
   selectedTime?: string;
   occupiedSlots: string[];
@@ -101,29 +101,32 @@ export default function CreateAppointmentModal({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     const unformattedCpf = cpf.replace(/\D/g, "");
     const unformattedPhone = telefone.replace(/\D/g, "");
-    onSave({
-      nome,
-      cpf: unformattedCpf,
-      telefone: unformattedPhone,
-      email: defaultEmail,
-      data: selectedDate,
-      horario,
-      data_nascimento: defaultBirthday,
-      atendimento_preferencial: preferential,
-      posto: selectedPosto,
-    });
-    setNome("");
-    setCpf("");
-    setTelefone("");
-    setHorario(selectedTime);
-    setSelectedPosto(posto);
-    setErrors({});
-    onClose();
+    try {
+      await onSave({
+        nome,
+        cpf: unformattedCpf,
+        telefone: unformattedPhone,
+        email: defaultEmail,
+        data: selectedDate,
+        horario,
+        data_nascimento: defaultBirthday,
+        atendimento_preferencial: preferential,
+        posto: selectedPosto,
+      });
+      setNome("");
+      setCpf("");
+      setTelefone("");
+      setHorario(selectedTime);
+      setSelectedPosto(posto);
+      setErrors({});
+    } catch (error) {
+      // Erro já tratado no componente pai
+    }
   };
 
   if (!isOpen) return null;
