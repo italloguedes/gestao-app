@@ -312,8 +312,9 @@ export default function AgendamentosHojePage() {
 
 
       // --- TABELA ---
-      const tableColumn = ['Nome', 'CPF', 'Data', 'Telefone', 'Status'];
+      const tableColumn = ['Horário', 'Nome', 'CPF', 'Data', 'Telefone', 'Status'];
       const tableRows = filteredAgendamentos.map(a => [
+        a.horario?.substring(0, 5) || '',
         a.nome,
         a.cpf,
         formatDate(a.data),
@@ -326,8 +327,8 @@ export default function AgendamentosHojePage() {
         body: tableRows,
         startY: 45,
         styles: {
-          fontSize: 9,
-          cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+          fontSize: 7,
+          cellPadding: { top: 1.5, right: 1.5, bottom: 1.5, left: 1.5 },
           lineColor: [230, 230, 230],
           lineWidth: 0.1,
           textColor: [50, 50, 50],
@@ -336,17 +337,18 @@ export default function AgendamentosHojePage() {
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
-          fontSize: 8,
+          fontSize: 7,
           fontStyle: 'bold',
           halign: 'center',
           valign: 'middle'
         },
         columnStyles: {
-          0: { cellWidth: 'auto', halign: 'left' },                  // Nome
-          1: { cellWidth: 35, halign: 'center' },                     // CPF
-          2: { cellWidth: 25, halign: 'center' },                     // Data
-          3: { cellWidth: 35, halign: 'center' },                     // Telefone
-          4: { cellWidth: 25, halign: 'center' },                     // Status
+          0: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }, // Horário
+          1: { cellWidth: 'auto', halign: 'left' },                  // Nome
+          2: { cellWidth: 30, halign: 'center' },                     // CPF
+          3: { cellWidth: 22, halign: 'center' },                     // Data
+          4: { cellWidth: 28, halign: 'center' },                     // Telefone
+          5: { cellWidth: 22, halign: 'center' },                     // Status
         },
         alternateRowStyles: {
           fillColor: secondaryColor
