@@ -12,7 +12,6 @@ import {
   FiXCircle,
   FiSlash,
   FiAlertCircle,
-  FiLock,
   FiRefreshCw,
   FiX,
   FiHash,
@@ -60,13 +59,6 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactElement; b
     text: "text-amber-700",
     border: "border-amber-200",
   },
-  bloqueado: {
-    label: "Bloqueado",
-    icon: <FiLock className="w-4 h-4" />,
-    bg: "bg-slate-50",
-    text: "text-slate-700",
-    border: "border-slate-200",
-  },
   chamando: {
     label: "Chamando",
     icon: <FiRefreshCw className="w-4 h-4 animate-spin" />,
@@ -89,48 +81,44 @@ function formatCPF(cpf: string) {
 
 export default function SearchAgendamentos() {
   const [query, setQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
   const [results, setResults] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   const handleSearch = useCallback(async () => {
     const trimmed = query.trim();
-    if (!trimmed) return;
+    if (!trimmed && !selectedDate) return;
 
     setLoading(true);
     setSearched(true);
 
     try {
-      const isNumeric = /^\d+$/.test(trimmed);
+      let queryBuilder = supabase
+        .from("agendamentos")
+        .select("id, nome, cpf, telefone, data, horario, status, posto, atendimento_preferencial")
+        .neq("status", "bloqueado")
+        .order("data", { ascending: false })
+        .order("horario", { ascending: true });
 
-      let data: Agendamento[] | null = null;
-
-      if (isNumeric) {
-        // Search by CPF
-        const { data: cpfData, error } = await supabase
-          .from("agendamentos")
-          .select("id, nome, cpf, telefone, data, horario, status, posto, atendimento_preferencial")
-          .ilike("cpf", `%${trimmed}%`)
-          .order("data", { ascending: false })
-          .order("horario", { ascending: true })
-          .limit(20);
-
-        if (error) throw error;
-        data = cpfData;
-      } else {
-        // Search by name
-        const { data: nameData, error } = await supabase
-          .from("agendamentos")
-          .select("id, nome, cpf, telefone, data, horario, status, posto, atendimento_preferencial")
-          .ilike("nome", `%${trimmed}%`)
-          .order("data", { ascending: false })
-          .order("horario", { ascending: true })
-          .limit(20);
-
-        if (error) throw error;
-        data = nameData;
+      // Filtro por data
+      if (selectedDate) {
+        queryBuilder = queryBuilder.eq("data", selectedDate);
       }
 
+      // Filtro por nome ou CPF
+      if (trimmed) {
+        const isNumeric = /^\d+$/.test(trimmed);
+        if (isNumeric) {
+          queryBuilder = queryBuilder.ilike("cpf", `%${trimmed}%`);
+        } else {
+          queryBuilder = queryBuilder.ilike("nome", `%${trimmed}%`);
+        }
+      }
+
+      const { data, error } = await queryBuilder.limit(50);
+
+      if (error) throw error;
       setResults(data || []);
     } catch (err) {
       console.error("Erro na busca:", err);
@@ -138,7 +126,7 @@ export default function SearchAgendamentos() {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, selectedDate]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -148,6 +136,7 @@ export default function SearchAgendamentos() {
 
   const clearSearch = () => {
     setQuery("");
+    setSelectedDate("");
     setResults([]);
     setSearched(false);
   };
@@ -159,8 +148,10 @@ export default function SearchAgendamentos() {
       </h2>
 
       {/* Search Bar */}
-      <div className="relative mb-6">
-        <div className="flex gap-3">
+      <div className="relative mb-6 space-y-4">
+        {/* Linha 1: Nome/CPF + Data */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Campo de busca por texto */}
           <div className="flex-1 relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
             <div className="relative flex items-center">
@@ -173,7 +164,7 @@ export default function SearchAgendamentos() {
                 placeholder="Digite o nome ou CPF do cliente..."
                 className="w-full pl-12 pr-12 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-300 shadow-sm hover:shadow-md text-sm"
               />
-              {query && (
+              {(query || selectedDate) && (
                 <button
                   onClick={clearSearch}
                   className="absolute right-4 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200"
@@ -183,10 +174,27 @@ export default function SearchAgendamentos() {
               )}
             </div>
           </div>
+
+          {/* Campo de data */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+            <div className="relative flex items-center">
+              <FiCalendar className="absolute left-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full sm:w-52 pl-12 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-800 font-medium focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Botão Buscar */}
           <button
             onClick={handleSearch}
-            disabled={loading || !query.trim()}
-            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-sm transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            disabled={loading || (!query.trim() && !selectedDate)}
+            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-sm transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
           >
             {loading ? (
               <FiRefreshCw className="w-5 h-5 animate-spin" />
@@ -196,6 +204,11 @@ export default function SearchAgendamentos() {
             Buscar
           </button>
         </div>
+
+        {/* Dica */}
+        <p className="text-xs text-slate-400 px-1">
+          Busque por nome, CPF ou selecione uma data. Bloqueios administrativos não são exibidos.
+        </p>
       </div>
 
       {/* Results */}
@@ -214,7 +227,7 @@ export default function SearchAgendamentos() {
             <FiAlertCircle className="w-10 h-10 text-slate-400" />
           </div>
           <h3 className="text-lg font-bold text-slate-600 mb-2">Nenhum agendamento encontrado</h3>
-          <p className="text-slate-400 text-sm">Tente buscar com outro nome ou CPF.</p>
+          <p className="text-slate-400 text-sm">Tente buscar com outro nome, CPF ou data.</p>
         </div>
       )}
 
