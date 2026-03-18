@@ -58,6 +58,7 @@ export default function AtendimentoModal({
   const [historicoObservacoes, setHistoricoObservacoes] = useState<AtendimentoObservacao[]>([]);
   const [novaObservacao, setNovaObservacao] = useState('');
   const [addingObservacao, setAddingObservacao] = useState(false);
+  const [showObservacoes, setShowObservacoes] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
 
@@ -513,41 +514,38 @@ export default function AtendimentoModal({
         </div>
       )}
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col transform transition-all scale-100">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-4 animate-fade-in">
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col transform transition-all">
           {/* Header */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 flex justify-between items-center shadow-lg relative z-20">
-            <div>
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <FiFileText className="w-6 h-6" />
-                Editar Atendimento
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center shadow-lg relative z-20">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <FiFileText className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">Editar Atendimento</span>
               </h2>
-              <div className="flex items-center gap-3 mt-1.5 opacity-90">
-                <span className="text-white text-sm font-medium bg-white/20 px-2 py-0.5 rounded-md">
-                  Protocolo: {atendimento.protocolo}
+              <div className="flex items-center gap-2 mt-1 opacity-90 flex-wrap">
+                <span className="text-white text-xs font-medium bg-white/20 px-2 py-0.5 rounded-md">
+                  {atendimento.protocolo}
                 </span>
                 {atendimento.atendente_nome && (
-                  <>
-                    <span className="text-white/40 text-xs">•</span>
-                    <span className="text-white text-sm">
-                      Atendente: <span className="font-semibold">{atendimento.atendente_nome}</span>
-                    </span>
-                  </>
+                  <span className="text-white/80 text-xs hidden sm:inline">
+                    • {atendimento.atendente_nome}
+                  </span>
                 )}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all backdrop-blur-sm"
+              className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all flex-shrink-0 ml-2"
             >
-              <FiX className="w-6 h-6" />
+              <FiX className="w-5 h-5" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {/* Formulário */}
-            <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-gradient-to-b from-slate-50 to-white">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-slate-50 to-white">
               <div className="max-w-3xl mx-auto space-y-6">
 
                 {/* Status Section - compact */}
@@ -694,76 +692,88 @@ export default function AtendimentoModal({
               </div>
             </div>
 
-            {/* Sidebar - Chat & Observations */}
-            <div className="w-full lg:w-[400px] bg-white border-l border-slate-200 flex flex-col shadow-xl z-10">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                  <FiMessageSquare className="text-emerald-600" /> Observações
+            {/* Observações - collapsible on mobile */}
+            <div className="border-t border-slate-200">
+              <button
+                onClick={() => setShowObservacoes(!showObservacoes)}
+                className="w-full px-4 py-3 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors"
+              >
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                  <FiMessageSquare className="text-emerald-600 w-4 h-4" /> Observações
                 </h3>
-                <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                  {historicoObservacoes.length}
-                </span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                {historicoObservacoes.length > 0 ? (
-                  historicoObservacoes.map((obs) => (
-                    <div key={obs.id} className="flex flex-col animate-fade-in text-sm">
-                      <div className="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                        <p className="text-slate-800 mb-2 leading-relaxed">{obs.observacao}</p>
-                        <div className="flex items-center justify-between text-xs text-slate-400">
-                          <span className="font-semibold text-emerald-600">{obs.usuario_nome || 'Usuário'}</span>
-                          <span>{formatChatDate(obs.created_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
-                    <FiMessageSquare className="w-12 h-12 mb-3" />
-                    <p className="font-medium">Nenhuma observação.</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 bg-white border-t border-slate-200">
-                <div className="relative">
-                  <textarea
-                    value={novaObservacao}
-                    onChange={(e) => setNovaObservacao(e.target.value)}
-                    placeholder="Nova observação..."
-                    className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none text-sm"
-                    rows={2}
-                  />
-                  <button
-                    onClick={handleAddObservacao}
-                    disabled={!novaObservacao.trim() || addingObservacao}
-                    className="absolute right-2 bottom-3 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:bg-slate-300 transition-all"
-                  >
-                    {addingObservacao ? (
-                      <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <FiSend className="w-4 h-4" />
-                    )}
-                  </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                    {historicoObservacoes.length}
+                  </span>
+                  <svg className={`w-4 h-4 text-slate-400 transition-transform ${showObservacoes ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-              </div>
+              </button>
+
+              {showObservacoes && (
+                <div className="border-t border-slate-200">
+                  <div className="max-h-[200px] overflow-y-auto p-3 space-y-3 bg-slate-50/50">
+                    {historicoObservacoes.length > 0 ? (
+                      historicoObservacoes.map((obs) => (
+                        <div key={obs.id} className="text-sm">
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                            <p className="text-slate-800 mb-1.5 leading-relaxed text-xs">{obs.observacao}</p>
+                            <div className="flex items-center justify-between text-xs text-slate-400">
+                              <span className="font-semibold text-emerald-600">{obs.usuario_nome || 'Usuário'}</span>
+                              <span>{formatChatDate(obs.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-6 flex flex-col items-center justify-center text-slate-400 opacity-60">
+                        <FiMessageSquare className="w-8 h-8 mb-2" />
+                        <p className="font-medium text-sm">Nenhuma observação.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-white border-t border-slate-200">
+                    <div className="relative">
+                      <textarea
+                        value={novaObservacao}
+                        onChange={(e) => setNovaObservacao(e.target.value)}
+                        placeholder="Nova observação..."
+                        className="w-full pl-3 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none text-sm"
+                        rows={2}
+                      />
+                      <button
+                        onClick={handleAddObservacao}
+                        disabled={!novaObservacao.trim() || addingObservacao}
+                        className="absolute right-2 bottom-2.5 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:bg-slate-300 transition-all"
+                      >
+                        {addingObservacao ? (
+                          <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <FiSend className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="bg-white border-t border-slate-200 p-6 flex items-center justify-between gap-4 shadow-[0_-5px_20px_-10px_rgba(0,0,0,0.1)] relative z-30">
-            <div className="flex items-center gap-3">
+          <div className="bg-white border-t border-slate-200 px-4 py-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-[0_-5px_20px_-10px_rgba(0,0,0,0.1)] relative z-30">
+            <div className="flex items-center gap-2 order-2 sm:order-1">
               {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
                 <button
                   onClick={handleVisualizarComprovante}
                   disabled={gerandoComprovante}
-                  className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl font-bold transition-all flex items-center gap-2 text-sm border border-emerald-200"
+                  className="px-3 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl font-bold transition-all flex items-center gap-1.5 text-xs border border-emerald-200"
                 >
                   {gerandoComprovante ? (
-                    <div className="w-4 h-4 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
-                  ) : <FiEye className="w-4 h-4" />}
-                  Ver Comprovante
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
+                  ) : <FiEye className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">Ver </span>Comprovante
                 </button>
               )}
 
@@ -771,24 +781,24 @@ export default function AtendimentoModal({
                 <button
                   onClick={handleDelete}
                   disabled={saving}
-                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all flex items-center gap-2 text-sm border border-transparent hover:border-red-200"
+                  className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all flex items-center gap-1.5 text-xs border border-transparent hover:border-red-200"
                 >
-                  <FiTrash2 className="w-4 h-4" /> Excluir
+                  <FiTrash2 className="w-3.5 h-3.5" /> Excluir
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={onClose}
-                className="px-6 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition-all text-sm"
+                className="flex-1 sm:flex-none px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition-all text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 rounded-xl font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transform active:scale-95 transition-all text-sm flex items-center gap-2"
+                className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 rounded-xl font-bold shadow-lg shadow-emerald-200 active:scale-95 transition-all text-sm flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <>
@@ -798,7 +808,7 @@ export default function AtendimentoModal({
                 ) : (
                   <>
                     <FiSave className="w-4 h-4" />
-                    Salvar Alterações
+                    Salvar
                   </>
                 )}
               </button>
