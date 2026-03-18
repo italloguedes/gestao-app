@@ -63,6 +63,8 @@ function AtualizarCINForm() {
     try {
       if (!user) {
         setMessage({ text: 'Usuário não autenticado', type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
@@ -71,6 +73,8 @@ function AtualizarCINForm() {
 
       if (cpfLimpo.length !== 11) {
         setMessage({ text: 'CPF inválido. Insira um CPF válido com 11 dígitos.', type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
@@ -89,11 +93,15 @@ function AtualizarCINForm() {
       if (fetchError) {
         console.error('Erro ao buscar atendimento:', fetchError);
         setMessage({ text: 'Erro ao buscar atendimento: ' + fetchError.message, type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
       if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Atendimento não encontrado para este CPF', type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
@@ -101,6 +109,8 @@ function AtualizarCINForm() {
 
       if (atendimento.status === 'Concluído' || atendimento.status === 'concluido') {
         setMessage({ text: 'Este atendimento já está concluído', type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
@@ -115,6 +125,8 @@ function AtualizarCINForm() {
       if (updateError) {
         console.error('Erro ao atualizar status:', updateError);
         setMessage({ text: 'Erro ao atualizar status do atendimento: ' + updateError.message, type: 'error' });
+        shouldFocusRef.current = true;
+        setLoading(false);
         return;
       }
 
