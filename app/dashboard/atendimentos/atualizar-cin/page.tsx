@@ -145,12 +145,9 @@ function AtualizarCINForm() {
 
       // Limpar formulário e refocar imediatamente para próxima digitação
       setCpf('');
-      setTimeout(() => {
-        setMessage(null);
-        if (cpfInputRef.current) {
-          cpfInputRef.current.focus();
-        }
-      }, 2000);
+      if (cpfInputRef.current) {
+        cpfInputRef.current.focus();
+      }
 
     } catch (error) {
       console.error('Erro ao processar solicitação:', error);
@@ -163,11 +160,9 @@ function AtualizarCINForm() {
   const handleReset = () => {
     setCpf('');
     setMessage(null);
-    setTimeout(() => {
-      if (cpfInputRef.current) {
-        cpfInputRef.current.focus();
-      }
-    }, 100);
+    if (cpfInputRef.current) {
+      cpfInputRef.current.focus();
+    }
   };
 
   return (
