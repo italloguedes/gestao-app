@@ -547,21 +547,21 @@ export default function AtendimentoModal({
           {/* Content */}
           <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
             {/* Formulário */}
-            <div className="flex-1 overflow-y-auto p-6 lg:p-10 bg-slate-50 relative">
-              <div className="max-w-4xl mx-auto space-y-8">
+            <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-gradient-to-b from-slate-50 to-white">
+              <div className="max-w-3xl mx-auto space-y-6">
 
-                {/* Status Section */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Status Atual</label>
-                  <div className="flex gap-4 items-center">
-                    <div className={`p-3 rounded-xl ${statusConfig.color} text-white shadow-md`}>
+                {/* Status Section - compact */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl ${statusConfig.color} text-white shadow-lg flex items-center justify-center flex-shrink-0`}>
                       {statusConfig.icon}
                     </div>
                     <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-widest">Status Atual</label>
                       <select
                         value={formData.status || ''}
                         onChange={(e) => handleChange('status', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-semibold text-slate-700 bg-white"
+                        className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold text-slate-800 bg-white text-sm"
                       >
                         <option value="">Selecione um status...</option>
                         <option value="pendente">Pendente</option>
@@ -576,94 +576,117 @@ export default function AtendimentoModal({
                   </div>
                 </div>
 
-                {/* Personal Info */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <FiUser className="text-emerald-500" /> Informações Pessoais
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Nome Completo</label>
+                {/* Personal Info Card */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100/50">
+                    <h3 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                      <FiUser className="w-4 h-4" /> Informações Pessoais
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Nome Completo</label>
                       <input
                         type="text"
                         value={formData.nome || ''}
                         onChange={(e) => handleChange('nome', e.target.value)}
-                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.nome ? 'border-red-400 ring-4 ring-red-500/10' : ''
-                          }`}
+                        className={`w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium text-sm ${validationErrors.nome ? 'border-red-400 ring-4 ring-red-500/10 bg-red-50' : ''}`}
                       />
-                      {validationErrors.nome && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.nome}</p>}
+                      {validationErrors.nome && <p className="text-red-500 text-xs mt-1 font-semibold">{validationErrors.nome}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">CPF</label>
+                        <div className="relative">
+                          <FiFileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="text"
+                            value={formData.cpf || ''}
+                            onChange={(e) => handleChange('cpf', e.target.value)}
+                            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium font-mono text-sm ${validationErrors.cpf ? 'border-red-400 ring-4 ring-red-500/10 bg-red-50' : ''}`}
+                          />
+                        </div>
+                        {validationErrors.cpf && <p className="text-red-500 text-xs mt-1 font-semibold">{validationErrors.cpf}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">E-mail</label>
+                        <div className="relative">
+                          <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="email"
+                            value={formData.email || ''}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium text-sm ${validationErrors.email ? 'border-red-400 ring-4 ring-red-500/10 bg-red-50' : ''}`}
+                          />
+                        </div>
+                        {validationErrors.email && <p className="text-red-500 text-xs mt-1 font-semibold">{validationErrors.email}</p>}
+                      </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">CPF</label>
-                      <input
-                        type="text"
-                        value={formData.cpf || ''}
-                        onChange={(e) => handleChange('cpf', e.target.value)}
-                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.cpf ? 'border-red-400 ring-4 ring-red-500/10' : ''
-                          }`}
-                      />
-                      {validationErrors.cpf && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.cpf}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">E-mail</label>
-                      <input
-                        type="email"
-                        value={formData.email || ''}
-                        onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium ${validationErrors.email ? 'border-red-400 ring-4 ring-red-500/10' : ''
-                          }`}
-                      />
-                      {validationErrors.email && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Solicitante</label>
-                      <input
-                        type="text"
-                        value={formData.solicitante || ''}
-                        onChange={(e) => handleChange('solicitante', e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                      />
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Solicitante</label>
+                      <div className="relative">
+                        <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          value={formData.solicitante || ''}
+                          onChange={(e) => handleChange('solicitante', e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Attendance Info */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <FiCalendar className="text-emerald-500" /> Dados do Agendamento
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Data</label>
-                      <input
-                        type="date"
-                        value={formData.dia_atual || ''}
-                        onChange={(e) => handleChange('dia_atual', e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                      />
-                    </div>
+                {/* Scheduling Card */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100/50">
+                    <h3 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                      <FiCalendar className="w-4 h-4" /> Dados do Agendamento
+                    </h3>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Data</label>
+                        <div className="relative">
+                          <FiCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="date"
+                            value={formData.dia_atual || ''}
+                            onChange={(e) => handleChange('dia_atual', e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium text-sm"
+                          />
+                        </div>
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Horário</label>
-                      <input
-                        type="time"
-                        value={formData.horario || ''}
-                        onChange={(e) => handleChange('horario', e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Horário</label>
+                        <div className="relative">
+                          <FiClock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="time"
+                            value={formData.horario || ''}
+                            onChange={(e) => handleChange('horario', e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium text-sm"
+                          />
+                        </div>
+                      </div>
 
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-slate-600 mb-1.5">Protocolo</label>
-                      <input
-                        type="text"
-                        value={formData.protocolo || ''}
-                        onChange={(e) => handleChange('protocolo', e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium font-mono text-slate-700"
-                      />
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Protocolo</label>
+                        <div className="relative">
+                          <FiFileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="text"
+                            value={formData.protocolo || ''}
+                            onChange={(e) => handleChange('protocolo', e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all font-medium font-mono text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
