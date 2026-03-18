@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useRef } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,15 @@ function AtualizarCINForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const cpfInputRef = useRef<HTMLInputElement>(null);
+  const shouldFocusRef = useRef(false);
+
+  // Focar o input quando loading mudar para false (DOM já atualizado)
+  useEffect(() => {
+    if (!loading && shouldFocusRef.current) {
+      shouldFocusRef.current = false;
+      cpfInputRef.current?.focus();
+    }
+  }, [loading]);
 
   // Formatar CPF durante digitação
   const formatCPF = (value: string) => {
@@ -145,19 +154,14 @@ function AtualizarCINForm() {
 
       // Limpar formulário e refocar imediatamente para próxima digitação
       setCpf('');
+      shouldFocusRef.current = true;
       setLoading(false);
-      // Aguardar React re-renderizar (input fica enabled) antes de focar
-      queueMicrotask(() => {
-        cpfInputRef.current?.focus();
-      });
 
     } catch (error) {
       console.error('Erro ao processar solicitação:', error);
       setMessage({ text: 'Erro ao processar a solicitação: ' + (error as Error).message, type: 'error' });
+      shouldFocusRef.current = true;
       setLoading(false);
-      queueMicrotask(() => {
-        cpfInputRef.current?.focus();
-      });
     }
   };
 
