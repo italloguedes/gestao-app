@@ -145,15 +145,19 @@ function AtualizarCINForm() {
 
       // Limpar formulário e refocar imediatamente para próxima digitação
       setCpf('');
-      if (cpfInputRef.current) {
-        cpfInputRef.current.focus();
-      }
+      setLoading(false);
+      // Aguardar React re-renderizar (input fica enabled) antes de focar
+      queueMicrotask(() => {
+        cpfInputRef.current?.focus();
+      });
 
     } catch (error) {
       console.error('Erro ao processar solicitação:', error);
       setMessage({ text: 'Erro ao processar a solicitação: ' + (error as Error).message, type: 'error' });
-    } finally {
       setLoading(false);
+      queueMicrotask(() => {
+        cpfInputRef.current?.focus();
+      });
     }
   };
 
