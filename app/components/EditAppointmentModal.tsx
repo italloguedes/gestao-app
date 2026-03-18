@@ -19,7 +19,7 @@ const ACTION_CONFIG: Record<string, { title: string; gradient: string; iconBg: s
   ausente: { title: 'Marcar Ausente', gradient: 'from-rose-600 to-red-600', iconBg: 'bg-rose-100 text-rose-600', icon: <FiXCircle className="w-6 h-6" /> },
   concluido: { title: 'Concluir Atendimento', gradient: 'from-emerald-600 to-green-600', iconBg: 'bg-emerald-100 text-emerald-600', icon: <FiCheck className="w-6 h-6" /> },
   cancelar: { title: 'Cancelar Atendimento', gradient: 'from-amber-600 to-orange-600', iconBg: 'bg-amber-100 text-amber-600', icon: <FiSlash className="w-6 h-6" /> },
-  edit: { title: 'Editar Agendamento', gradient: 'from-blue-600 to-indigo-600', iconBg: 'bg-blue-100 text-blue-600', icon: <FiEdit3 className="w-6 h-6" /> },
+  edit: { title: 'Editar Agendamento', gradient: 'from-emerald-600 to-teal-600', iconBg: 'bg-emerald-100 text-emerald-600', icon: <FiEdit3 className="w-6 h-6" /> },
   delete: { title: 'Excluir Agendamento', gradient: 'from-red-600 to-rose-700', iconBg: 'bg-red-100 text-red-600', icon: <FiTrash2 className="w-6 h-6" /> },
 };
 
@@ -598,17 +598,17 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Data</label>
                       <input type="date" name="data" defaultValue={appointment.data} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Horário</label>
                       <input type="time" name="horario" defaultValue={appointment.horario?.substring(0, 5)} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Status</label>
                       <select name="status" defaultValue={appointment.status} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium">
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium">
                         <option value="confirmado">Confirmado</option>
                         <option value="cancelado">Cancelado</option>
                         <option value="ausente">Ausente</option>
@@ -621,19 +621,19 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Nome</label>
                     <input type="text" name="nome" defaultValue={appointment.nome} required
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Telefone</label>
                       <input type="tel" name="telefone" defaultValue={appointment.telefone} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Email</label>
                       <input type="email" name="email" defaultValue={appointment.email} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                     </div>
                   </div>
 
@@ -641,12 +641,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">CPF</label>
                       <input type="text" name="cpf" defaultValue={appointment.cpf} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium font-mono" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium font-mono" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Data de Nascimento</label>
                       <input type="date" name="data_nascimento" defaultValue={appointment.data_nascimento} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium" />
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium" />
                     </div>
                   </div>
 
@@ -661,7 +661,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <div>
                     <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Observações</label>
                     <textarea name="observacoes" rows={3} defaultValue={appointment.observacoes}
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all duration-200 text-sm font-medium resize-none"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium resize-none"
                       placeholder="Observações sobre o atendimento" />
                   </div>
                 </div>

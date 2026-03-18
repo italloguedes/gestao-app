@@ -264,7 +264,7 @@ export default function AtendimentosPage() {
 
             <Link
               href="/dashboard/atendimentos/novo"
-              className="group flex items-center gap-2.5 px-6 py-3.5 bg-slate-900 hover:bg-emerald-600 text-white rounded-2xl font-semibold shadow-lg shadow-slate-200 hover:shadow-emerald-200/50 hover:-translate-y-0.5 transition-all duration-300"
+              className="group flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-200/50 hover:-translate-y-0.5 transition-all duration-300"
             >
               <FiPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span>Novo Atendimento</span>
@@ -380,7 +380,7 @@ export default function AtendimentosPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
                             {atendimento.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="ml-4">
@@ -463,7 +463,7 @@ export default function AtendimentosPage() {
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
                       className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum
-                        ? 'bg-slate-900 text-white shadow-md'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
                         : 'text-slate-500 hover:bg-slate-100'
                         }`}
                     >
