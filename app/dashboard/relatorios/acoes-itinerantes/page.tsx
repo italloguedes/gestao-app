@@ -67,26 +67,29 @@ interface ChronologicalItem {
   total: number;
 }
 
+// Updated color palette — emerald / teal / green tones
 const COLORS = {
-  primary: '#3B82F6',
-  success: '#10B981',
+  primary: '#059669',   // emerald-600
+  success: '#10B981',   // emerald-500
   warning: '#F59E0B',
   danger: '#EF4444',
-  purple: '#8B5CF6',
-  pink: '#EC4899',
   teal: '#14B8A6',
-  orange: '#F97316'
+  cyan: '#06B6D4',
+  amber: '#D97706',
+  gray: '#6B7280'
 };
 
 const STATUS_COLORS: Record<string, string> = {
   'Concluído': COLORS.success,
   'concluido': COLORS.success,
-  'em_andamento': COLORS.primary,
-  'Em Andamento': COLORS.primary,
+  'Concluídos': COLORS.success,
+  'em_andamento': COLORS.teal,
+  'Em Andamento': COLORS.teal,
   'correcao': COLORS.warning,
   'Correção': COLORS.warning,
   'bloqueado': COLORS.danger,
   'Bloqueado': COLORS.danger,
+  'Bloqueados': COLORS.danger,
   'cancelado': '#6B7280',
   'Cancelado': '#6B7280',
   'Outros': '#6B7280',
@@ -108,10 +111,8 @@ export default function AcoesItinerantesPage() {
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
 
   useEffect(() => {
-    // Definir datas padrão: início das ações (01/06/2025) até hoje
     const hoje = new Date();
-    const dataInicioAcoes = new Date('2025-06-01'); // Data de início das ações itinerantes
-
+    const dataInicioAcoes = new Date('2025-06-01');
     setDataFim(hoje.toISOString().split('T')[0]);
     setDataInicio(dataInicioAcoes.toISOString().split('T')[0]);
   }, []);
@@ -122,17 +123,19 @@ export default function AcoesItinerantesPage() {
     }
   }, [dataInicio, dataFim, selectedAcao]);
 
+  // =============================================
+  // BUSINESS LOGIC — preserved exactly as original
+  // =============================================
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Buscar todos os atendimentos do período com paginação automática
-      // O Supabase tem limite padrão de 1000 registros, então precisamos buscar em lotes
       console.log('=== BUSCA DE ATENDIMENTOS ===');
       console.log(`Período: ${dataInicio} a ${dataFim}`);
 
       let allAtendimentos: any[] = [];
       let page = 0;
-      const pageSize = 1000; // Limite máximo do Supabase
+      const pageSize = 1000;
       let hasMore = true;
 
       while (hasMore) {
@@ -156,7 +159,6 @@ export default function AcoesItinerantesPage() {
           allAtendimentos = [...allAtendimentos, ...atendimentos];
           console.log(`Página ${page + 1}: ${atendimentos.length} registros encontrados (Total acumulado: ${allAtendimentos.length})`);
 
-          // Se retornou menos que o pageSize, não há mais registros
           if (atendimentos.length < pageSize) {
             hasMore = false;
           } else {
@@ -180,33 +182,23 @@ export default function AcoesItinerantesPage() {
         return;
       }
 
-      // Filtrar apenas atendimentos que são de ações (solicitante contém qualquer variação de "ação")
-      // Usar busca case-insensitive e mais flexível para capturar todos os registros fieis da tabela
       console.log('=== FILTRAGEM DE AÇÕES ===');
       console.log(`Total de atendimentos no período: ${atendimentos.length}`);
 
       const atendimentosAcoes = atendimentos.filter((a: any) => {
-        if (!a.solicitante) {
-          return false;
-        }
-        // Normalizar o solicitante: remover espaços extras, converter para minúsculas e remover acentos
+        if (!a.solicitante) return false;
         const solicitante = a.solicitante.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        // Verificar se COMEÇA com "acao" (para evitar palavras como "comunicação" que contém "acao")
-        // Isso garante que captura: "AÇÃO", "ação", "Ação Itinerante", etc.
         const isAcao = solicitante.startsWith('acao') || /^a[çc][ãa]o/i.test(a.solicitante.trim());
         return isAcao;
       });
 
-      // Log detalhado para debug
       console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
 
-      // Verificar se há atendimentos sem solicitante que poderiam ser ações
       const atendimentosSemSolicitante = atendimentos.filter((a: any) => !a.solicitante);
       if (atendimentosSemSolicitante.length > 0) {
         console.warn(`Atenção: ${atendimentosSemSolicitante.length} atendimento(s) sem solicitante (não incluídos no relatório)`);
       }
 
-      // Mostrar exemplos de solicitantes encontrados
       const solicitantesUnicos = [...new Set(atendimentosAcoes.map((a: any) => a.solicitante))];
       console.log(`Solicitantes únicos encontrados: ${solicitantesUnicos.length}`);
       if (solicitantesUnicos.length <= 10) {
@@ -218,7 +210,7 @@ export default function AcoesItinerantesPage() {
 
       setTotalAtendimentos(atendimentosAcoes.length);
 
-      // Processamento cronológico: Agrupar por ação (consolidar datas)
+      // Chronological processing
       const cronoMap = new Map<string, { dataInicio: string; dataFim: string; total: number }>();
 
       atendimentosAcoes.forEach((at: any) => {
@@ -231,33 +223,23 @@ export default function AcoesItinerantesPage() {
           } else {
             const existing = cronoMap.get(nome)!;
             existing.total++;
-            // Atualizar data de início se for anterior
-            if (data < existing.dataInicio) {
-              existing.dataInicio = data;
-            }
-            // Atualizar data de fim se for posterior
-            if (data > existing.dataFim) {
-              existing.dataFim = data;
-            }
+            if (data < existing.dataInicio) existing.dataInicio = data;
+            if (data > existing.dataFim) existing.dataFim = data;
           }
         }
       });
 
-      // Converter mapa para array e ordenar por data de início
       const cronoArray: ChronologicalItem[] = Array.from(cronoMap.entries()).map(([acao, dados]) => ({
         acao,
         dataInicio: dados.dataInicio,
         dataFim: dados.dataFim,
         total: dados.total
-      })).sort((a, b) => {
-        // Ordenar por data de início (crescente)
-        return a.dataInicio.localeCompare(b.dataInicio);
-      });
+      })).sort((a, b) => a.dataInicio.localeCompare(b.dataInicio));
 
       console.log(`Itens cronológicos gerados: ${cronoArray.length}`);
       setChronologicalData(cronoArray);
 
-      // Agrupar por ação
+      // Group by action
       console.log('=== AGRUPAMENTO POR AÇÃO ===');
       const acoesMap = new Map<string, AcaoData>();
       const statusEncontrados = new Set<string>();
@@ -265,7 +247,6 @@ export default function AcoesItinerantesPage() {
       atendimentosAcoes.forEach((atendimento: any) => {
         const nomeAcao = atendimento.solicitante;
 
-        // Coletar todos os status únicos para análise
         if (atendimento.status) {
           statusEncontrados.add(String(atendimento.status).trim());
         }
@@ -286,8 +267,6 @@ export default function AcoesItinerantesPage() {
         const acao = acoesMap.get(nomeAcao)!;
         acao.total++;
 
-        // Normalizar status para comparação (remover acentos e converter para minúsculas)
-        // Tratar casos de null, undefined, empty string
         const statusRaw = atendimento.status;
         const status = (statusRaw === null || statusRaw === undefined || statusRaw === '')
           ? ''
@@ -296,14 +275,11 @@ export default function AcoesItinerantesPage() {
         const statusLower = status.toLowerCase();
         const statusNormalizado = statusLower
           .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-          .replace(/\s+/g, ' '); // Normaliza espaços múltiplos
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ');
 
-        // Verificar todas as variações de status - usar if separados para garantir contagem correta
-        // IMPORTANTE: Cada atendimento deve ser contado em apenas uma categoria
         let statusContado = false;
 
-        // Concluído - todas as variações possíveis
         if (!statusContado && (
           statusNormalizado.includes('concluido') ||
           statusLower.includes('concluído') ||
@@ -319,7 +295,6 @@ export default function AcoesItinerantesPage() {
           statusContado = true;
         }
 
-        // Em Andamento - todas as variações possíveis
         if (!statusContado && (
           statusNormalizado.includes('em_andamento') ||
           statusNormalizado.includes('em andamento') ||
@@ -335,7 +310,6 @@ export default function AcoesItinerantesPage() {
           statusContado = true;
         }
 
-        // Correção - todas as variações possíveis
         if (!statusContado && (
           statusNormalizado.includes('correcao') ||
           statusLower.includes('correção') ||
@@ -351,7 +325,6 @@ export default function AcoesItinerantesPage() {
           statusContado = true;
         }
 
-        // Bloqueado - todas as variações possíveis
         if (!statusContado && (
           statusNormalizado.includes('bloqueado') ||
           statusLower === 'bloqueado' ||
@@ -362,20 +335,17 @@ export default function AcoesItinerantesPage() {
           statusContado = true;
         }
 
-        // Cancelado - adicionar também como categoria separada ou em Outros
         if (!statusContado && (
           statusNormalizado.includes('cancelado') ||
           statusLower === 'cancelado' ||
           status === 'Cancelado' ||
           status === 'CANCELADO'
         )) {
-          // Cancelados vão para "Outros" por enquanto, mas são contados
           acao.outros++;
           statusContado = true;
           console.warn(`Status "Cancelado" encontrado para ação "${nomeAcao}" - adicionado em "Outros"`);
         }
 
-        // Se não foi contado em nenhuma categoria (incluindo status vazio/null), adicionar à categoria "Outros"
         if (!statusContado) {
           acao.outros++;
           if (status) {
@@ -386,37 +356,29 @@ export default function AcoesItinerantesPage() {
         }
       });
 
-      // Log de status únicos encontrados
       console.log(`Status únicos encontrados nos atendimentos: ${statusEncontrados.size}`);
       if (statusEncontrados.size > 0) {
         console.log('Lista de status:', Array.from(statusEncontrados).sort());
       }
       console.log('============================');
 
-      // Calcular percentuais e ordenar com validação rigorosa
       const acoesArray = Array.from(acoesMap.values()).map(acao => {
-        // Validar que a soma dos status seja igual ao total
         const somaStatus = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
 
-        // Se houver discrepância, corrigir automaticamente ajustando "Outros"
         if (somaStatus !== acao.total) {
           const diferenca = acao.total - somaStatus;
           console.error(`ERRO: Discrepância na ação "${acao.nome}": Total=${acao.total}, Soma Status=${somaStatus}, Diferença=${diferenca}`);
 
-          // Corrigir automaticamente: ajustar "Outros" para compensar a diferença
           if (diferenca > 0) {
-            // Faltam atendimentos contados - adicionar em "Outros"
             acao.outros += diferenca;
             console.warn(`Correção automática: Adicionados ${diferenca} atendimento(s) em "Outros" para ação "${acao.nome}"`);
           } else if (diferenca < 0) {
-            // Há atendimentos contados a mais - remover de "Outros" se possível
             const ajuste = Math.min(Math.abs(diferenca), acao.outros);
             acao.outros -= ajuste;
             console.warn(`Correção automática: Removidos ${ajuste} atendimento(s) de "Outros" para ação "${acao.nome}"`);
           }
         }
 
-        // Validação final após correção
         const somaFinal = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
         if (somaFinal !== acao.total) {
           console.error(`ERRO CRÍTICO: Ainda há discrepância após correção na ação "${acao.nome}": Total=${acao.total}, Soma Final=${somaFinal}`);
@@ -430,13 +392,11 @@ export default function AcoesItinerantesPage() {
 
       setAcoes(acoesArray);
 
-      // Validação rigorosa final - verificar totais
       const totalGeral = acoesArray.reduce((sum, acao) => sum + acao.total, 0);
       const somaStatusGeral = acoesArray.reduce((sum, acao) =>
         sum + acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros, 0
       );
 
-      // Logs detalhados para debug
       console.log('=== VALIDAÇÃO DE DADOS ===');
       console.log(`Total de atendimentos no período: ${atendimentos.length}`);
       console.log(`Atendimentos de ações encontrados: ${atendimentosAcoes.length}`);
@@ -444,18 +404,14 @@ export default function AcoesItinerantesPage() {
       console.log(`Soma geral de status: ${somaStatusGeral}`);
       console.log(`Número de ações distintas: ${acoesArray.length}`);
 
-      // Verificar se todos os atendimentos foram agrupados
       if (totalGeral !== atendimentosAcoes.length) {
         console.error(`ERRO: Total geral (${totalGeral}) não corresponde ao número de atendimentos filtrados (${atendimentosAcoes.length})`);
         console.error(`Diferença: ${Math.abs(totalGeral - atendimentosAcoes.length)} atendimento(s)`);
       }
 
-      // Verificar se a soma dos status bate com o total
       if (totalGeral !== somaStatusGeral) {
         console.error(`ERRO: Total geral (${totalGeral}) não corresponde à soma de status (${somaStatusGeral})`);
         console.error(`Diferença: ${Math.abs(totalGeral - somaStatusGeral)} atendimento(s)`);
-
-        // Tentar identificar qual ação tem problema
         acoesArray.forEach(acao => {
           const somaAcao = acao.concluidos + acao.emAndamento + acao.correcao + acao.bloqueados + acao.outros;
           if (somaAcao !== acao.total) {
@@ -466,7 +422,6 @@ export default function AcoesItinerantesPage() {
         console.log('✓ Validação passou: Total geral corresponde à soma de status');
       }
 
-      // Estatísticas por status
       const statsPorStatus = {
         concluidos: acoesArray.reduce((sum, acao) => sum + acao.concluidos, 0),
         emAndamento: acoesArray.reduce((sum, acao) => sum + acao.emAndamento, 0),
@@ -477,13 +432,10 @@ export default function AcoesItinerantesPage() {
       console.log('Estatísticas por status:', statsPorStatus);
       console.log('========================');
 
-      // Dados para gráfico de status (consolidado ou por ação)
-      // Usar a mesma lógica de categorização da tabela para garantir consistência
       const acoesFiltradas = selectedAcao
         ? acoesArray.filter(acao => acao.nome === selectedAcao)
         : acoesArray;
 
-      // Agregar os dados das ações filtradas
       const statusAgregado = {
         'Concluídos': 0,
         'Em Andamento': 0,
@@ -501,7 +453,7 @@ export default function AcoesItinerantesPage() {
       });
 
       const statusArray: StatusData[] = Object.entries(statusAgregado)
-        .filter(([_, value]) => value > 0) // Remover categorias com zero
+        .filter(([_, value]) => value > 0)
         .map(([name, value]) => ({
           name,
           value,
@@ -510,7 +462,6 @@ export default function AcoesItinerantesPage() {
 
       setStatusData(statusArray);
 
-      // Log detalhado para gráfico de status
       console.log('=== GRÁFICO DE STATUS ===');
       const totalStatusGrafico = statusArray.reduce((sum, item) => sum + item.value, 0);
       const totalAcoesFiltradas = acoesFiltradas.reduce((sum, acao) => sum + acao.total, 0);
@@ -525,7 +476,6 @@ export default function AcoesItinerantesPage() {
       }
       console.log('==========================');
 
-      // Dados para timeline (atendimentos por dia)
       const atendimentosParaTimeline = selectedAcao
         ? atendimentosAcoes.filter((a: any) => a.solicitante === selectedAcao)
         : atendimentosAcoes;
@@ -552,42 +502,53 @@ export default function AcoesItinerantesPage() {
     }
   };
 
+  // =============================================
+  // PDF GENERATORS — updated colors to green
+  // =============================================
+
   const generatePDF = () => {
     const doc = new jsPDF();
+    const aleceGreen: [number, number, number] = [5, 150, 105]; // emerald-600
 
-    // Título
     doc.setFontSize(20);
-    doc.setTextColor(59, 130, 246);
+    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
     doc.text('Relatório de Ações Itinerantes ALECE', 14, 20);
 
-    // Período
     doc.setFontSize(12);
     doc.setTextColor(100);
     doc.text(`Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`, 14, 30);
     doc.text(`Total de Atendimentos: ${totalAtendimentos}`, 14, 38);
 
-    // Tabela de ações
-    const tableData = acoes.map(acao => [
-      acao.nome,
-      acao.total.toString(),
-      acao.concluidos.toString(),
-      acao.emAndamento.toString(),
-      acao.correcao.toString(),
-      acao.bloqueados.toString(),
-      acao.outros.toString(),
-      `${acao.percentualConclusao.toFixed(1)}%`
-    ]);
+    const tableData = acoes.map(acao => {
+      const crono = chronologicalData.find(c => c.acao === acao.nome);
+      const periodo = crono
+        ? (crono.dataInicio === crono.dataFim
+          ? new Date(crono.dataInicio).toLocaleDateString('pt-BR')
+          : `${new Date(crono.dataInicio).toLocaleDateString('pt-BR')} a ${new Date(crono.dataFim).toLocaleDateString('pt-BR')}`)
+        : '—';
+
+      return [
+        acao.nome,
+        periodo,
+        acao.total.toString(),
+        acao.concluidos.toString(),
+        acao.emAndamento.toString(),
+        acao.correcao.toString(),
+        acao.bloqueados.toString(),
+        acao.outros.toString(),
+        `${acao.percentualConclusao.toFixed(1)}%`
+      ];
+    });
 
     autoTable(doc, {
       startY: 45,
-      head: [['Ação', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
+      head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 8 }
+      headStyles: { fillColor: aleceGreen },
+      styles: { fontSize: 7 }
     });
 
-    // Rodapé
     const pageCount = (doc as any).internal.getNumberOfPages();
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -612,38 +573,27 @@ export default function AcoesItinerantesPage() {
   const generateChronologicalPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const aleceGreen: [number, number, number] = [0, 128, 0]; // Verde ALECE
+    const aleceGreen: [number, number, number] = [5, 150, 105];
 
-    // Title
     doc.setFontSize(18);
     doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
     doc.text('Cronograma de Ações Itinerantes', pageWidth / 2, 20, { align: 'center' });
 
-    // Subtitle / Period
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(
       `Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`,
-      pageWidth / 2,
-      28,
-      { align: 'center' }
+      pageWidth / 2, 28, { align: 'center' }
     );
 
-    // Table Data
     const formattedData = chronologicalData.map(item => {
       const dataInicioFormatted = new Date(item.dataInicio).toLocaleDateString('pt-BR');
       const dataFimFormatted = new Date(item.dataFim).toLocaleDateString('pt-BR');
-
-      // Se data início e fim são iguais, mostrar apenas uma data
       const periodo = item.dataInicio === item.dataFim
         ? dataInicioFormatted
         : `${dataInicioFormatted} até ${dataFimFormatted}`;
 
-      return [
-        item.acao,
-        periodo,
-        item.total.toString()
-      ];
+      return [item.acao, periodo, item.total.toString()];
     });
 
     autoTable(doc, {
@@ -653,50 +603,54 @@ export default function AcoesItinerantesPage() {
       theme: 'grid',
       headStyles: { fillColor: aleceGreen, halign: 'center' },
       columnStyles: {
-        0: { halign: 'left' }, // Ação
-        1: { halign: 'center', cellWidth: 50 }, // Período
-        2: { halign: 'center', cellWidth: 25 }  // Quantidade
+        0: { halign: 'left' },
+        1: { halign: 'center', cellWidth: 50 },
+        2: { halign: 'center', cellWidth: 25 }
       },
       styles: { fontSize: 10, cellPadding: 3 },
       didDrawPage: () => {
-        // Footer
         const pageCount = doc.internal.getNumberOfPages();
         doc.setFontSize(9);
         doc.setTextColor(100);
-
-        // User who generated
         const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
-        doc.text(
-          `Gerado por: ${userName}`,
-          14,
-          doc.internal.pageSize.getHeight() - 15
-        );
-
-        doc.text(
-          `Gerado em ${new Date().toLocaleString('pt-BR')}`,
-          14,
-          doc.internal.pageSize.getHeight() - 10
-        );
-
-        doc.text(
-          `Página ${pageCount}`,
-          pageWidth - 14,
-          doc.internal.pageSize.getHeight() - 10,
-          { align: 'right' }
-        );
+        doc.text(`Gerado por: ${userName}`, 14, doc.internal.pageSize.getHeight() - 15);
+        doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, doc.internal.pageSize.getHeight() - 10);
+        doc.text(`Página ${pageCount}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
       }
     });
 
     doc.save(`acoes-itinerantes-cronologica-${dataInicio}-${dataFim}.pdf`);
   };
 
+  // =============================================
+  // HELPERS
+  // =============================================
+
+  const formatDateShort = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}`;
+  };
+
+  const formatDateFull = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+  };
+
+  const getAcaoPeriodo = (nomeAcao: string) => {
+    const crono = chronologicalData.find(c => c.acao === nomeAcao);
+    if (!crono) return '—';
+    if (crono.dataInicio === crono.dataFim) return formatDateFull(crono.dataInicio);
+    return `${formatDateShort(crono.dataInicio)} — ${formatDateFull(crono.dataFim)}`;
+  };
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 rounded-xl shadow-xl border-2 border-blue-200">
-          <p className="font-bold text-slate-800">{payload[0].payload.nome || payload[0].name}</p>
-          <p className="text-sm text-slate-600 mt-1">
-            {payload[0].name}: <span className="font-bold text-blue-600">{payload[0].value}</span>
+        <div className="bg-white p-3 rounded-xl shadow-lg border border-emerald-200">
+          <p className="font-bold text-gray-800 text-sm">{payload[0].payload.nome || payload[0].name}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {payload[0].name}: <span className="font-bold text-emerald-600">{payload[0].value}</span>
           </p>
         </div>
       );
@@ -704,328 +658,308 @@ export default function AcoesItinerantesPage() {
     return null;
   };
 
+  // =============================================
+  // RENDER
+  // =============================================
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-32">
         <div className="text-center">
-          <FiRefreshCw className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-xl font-bold text-slate-700">Carregando dados...</p>
+          <FiRefreshCw className="w-10 h-10 text-emerald-500 animate-spin mx-auto mb-4" />
+          <p className="text-sm font-semibold text-gray-500">Carregando dados...</p>
         </div>
       </div>
     );
   }
 
+  const totalConcluidos = acoes.reduce((s, a) => s + a.concluidos, 0);
+  const totalEmAndamento = acoes.reduce((s, a) => s + a.emAndamento, 0);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="w-full space-y-5 animate-in fade-in duration-500">
+
+      {/* === Page Header === */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
           <button
             onClick={() => router.back()}
-            className="group flex items-center text-slate-600 hover:text-blue-600 transition-all duration-200 mb-6"
+            className="group flex items-center text-gray-400 hover:text-emerald-600 transition-colors mb-3 text-sm"
           >
-            <FiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
+            <FiArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Voltar</span>
           </button>
 
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl">
-                  <FiMapPin className="w-8 h-8 text-white" />
-                </div>
-                <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Ações Itinerantes ALECE
-                </h1>
-              </div>
-              <p className="text-lg text-slate-600 ml-14">
-                Análise de atendimentos por ação itinerante
-              </p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200/50">
+              <FiMapPin className="h-5 w-5 text-white" />
             </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={generateChronologicalPDF}
-                className="group flex items-center gap-2 px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <FiClock className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                Lista Cronológica
-              </button>
-
-              <button
-                onClick={generatePDF}
-                className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-200" />
-                Exportar PDF
-              </button>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">Relatório</p>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Ações Itinerantes ALECE</h1>
             </div>
           </div>
+          <p className="text-sm text-gray-500 ml-[52px]">
+            Análise detalhada de atendimentos por ação itinerante
+          </p>
         </div>
 
-        {/* Filtros */}
-        <div className="bg-white rounded-3xl shadow-xl border-4 border-blue-200 p-6 mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <FiFilter className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-slate-800">Filtros</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={generateChronologicalPDF}
+            className="group flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 rounded-xl font-semibold text-sm shadow-sm hover:shadow transition-all"
+          >
+            <FiClock className="w-4 h-4" />
+            Lista Cronológica
+          </button>
+          <button
+            onClick={generatePDF}
+            className="group flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold text-sm shadow-lg shadow-emerald-200/50 hover:-translate-y-0.5 transition-all"
+          >
+            <FiDownload className="w-4 h-4" />
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      {/* === Filters === */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <FiFilter className="h-3.5 w-3.5 text-emerald-600" />
+          </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Filtros</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600">Data Início</label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
-                Data Início
-              </label>
-              <input
-                type="date"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600">Data Fim</label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
-                Data Fim
-              </label>
-              <input
-                type="date"
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600">Filtrar por Ação</label>
+            <select
+              value={selectedAcao || ''}
+              onChange={(e) => setSelectedAcao(e.target.value || null)}
+              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+            >
+              <option value="">Todas as Ações</option>
+              {acoes.map(acao => (
+                <option key={acao.nome} value={acao.nome}>{acao.nome}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
-                Filtrar por Ação
-              </label>
-              <select
-                value={selectedAcao || ''}
-                onChange={(e) => setSelectedAcao(e.target.value || null)}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-200"
+      {/* === Stats Cards === */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Total de Ações" value={acoes.length} icon={<FiActivity className="h-5 w-5" />} color="emerald" />
+        <StatCard label="Atendimentos" value={totalAtendimentos} icon={<FiUsers className="h-5 w-5" />} color="teal" />
+        <StatCard label="Concluídos" value={totalConcluidos} icon={<FiCheckCircle className="h-5 w-5" />} color="green" />
+        <StatCard label="Em Andamento" value={totalEmAndamento} icon={<FiClock className="h-5 w-5" />} color="amber" />
+      </div>
+
+      {/* === Charts === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Bar Chart */}
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <FiBarChart2 className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-900">Atendimentos por Ação</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={acoes}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis
+                dataKey="nome"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                tick={{ fontSize: 11, fill: '#6B7280' }}
+              />
+              <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar dataKey="total" fill={COLORS.primary} name="Total" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="concluidos" fill={COLORS.success} name="Concluídos" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Pie Chart */}
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-7 w-7 rounded-lg bg-teal-50 flex items-center justify-center">
+              <FiPieChart className="h-3.5 w-3.5 text-teal-600" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-900">
+              Distribuição de Status {selectedAcao && <span className="font-normal text-gray-400">— {selectedAcao}</span>}
+            </h3>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <PieChart>
+              <Pie
+                data={statusData as any}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }: any) => `${name}: ${((percent as number) * 100).toFixed(0)}%`}
+                outerRadius={110}
+                fill="#8884d8"
+                dataKey="value"
               >
-                <option value="">Todas as Ações</option>
-                {acoes.map(acao => (
-                  <option key={acao.nome} value={acao.nome}>{acao.nome}</option>
+                {statusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
-              </select>
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* === Timeline Chart === */}
+      {timelineData.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <FiCalendar className="h-3.5 w-3.5 text-emerald-600" />
             </div>
+            <h3 className="text-sm font-bold text-gray-900">Evolução de Atendimentos</h3>
           </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={timelineData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis
+                dataKey="data"
+                tick={{ fontSize: 11, fill: '#6B7280' }}
+                tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              />
+              <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} />
+              <Tooltip
+                labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                content={<CustomTooltip />}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="atendimentos"
+                stroke={COLORS.primary}
+                strokeWidth={2.5}
+                name="Atendimentos"
+                dot={{ fill: COLORS.primary, r: 4 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* === Table === */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <FiMapPin className="h-3.5 w-3.5 text-emerald-600" />
+          </div>
+          <h3 className="text-sm font-bold text-gray-900">Detalhamento por Ação</h3>
+          <span className="ml-auto text-xs text-gray-400">{acoes.length} ações</span>
         </div>
 
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <FiActivity className="w-8 h-8" />
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                <FiBarChart2 className="w-5 h-5" />
-              </div>
+        {acoes.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="h-14 w-14 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiAlertCircle className="w-7 h-7 text-gray-300" />
             </div>
-            <p className="text-sm font-medium opacity-90 mb-1">Total de Ações</p>
-            <p className="text-4xl font-black">{acoes.length}</p>
+            <p className="text-sm font-semibold text-gray-500">Nenhuma ação encontrada no período</p>
+            <p className="text-xs text-gray-400 mt-1">Ajuste os filtros para visualizar os dados</p>
           </div>
-
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <FiUsers className="w-8 h-8" />
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                <FiTrendingUp className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-sm font-medium opacity-90 mb-1">Total de Atendimentos</p>
-            <p className="text-4xl font-black">{totalAtendimentos}</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl p-6 text-white shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <FiCheckCircle className="w-8 h-8" />
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                <FiActivity className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-sm font-medium opacity-90 mb-1">Concluídos</p>
-            <p className="text-4xl font-black">
-              {acoes.reduce((sum, acao) => sum + acao.concluidos, 0)}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-6 text-white shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <FiClock className="w-8 h-8" />
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                <FiPieChart className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-sm font-medium opacity-90 mb-1">Em Andamento</p>
-            <p className="text-4xl font-black">
-              {acoes.reduce((sum, acao) => sum + acao.emAndamento, 0)}
-            </p>
-          </div>
-        </div>
-
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Gráfico de Barras - Atendimentos por Ação */}
-          <div className="bg-white rounded-3xl shadow-xl border-4 border-blue-200 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <FiBarChart2 className="w-6 h-6 text-blue-600" />
-              <h3 className="text-2xl font-bold text-slate-800">Atendimentos por Ação</h3>
-            </div>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={acoes}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis
-                  dataKey="nome"
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                  tick={{ fontSize: 12, fill: '#64748B' }}
-                />
-                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="total" fill={COLORS.primary} name="Total" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="concluidos" fill={COLORS.success} name="Concluídos" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Gráfico de Pizza - Distribuição de Status */}
-          <div className="bg-white rounded-3xl shadow-xl border-4 border-purple-200 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <FiPieChart className="w-6 h-6 text-purple-600" />
-              <h3 className="text-2xl font-bold text-slate-800">
-                Distribuição de Status {selectedAcao && `- ${selectedAcao}`}
-              </h3>
-            </div>
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={statusData as any}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }: any) => `${name}: ${((percent as number) * 100).toFixed(0)}%`}
-                  outerRadius={120}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Gráfico de Linha - Timeline */}
-        {timelineData.length > 0 && (
-          <div className="bg-white rounded-3xl shadow-xl border-4 border-pink-200 p-8 mb-8">
-            <div className="flex items-center gap-3 mb-6">
-              <FiCalendar className="w-6 h-6 text-pink-600" />
-              <h3 className="text-2xl font-bold text-slate-800">
-                Evolução de Atendimentos ao Longo do Tempo
-              </h3>
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={timelineData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis
-                  dataKey="data"
-                  tick={{ fontSize: 12, fill: '#64748B' }}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                />
-                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  content={<CustomTooltip />}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="atendimentos"
-                  stroke={COLORS.pink}
-                  strokeWidth={3}
-                  name="Atendimentos"
-                  dot={{ fill: COLORS.pink, r: 5 }}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Tabela de Ações */}
-        <div className="bg-white rounded-3xl shadow-xl border-4 border-green-200 p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FiMapPin className="w-6 h-6 text-green-600" />
-            <h3 className="text-2xl font-bold text-slate-800">Detalhamento por Ação</h3>
-          </div>
-
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-blue-200">
-                  <th className="px-6 py-4 text-left text-sm font-bold text-slate-700">Ação</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Total</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Concluídos</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Em Andamento</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Correção</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Bloqueados</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">Outros</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">% Conclusão</th>
+                <tr className="border-b border-gray-100 bg-gray-50/80">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Ação</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Período</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Total</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Concluídos</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Em Andamento</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Correção</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Bloqueados</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Outros</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% Conclusão</th>
                 </tr>
               </thead>
-              <tbody>
-                {acoes.map((acao, index) => (
+              <tbody className="divide-y divide-gray-50">
+                {acoes.map((acao, idx) => (
                   <tr
                     key={acao.nome}
-                    className={`border-b border-slate-100 hover:bg-blue-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
-                      }`}
+                    className={`hover:bg-emerald-50/40 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
                   >
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{acao.nome}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700">
+                    <td className="px-4 py-3 font-semibold text-gray-900">{acao.nome}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <FiCalendar className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{getAcaoPeriodo(acao.nome)}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         {acao.total}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700">
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
                         {acao.concluidos}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700">
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
                         {acao.emAndamento}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-700">
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
                         {acao.correcao}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700">
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
                         {acao.bloqueados}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
                         {acao.outros}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
                             style={{ width: `${acao.percentualConclusao}%` }}
                           />
                         </div>
-                        <span className="text-sm font-bold text-slate-700">
+                        <span className="text-xs font-bold text-gray-700 tabular-nums w-12 text-right">
                           {acao.percentualConclusao.toFixed(1)}%
                         </span>
                       </div>
@@ -1034,19 +968,50 @@ export default function AcoesItinerantesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
 
-          {acoes.length === 0 && (
-            <div className="text-center py-12">
-              <FiAlertCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-lg text-slate-500 font-medium">
-                Nenhuma ação encontrada no período selecionado
-              </p>
-              <p className="text-sm text-slate-400 mt-2">
-                Ajuste os filtros para visualizar os dados
+            {/* Table Footer */}
+            <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
+              <p className="text-xs text-gray-400">
+                Mostrando <span className="font-semibold text-gray-600">{acoes.length}</span> ações com <span className="font-semibold text-gray-600">{totalAtendimentos}</span> atendimentos no total
               </p>
             </div>
-          )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* === Stat Card === */
+function StatCard({ label, value, icon, color }: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'emerald' | 'teal' | 'green' | 'amber';
+}) {
+  const styles = {
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    teal: 'bg-teal-50 text-teal-600 border-teal-100',
+    green: 'bg-green-50 text-green-600 border-green-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+  };
+
+  const iconBg = {
+    emerald: 'bg-emerald-100 text-emerald-600',
+    teal: 'bg-teal-100 text-teal-600',
+    green: 'bg-green-100 text-green-600',
+    amber: 'bg-amber-100 text-amber-600',
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 ${styles[color]} transition-all hover:shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{label}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+        </div>
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${iconBg[color]}`}>
+          {icon}
         </div>
       </div>
     </div>
