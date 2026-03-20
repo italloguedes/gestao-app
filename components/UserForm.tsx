@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase-client';
 import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface UserFormProps {
   user?: User;
@@ -38,10 +37,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +52,6 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) throw new Error('Formato de email inválido');
 
-      // Para novo usuário, senha é obrigatória
       if (!user && (!formData.password || formData.password.length < 6)) {
         throw new Error('Senha obrigatória (mínimo 6 caracteres)');
       }
@@ -65,14 +60,12 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       if (!session) throw new Error('Sessão expirada');
 
       if (user?.id) {
-        // Atualizar usuário existente via /api/users/[id]
         const updateData: any = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
           status: formData.status
         };
-
         if (formData.phone) updateData.phone = formData.phone;
         if (formData.password) updateData.password = formData.password;
 
@@ -89,9 +82,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           const errorData = await response.json();
           throw new Error(errorData.error || errorData.details || 'Erro ao atualizar usuário');
         }
-
       } else {
-        // Criar novo usuário via /api/users (que cria no Auth com user_metadata)
         const createData = {
           name: formData.name,
           email: formData.email,
@@ -126,59 +117,70 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   };
 
   return (
-    <Card className="max-w-3xl mx-auto shadow-2xl border-0 bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom-5 duration-500 overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+    <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in slide-in-from-bottom-3 duration-300">
+      {/* Top gradient bar */}
+      <div className="h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" />
 
-      <CardHeader className="pb-8 pt-8 px-8 bg-slate-50/50 border-b border-slate-100">
+      {/* Header */}
+      <div className="px-6 py-5 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              {user ? <FiUser className="text-blue-600" /> : <FiUserPlus className="text-blue-600" />}
-              {user ? 'Editar Usuário' : 'Novo Usuário'}
-            </CardTitle>
-            <CardDescription className="text-slate-500 mt-2 text-base">
-              {user ? 'Atualize as informações e permissões do usuário' : 'Preencha os dados para adicionar um novo membro'}
-            </CardDescription>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+              {user ? <FiUser className="h-5 w-5 text-white" /> : <FiUserPlus className="h-5 w-5 text-white" />}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">
+                {user ? 'Editar Usuário' : 'Novo Usuário'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {user ? 'Atualize as informações e permissões' : 'Preencha os dados do novo membro'}
+              </p>
+            </div>
           </div>
           {onCancel && (
-            <Button variant="ghost" size="icon" onClick={onCancel} className="rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600">
-              <FiX className="h-5 w-5" />
-            </Button>
+            <button
+              onClick={onCancel}
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              <FiX className="h-4 w-4" />
+            </button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Form */}
+      <div className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-3 animate-shake">
+            <div className="rounded-xl bg-red-50 border border-red-100 p-3.5 flex items-start gap-3">
               <FiAlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-bold text-red-800">Erro ao salvar</h4>
-                <p className="text-sm text-red-600 mt-1">{error}</p>
+                <p className="text-sm font-semibold text-red-800">Erro ao salvar</p>
+                <p className="text-sm text-red-600 mt-0.5">{error}</p>
               </div>
             </div>
           )}
 
-          <div className="grid gap-6">
-            {/* Personal Info */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiUser className="text-slate-400" /> Nome Completo <span className="text-red-500">*</span>
+          {/* Personal Info */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Informações Pessoais</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiUser className="text-gray-400 h-3.5 w-3.5" /> Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Ex: João Silva"
-                  className="h-11"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiMail className="text-slate-400" /> Email <span className="text-red-500">*</span>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiMail className="text-gray-400 h-3.5 w-3.5" /> Email <span className="text-red-500">*</span>
                 </label>
                 <Input
                   name="email"
@@ -186,58 +188,59 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="joao@exemplo.com"
-                  className="h-11"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
                   required
                 />
               </div>
             </div>
+          </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiPhone className="text-slate-400" /> Telefone
-                </label>
-                <Input
-                  name="phone"
-                  type="tel"
-                  value={formData.phone || ''}
-                  onChange={handleChange}
-                  placeholder="(00) 00000-0000"
-                  className="h-11"
-                />
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiLock className="text-slate-400" /> Senha {!user && <span className="text-red-500">*</span>}
-                </label>
-                <Input
-                  name="password"
-                  type="password"
-                  value={formData.password || ''}
-                  onChange={handleChange}
-                  placeholder={user ? "Deixe em branco para manter" : "Mínimo 6 caracteres"}
-                  className="h-11"
-                  required={!user}
-                  minLength={6}
-                />
-              </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <FiPhone className="text-gray-400 h-3.5 w-3.5" /> Telefone
+              </label>
+              <Input
+                name="phone"
+                type="tel"
+                value={formData.phone || ''}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
+                className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+              />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <FiLock className="text-gray-400 h-3.5 w-3.5" /> Senha {!user && <span className="text-red-500">*</span>}
+              </label>
+              <Input
+                name="password"
+                type="password"
+                value={formData.password || ''}
+                onChange={handleChange}
+                placeholder={user ? "Deixe em branco para manter" : "Mínimo 6 caracteres"}
+                className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                required={!user}
+                minLength={6}
+              />
+            </div>
+          </div>
 
-            <div className="h-px bg-slate-100 my-2"></div>
+          <div className="h-px bg-gray-100" />
 
-            {/* Permissions */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiShield className="text-slate-400" /> Função
+          {/* Permissions */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Permissões</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiShield className="text-gray-400 h-3.5 w-3.5" /> Função
                 </label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full h-11 rounded-lg border-slate-200 bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-lg border border-gray-200 bg-white text-sm px-3 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-colors"
                 >
                   <option value="user">Usuário (Padrão)</option>
                   <option value="recepcao">Recepção</option>
@@ -245,7 +248,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   <option value="admin">Administrador</option>
                   <option value="superadmin">Super Admin</option>
                 </select>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-gray-400">
                   {formData.role === 'superadmin' && 'Acesso total ao sistema.'}
                   {formData.role === 'admin' && 'Gerencia usuários e atendimentos.'}
                   {formData.role === 'atendente' && 'Gerencia apenas atendimentos.'}
@@ -254,15 +257,15 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FiToggleRight className="text-slate-400" /> Status
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiToggleRight className="text-gray-400 h-3.5 w-3.5" /> Status
                 </label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  className="w-full h-11 rounded-lg border-slate-200 bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-lg border border-gray-200 bg-white text-sm px-3 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-colors"
                 >
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
@@ -271,29 +274,30 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
             {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="h-11 px-6">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="h-10 px-5 rounded-xl border-gray-200">
                 Cancelar
               </Button>
             )}
             <Button
               type="submit"
               disabled={loading}
-              className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all"
+              className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-200/50 transition-all font-semibold"
             >
               {loading ? (
-                <FiRefreshCw className="h-5 w-5 animate-spin" />
+                <FiRefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <FiSave className="mr-2 h-5 w-5" />
+                  <FiSave className="mr-2 h-4 w-4" />
                   {user ? 'Salvar Alterações' : 'Criar Usuário'}
                 </>
               )}
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

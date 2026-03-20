@@ -46,6 +46,15 @@ const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname
       <FiBarChart2 className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Relatórios</span>
     </Link>
+
+    <Link
+      href="/admin/gestao"
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname?.includes('/admin/gestao') ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
+      onClick={onClose}
+    >
+      <FiSettings className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
+      <span>Gestão</span>
+    </Link>
   </>
 );
 
