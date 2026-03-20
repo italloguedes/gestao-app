@@ -67,6 +67,18 @@ interface ChronologicalItem {
   total: number;
 }
 
+const formatDateShort = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('T')[0].split('-');
+  return `${d}/${m}`;
+};
+
+const formatDateFull = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('T')[0].split('-');
+  return `${d}/${m}/${y}`;
+};
+
 // Updated color palette — emerald / teal / green tones
 const COLORS = {
   primary: '#059669',   // emerald-600
@@ -516,15 +528,15 @@ export default function AcoesItinerantesPage() {
 
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`, 14, 30);
+    doc.text(`Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`, 14, 30);
     doc.text(`Total de Atendimentos: ${totalAtendimentos}`, 14, 38);
 
     const tableData = acoes.map(acao => {
       const crono = chronologicalData.find(c => c.acao === acao.nome);
       const periodo = crono
         ? (crono.dataInicio === crono.dataFim
-          ? new Date(crono.dataInicio).toLocaleDateString('pt-BR')
-          : `${new Date(crono.dataInicio).toLocaleDateString('pt-BR')} a ${new Date(crono.dataFim).toLocaleDateString('pt-BR')}`)
+          ? formatDateFull(crono.dataInicio)
+          : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
         : '—';
 
       return [
@@ -582,13 +594,13 @@ export default function AcoesItinerantesPage() {
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(
-      `Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`,
+      `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`,
       pageWidth / 2, 28, { align: 'center' }
     );
 
     const formattedData = chronologicalData.map(item => {
-      const dataInicioFormatted = new Date(item.dataInicio).toLocaleDateString('pt-BR');
-      const dataFimFormatted = new Date(item.dataFim).toLocaleDateString('pt-BR');
+      const dataInicioFormatted = formatDateFull(item.dataInicio);
+      const dataFimFormatted = formatDateFull(item.dataFim);
       const periodo = item.dataInicio === item.dataFim
         ? dataInicioFormatted
         : `${dataInicioFormatted} até ${dataFimFormatted}`;
@@ -626,16 +638,7 @@ export default function AcoesItinerantesPage() {
   // HELPERS
   // =============================================
 
-  const formatDateShort = (dateStr: string) => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}`;
-  };
 
-  const formatDateFull = (dateStr: string) => {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString('pt-BR');
-  };
 
   const getAcaoPeriodo = (nomeAcao: string) => {
     const crono = chronologicalData.find(c => c.acao === nomeAcao);
@@ -852,11 +855,11 @@ export default function AcoesItinerantesPage() {
               <XAxis
                 dataKey="data"
                 tick={{ fontSize: 11, fill: '#6B7280' }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                tickFormatter={(value) => formatDateShort(value)}
               />
               <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} />
               <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                labelFormatter={(value) => formatDateFull(value)}
                 content={<CustomTooltip />}
               />
               <Legend />
