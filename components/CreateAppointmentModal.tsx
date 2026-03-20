@@ -257,7 +257,9 @@ export default function CreateAppointmentModal({
               <select
                 value={selectedPosto}
                 onChange={(e) => setSelectedPosto(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                disabled
+                title="Para agendar em outro posto, altere a aba na tela principal."
+                className="w-full pl-10 pr-3 py-2 border rounded-lg bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500"
               >
                 {POSTOS.map((p) => (
                   <option key={p.id} value={p.id}>

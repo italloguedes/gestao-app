@@ -499,7 +499,9 @@ export default function AgendamentosHojePage() {
   }, [agendamentos, showEmptySlots, showOnlyPreferential, selectedStatusFilter]);
 
   const occupiedSlots = useMemo(() =>
-    agendamentos.map((a: any) => a.horario.substring(0, 5)),
+    agendamentos
+      .filter((a: any) => !['cancelado', 'ausente'].includes(a.status))
+      .map((a: any) => a.horario.substring(0, 5)),
     [agendamentos]
   );
 

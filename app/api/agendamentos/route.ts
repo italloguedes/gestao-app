@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Permitir até 2 agendamentos por horário por posto
-    if (existingAppointments && existingAppointments.length >= 2) {
+    // Permitir apenas 1 agendamento por horário por posto
+    if (existingAppointments && existingAppointments.length >= 1) {
       return NextResponse.json(
-        { error: 'Este horário já está completo neste posto (máximo 2 agendamentos por horário)' },
+        { error: 'Este horário já está completo neste posto (máximo 1 agendamento por horário)' },
         { status: 409 }
       );
     }
