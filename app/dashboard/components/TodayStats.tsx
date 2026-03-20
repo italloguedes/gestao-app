@@ -10,41 +10,50 @@ interface TodayStatsProps {
 }
 
 export default function TodayStats({ total, confirmados, concluidos, preferenciais, loading = false }: TodayStatsProps) {
-    const today = new Date().toLocaleDateString('pt-BR');
+    const today = new Date().toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
 
     if (loading) {
-        return (
-            <div className="w-full h-16 bg-gray-200 animate-pulse rounded-2xl mb-8"></div>
-        );
+        return <div className="w-full h-20 bg-gray-100 animate-pulse rounded-2xl" />;
     }
 
+    const items = [
+        { label: 'Agendados', value: total, icon: <FiClock className="h-4 w-4" /> },
+        { label: 'Confirmados', value: confirmados, icon: <FiCheckCircle className="h-4 w-4" /> },
+        { label: 'Concluídos', value: concluidos, icon: <FiCheckCircle className="h-4 w-4" /> },
+        { label: 'Preferenciais', value: preferenciais, icon: <FiStar className="h-4 w-4" /> },
+    ];
+
     return (
-        <div className="bg-emerald-600 rounded-2xl p-4 shadow-lg mb-8 flex flex-col md:flex-row items-center justify-between gap-4 text-white overflow-x-auto">
-            <div className="flex items-center gap-3 bg-emerald-700/50 px-4 py-2 rounded-xl min-w-fit">
-                <FiCalendar className="w-6 h-6" />
-                <span className="text-xl font-bold">{today}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 w-full md:justify-end">
-                <div className="flex items-center gap-2 bg-emerald-500/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-400/30 flex-1 md:flex-none justify-center min-w-[120px]">
-                    <span className="font-bold text-lg">{total}</span>
-                    <span className="text-emerald-100 font-medium">total</span>
+        <div className="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 rounded-2xl shadow-lg shadow-emerald-200/30 overflow-hidden">
+            <div className="px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Date */}
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                        <FiCalendar className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wider">Hoje</p>
+                        <p className="text-white font-bold text-sm capitalize">{today}</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-emerald-500/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-400/30 flex-1 md:flex-none justify-center min-w-[140px]">
-                    <span className="font-bold text-lg">{confirmados}</span>
-                    <span className="text-emerald-100 font-medium">confirmados</span>
-                </div>
-
-                <div className="flex items-center gap-2 bg-emerald-500/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-400/30 flex-1 md:flex-none justify-center min-w-[140px]">
-                    <span className="font-bold text-lg">{concluidos}</span>
-                    <span className="text-emerald-100 font-medium">concluídos</span>
-                </div>
-
-                <div className="flex items-center gap-2 bg-lime-500/40 px-4 py-2 rounded-xl backdrop-blur-sm border border-lime-400/30 flex-1 md:flex-none justify-center min-w-[160px]">
-                    <FiStar className="w-5 h-5 text-lime-200" />
-                    <span className="font-bold text-lg">{preferenciais}</span>
-                    <span className="text-lime-100 font-medium">preferenciais</span>
+                {/* Stats */}
+                <div className="flex flex-wrap items-center gap-2">
+                    {items.map((item, i) => (
+                        <div
+                            key={i}
+                            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-2 rounded-xl min-w-[110px] justify-center"
+                        >
+                            <span className="text-white/60">{item.icon}</span>
+                            <span className="text-white font-bold text-lg leading-none">{item.value}</span>
+                            <span className="text-emerald-100/80 text-xs font-medium">{item.label}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

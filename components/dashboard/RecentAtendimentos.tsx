@@ -1,8 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FiClock, FiUser, FiCalendar, FiArrowRight, FiEdit2, FiChevronRight } from 'react-icons/fi';
-import { Button } from '@/components/ui/button';
+import { FiClock, FiUser, FiCalendar, FiArrowRight, FiChevronRight } from 'react-icons/fi';
 
 interface Atendimento {
     id: number;
@@ -24,20 +22,20 @@ interface RecentAtendimentosProps {
     onEdit: (atendimento: Atendimento) => void;
 }
 
-const getStatusColor = (status: string) => {
+const getStatusStyle = (status: string) => {
     switch (status.toLowerCase()) {
         case 'concluido':
         case 'entregue':
-            return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200';
         case 'em andamento':
         case 'em_andamento':
-            return 'bg-blue-100 text-blue-700 border-blue-200';
+            return 'bg-teal-50 text-teal-700 border-teal-200';
         case 'pendente':
-            return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            return 'bg-amber-50 text-amber-700 border-amber-200';
         case 'correcao':
-            return 'bg-red-100 text-red-700 border-red-200';
+            return 'bg-red-50 text-red-700 border-red-200';
         case 'cancelado':
-            return 'bg-gray-100 text-gray-700 border-gray-200';
+            return 'bg-gray-100 text-gray-500 border-gray-200';
         default:
             return 'bg-gray-50 text-gray-600 border-gray-200';
     }
@@ -46,36 +44,38 @@ const getStatusColor = (status: string) => {
 const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    return `${day}/${month}`;
 };
 
 export default function RecentAtendimentos({ atendimentos, loading, onEdit }: RecentAtendimentosProps) {
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden flex flex-col h-full">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                        <FiClock className="h-4 w-4" />
+                    <div className="h-9 w-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <FiClock className="h-4 w-4 text-emerald-600" />
                     </div>
                     <div>
-                        <h2 className="text-base font-bold text-gray-800 leading-tight">Atendimentos Recentes</h2>
-                        <p className="text-[11px] text-gray-500 font-medium">Últimas atualizações</p>
+                        <h2 className="text-sm font-bold text-gray-900 leading-tight">Atendimentos Recentes</h2>
+                        <p className="text-[11px] text-gray-400 font-medium">Últimas atualizações</p>
                     </div>
                 </div>
                 <Link
                     href="/dashboard/atendimentos"
-                    className="group flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                    className="group flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-all duration-200"
                 >
                     Ver todos
                     <FiArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                 </Link>
             </div>
 
-            <div className="flex-1 overflow-auto p-1">
+            {/* Content */}
+            <div className="flex-1 overflow-auto">
                 {loading ? (
-                    <div className="space-y-2 p-2">
+                    <div className="p-3 space-y-2">
                         {[...Array(5)].map((_, i) => (
-                            <div key={i} className="h-14 bg-gray-50 rounded-lg animate-pulse border border-gray-100"></div>
+                            <div key={i} className="h-14 bg-gray-50 rounded-lg animate-pulse" />
                         ))}
                     </div>
                 ) : atendimentos.length === 0 ? (
@@ -86,39 +86,36 @@ export default function RecentAtendimentos({ atendimentos, loading, onEdit }: Re
                         <p className="text-sm font-medium text-gray-500">Nenhum atendimento recente</p>
                     </div>
                 ) : (
-                    <div className="space-y-1">
+                    <div className="divide-y divide-gray-50">
                         {atendimentos.map((atendimento) => (
                             <div
                                 key={atendimento.id}
                                 onClick={() => onEdit(atendimento)}
-                                className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer transition-all duration-200"
+                                className="group flex items-center justify-between px-5 py-3 hover:bg-emerald-50/40 cursor-pointer transition-colors duration-150"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold ${atendimento.nome ? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600' : 'bg-gray-100'
-                                        }`}>
-                                        {atendimento.nome ? atendimento.nome.charAt(0).toUpperCase() : <FiUser />}
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex-shrink-0">
+                                        {atendimento.nome ? atendimento.nome.charAt(0).toUpperCase() : <FiUser className="h-3.5 w-3.5" />}
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-emerald-700 transition-colors">
                                             {atendimento.nome}
-                                        </h3>
-                                        <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                                            <span className="flex items-center gap-1">
-                                                <FiCalendar className="h-3 w-3" />
-                                                {formatDate(atendimento.dia_atual)}
-                                            </span>
-                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                        </p>
+                                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                            <FiCalendar className="h-3 w-3" />
+                                            <span>{formatDate(atendimento.dia_atual)}</span>
+                                            <span className="text-gray-200">•</span>
                                             <span className="font-mono">{atendimento.protocolo}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(atendimento.status)}`}>
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusStyle(atendimento.status)}`}>
                                         {atendimento.status}
                                     </span>
-                                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-gray-300 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all">
-                                        <FiChevronRight className="h-4 w-4" />
+                                    <div className="h-6 w-6 rounded-full flex items-center justify-center text-gray-300 group-hover:text-emerald-600 group-hover:bg-emerald-50 transition-all">
+                                        <FiChevronRight className="h-3.5 w-3.5" />
                                     </div>
                                 </div>
                             </div>

@@ -15,9 +15,11 @@ export default function DashboardLayout({
 }) {
   return (
     <DashboardGuard>
-      <div className="min-h-screen bg-gray-100">
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-50 via-white to-emerald-50/30">
+        <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/25 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full bg-teal-200/20 blur-3xl" />
         <DashboardNav />
-        <main className="pt-20 pb-6">
+        <main className="relative z-10 pt-20 pb-6">
           <div className="w-full px-4 sm:px-6 lg:px-8">
             {children}
           </div>

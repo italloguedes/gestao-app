@@ -4,22 +4,25 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
-// DashboardHeader import removed (handled by layout)
 import AtendimentoModal from '@/components/AtendimentoModal';
 import SignaturePadCanvas from '@/components/SignaturePadCanvas';
 import ModoEntregaModal from '@/components/ModoEntregaModal';
 import DashboardStats from '@/components/dashboard/DashboardStats';
-
 import RecentAtendimentos from '@/components/dashboard/RecentAtendimentos';
 import QuickAction from '@/components/dashboard/QuickAction';
 import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
 import PdfModal from '@/components/dashboard/PdfModal';
 import { generateComprovantePDF } from '@/lib/pdf-utils';
-import { FiPlus, FiRefreshCw, FiAlertTriangle, FiXCircle, FiLock, FiCalendar, FiCheckCircle, FiSearch, FiBell, FiSettings } from 'react-icons/fi';
+import {
+  FiPlus, FiRefreshCw, FiAlertTriangle, FiCheckCircle,
+  FiSearch, FiActivity
+} from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+
+import TodayStats from './components/TodayStats';
 
 type ModoEntrega = 'impressao' | 'digital';
 
@@ -58,31 +61,17 @@ interface AtendimentoEntrega extends Atendimento {
   vinculo?: string;
 }
 
-import TodayStats from './components/TodayStats';
-import AttendantPodium from '@/components/dashboard/AttendantPodium';
-
-// ... existing imports
-
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStatsData>({
-    total: 0,
-    correcoes: 0,
-    emAndamento: 0,
-    concluidos: 0,
-    bloqueados: 0,
-    hoje: 0,
-    agendamentosPendentes: 0,
-    agendamentosConfirmados: 0,
-    agendamentosCancelados: 0,
+    total: 0, correcoes: 0, emAndamento: 0, concluidos: 0,
+    bloqueados: 0, hoje: 0, agendamentosPendentes: 0,
+    agendamentosConfirmados: 0, agendamentosCancelados: 0,
   });
 
   const [todayStats, setTodayStats] = useState({
-    total: 0,
-    confirmados: 0,
-    concluidos: 0,
-    preferenciais: 0
+    total: 0, confirmados: 0, concluidos: 0, preferenciais: 0
   });
 
   const [loading, setLoading] = useState(true);
@@ -142,7 +131,6 @@ export default function DashboardPage() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      // Fetch all atendimentos stats in parallel
       const [
         atendimentosData,
         agendamentosData,
@@ -182,7 +170,6 @@ export default function DashboardPage() {
         agendamentosCancelados: agendamentosStats.cancelados || 0,
       });
 
-      // Calculate today's stats from agendamentos
       const todayAppointments = todayAgendamentosData.data || [];
       setTodayStats({
         total: todayAppointments.length,
@@ -192,7 +179,6 @@ export default function DashboardPage() {
       });
 
       setRecentAtendimentos(recentAtendimentosData.data || []);
-
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
     } finally {
@@ -219,9 +205,7 @@ export default function DashboardPage() {
         .order('horario', { ascending: false });
 
       if (error) throw error;
-
       setAtendimentosParaEntrega(data || []);
-
     } catch (error) {
       console.error('Erro ao buscar atendimentos:', error);
     } finally {
@@ -231,16 +215,13 @@ export default function DashboardPage() {
   };
 
   const handleGerarComprovante = async () => {
-    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) {
-      return;
-    }
+    if (!selectedAtendimento || !nomeRecebedor || !cpfRecebedor || !user) return;
     setShowModoEntregaModal(true);
   };
 
   const handleSelectModoEntrega = (mode: ModoEntrega) => {
     setShowModoEntregaModal(false);
     setModoEntregaSelecionado(mode);
-
     if (mode === 'impressao') {
       handleProcessarEntrega(null);
     } else if (mode === 'digital') {
@@ -259,14 +240,12 @@ export default function DashboardPage() {
 
     setGerandoComprovante(true);
     try {
-      // Buscar nome do atendente
       let atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
 
       const now = new Date();
       const dataEntrega = now.toISOString().split('T')[0];
       const dataHoraEntrega = now.toISOString();
 
-      // Atualizar atendimento no Supabase
       const { error } = await supabase
         .from('atendimentos')
         .update({
@@ -282,7 +261,6 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      // Carregar logo
       const logoUrl = '/logoautismo.png';
       const getBase64FromUrl = async (url: string) => {
         const res = await fetch(url);
@@ -296,7 +274,6 @@ export default function DashboardPage() {
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
 
-      // Gerar PDF
       const url = await generateComprovantePDF({
         atendimento: selectedAtendimento,
         recebedor: {
@@ -311,8 +288,7 @@ export default function DashboardPage() {
       });
 
       setPdfUrl(url);
-      fetchDashboardData(); // Atualizar dados do dashboard
-
+      fetchDashboardData();
     } catch (err) {
       console.error('Erro ao gerar comprovante:', err);
       alert('Erro ao gerar comprovante. Tente novamente.');
@@ -323,7 +299,6 @@ export default function DashboardPage() {
 
   const handleGlobalSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && globalSearch) {
-      // Redirect to atendimentos page with search query
       router.push(`/dashboard/atendimentos?search=${encodeURIComponent(globalSearch)}`);
     }
   };
@@ -334,8 +309,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Modals */}
+    <div className="w-full space-y-5 animate-in fade-in duration-500">
+      {/* === Modals === */}
       <EntregarCinModal
         show={showEntregarCinModal}
         onClose={() => setShowEntregarCinModal(false)}
@@ -359,9 +334,7 @@ export default function DashboardPage() {
         onGerarComprovante={handleGerarComprovante}
       />
 
-      {pdfUrl && (
-        <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
-      )}
+      {pdfUrl && <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />}
 
       {showEditAtendimentoModal && selectedAtendimentoForEdit && (
         <AtendimentoModal
@@ -384,8 +357,6 @@ export default function DashboardPage() {
         />
       )}
 
-
-
       <ModoEntregaModal
         isOpen={showModoEntregaModal}
         onClose={() => setShowModoEntregaModal(false)}
@@ -400,24 +371,32 @@ export default function DashboardPage() {
         recipientName={nomeRecebedor}
       />
 
-      {/* Hero Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-gray-200/50">
+      {/* === Page Header === */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight sm:text-3xl">Painel de Controle</h1>
-          <p className="text-sm text-gray-500 font-medium">
-            Bem-vindo de volta, <span className="text-emerald-600">{user?.email?.split('@')[0]}</span>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200/50">
+              <FiActivity className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">Dashboard</p>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Painel de Controle</h1>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 ml-[52px]">
+            Bem-vindo, <span className="font-semibold text-emerald-600">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <div className="relative group flex-1 sm:w-72">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <div className="relative group flex-1 sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FiSearch className="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
             </div>
             <Input
               type="text"
               placeholder="Buscar atendimento..."
-              className="pl-9 h-9 bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-lg shadow-sm transition-all duration-300 hover:shadow-md text-sm"
+              className="pl-9 h-10 bg-white border-gray-200 focus:border-emerald-400 focus:ring-emerald-100 rounded-lg text-sm"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               onKeyDown={handleGlobalSearch}
@@ -425,7 +404,7 @@ export default function DashboardPage() {
           </div>
           <Link
             href="/dashboard/atendimentos/novo"
-            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm shadow-emerald-200 hover:shadow-md transition-all duration-300 font-semibold px-4 text-xs flex items-center"
+            className="h-10 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:-translate-y-0.5 transition-all duration-300 font-semibold px-5 text-sm flex items-center justify-center"
           >
             <FiPlus className="mr-1.5 h-4 w-4" />
             Novo Atendimento
@@ -433,36 +412,36 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="space-y-4">
-        <TodayStats
-          total={todayStats.total}
-          confirmados={todayStats.confirmados}
-          concluidos={todayStats.concluidos}
-          preferenciais={todayStats.preferenciais}
-          loading={loading}
-        />
-        <DashboardStats stats={stats} loading={loading} />
-      </div>
+      {/* === Today Stats Bar === */}
+      <TodayStats
+        total={todayStats.total}
+        confirmados={todayStats.confirmados}
+        concluidos={todayStats.concluidos}
+        preferenciais={todayStats.preferenciais}
+        loading={loading}
+      />
 
-      {/* 3-Column Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6 items-start">
+      {/* === Stats Cards === */}
+      <DashboardStats stats={stats} loading={loading} />
 
-        {/* 1. Quick Actions (Left) */}
-        <div className="space-y-4 flex flex-col h-full">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
-            <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
-                <FiCheckCircle className="h-4 w-4" />
+      {/* === 2-Column Grid: Quick Actions + Recent === */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-6 items-start">
+
+        {/* Quick Actions */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <FiCheckCircle className="h-4 w-4 text-emerald-600" />
               </div>
-              Ações Rápidas
-            </h2>
-            <div className="space-y-2.5">
+              <h2 className="text-sm font-bold text-gray-900">Ações Rápidas</h2>
+            </div>
+            <div className="space-y-2">
               <QuickAction href="/dashboard/coleta-digitais" color="border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100" icon={<MdFingerprint className="h-4 w-4" />}>
                 Fila de Coleta
               </QuickAction>
 
-              <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-blue-200 text-blue-800 bg-blue-50 hover:bg-blue-100" icon={<FiRefreshCw className="h-4 w-4" />}>
+              <QuickAction href="/dashboard/atendimentos/atualizar-cin" color="border-teal-200 text-teal-800 bg-teal-50 hover:bg-teal-100" icon={<FiRefreshCw className="h-4 w-4" />}>
                 Atualizar CIN
               </QuickAction>
 
@@ -471,7 +450,7 @@ export default function DashboardPage() {
               </QuickAction>
 
               <Button
-                className="w-full justify-start h-auto py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg transition-all duration-300 group"
+                className="w-full justify-start h-auto py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition-all duration-300 group"
                 variant="ghost"
                 onClick={() => setShowEntregarCinModal(true)}
               >
@@ -482,12 +461,12 @@ export default function DashboardPage() {
               </Button>
             </div>
 
-            {/* Help Card Integrated */}
+            {/* Mini Help */}
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-xl p-4 text-white relative overflow-hidden group">
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl p-4 text-white relative overflow-hidden">
                 <div className="relative z-10 flex justify-between items-center">
                   <div>
-                    <h3 className="text-sm font-bold">Ajuda?</h3>
+                    <p className="text-sm font-bold">Ajuda?</p>
                     <p className="text-emerald-100 text-[10px]">Consulte o manual.</p>
                   </div>
                   <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0 h-8 w-8 p-0 rounded-lg shadow-none backdrop-blur-sm">
@@ -499,20 +478,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 2. Recent Attendances (Middle) */}
-        <div className="space-y-4 flex flex-col h-full">
+        {/* Recent Atendimentos */}
+        <div className="lg:col-span-2">
           <RecentAtendimentos
             atendimentos={recentAtendimentos}
             loading={loading}
             onEdit={handleEditAtendimento}
           />
         </div>
-
-        {/* 3. Attendant Ranking Podium (Right) */}
-        <div className="space-y-4 flex flex-col h-full">
-          <AttendantPodium />
-        </div>
-
       </div>
     </div>
   );
