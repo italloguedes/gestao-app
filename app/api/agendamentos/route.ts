@@ -61,8 +61,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('data', data)
       .eq('horario', horario)
-      .eq('posto', postoAtual)
-      .in('status', ['confirmado', 'bloqueado']);
+      .eq('posto', postoAtual);
 
     if (checkError) {
       console.error('Erro ao verificar agendamentos existentes:', checkError);
