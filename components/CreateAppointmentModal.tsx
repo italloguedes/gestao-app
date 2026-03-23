@@ -48,7 +48,6 @@ export default function CreateAppointmentModal({
   const defaultEmail = "default@example.com";
   const [preferential, setPreferential] = useState(false);
   const [horario, setHorario] = useState(selectedTime);
-  const [selectedPosto, setSelectedPosto] = useState(posto);
   const [errors, setErrors] = useState<{
     nome?: string;
     cpf?: string;
@@ -116,13 +115,12 @@ export default function CreateAppointmentModal({
         horario,
         data_nascimento: defaultBirthday,
         atendimento_preferencial: preferential,
-        posto: selectedPosto,
+        posto: posto,
       });
       setNome("");
       setCpf("");
       setTelefone("");
       setHorario(selectedTime);
-      setSelectedPosto(posto);
       setErrors({});
     } catch (error) {
       // Erro já tratado no componente pai
@@ -255,8 +253,7 @@ export default function CreateAppointmentModal({
             <div className="relative">
               <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <select
-                value={selectedPosto}
-                onChange={(e) => setSelectedPosto(e.target.value)}
+                value={posto}
                 disabled
                 title="Para agendar em outro posto, altere a aba na tela principal."
                 className="w-full pl-10 pr-3 py-2 border rounded-lg bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500"
