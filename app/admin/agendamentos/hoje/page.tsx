@@ -417,6 +417,33 @@ export default function AgendamentosHojePage() {
 
   useEffect(() => {
     loadAgendamentos();
+
+    // Set up real-time subscription for immediate updates
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+        },
+        () => {
+          loadAgendamentos();
+        }
+      )
+      .subscribe();
+
+    // Set up a polling interval as a fallback (every 30 seconds)
+    const interval = setInterval(() => {
+      loadAgendamentos();
+    }, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedPosto]);
 
   const getStatusBadge = useCallback((status: AppointmentStatus): ReactElement | null => {
