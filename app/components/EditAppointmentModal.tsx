@@ -147,6 +147,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
         atendimento_preferencial: formData.get('atendimento_preferencial') === 'on',
         status: formData.get('status') || appointment.status,
+        posto: formData.get('posto') || appointment.posto,
         observacoes: formData.get('observacoes') || appointment.observacoes,
       };
 
@@ -594,7 +595,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               {/* EDIT - Edição completa */}
               {action === 'edit' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Data</label>
                       <input type="date" name="data" defaultValue={appointment.data} required
@@ -614,6 +615,15 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                         <option value="ausente">Ausente</option>
                         <option value="concluido">Concluído</option>
                         <option value="bloqueado">Bloqueado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Posto</label>
+                      <select name="posto" defaultValue={appointment.posto} required
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium">
+                        <option value="Sala Sensorial">Sala Sensorial</option>
+                        <option value="Alece Itinerante I">Alece Itinerante I</option>
+                        <option value="Alece Itinerante II">Alece Itinerante II</option>
                       </select>
                     </div>
                   </div>

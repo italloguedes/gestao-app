@@ -171,7 +171,8 @@ export default function AgendamentosHojePage() {
           telefone: updatedAppointment.telefone,
           data_nascimento: updatedAppointment.data_nascimento,
           observacoes: updatedAppointment.observacoes,
-          atendimento_preferencial: updatedAppointment.atendimento_preferencial
+          atendimento_preferencial: updatedAppointment.atendimento_preferencial,
+          posto: updatedAppointment.posto
         })
         .eq("id", updatedAppointment.id);
 
