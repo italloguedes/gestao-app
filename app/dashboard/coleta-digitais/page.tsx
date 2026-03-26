@@ -238,7 +238,37 @@ export default function ColetaDigitaisPage() {
         return;
       }
 
-      const proximo = fila[0];
+      // Separar a fila em preferenciais e normais
+      const preferenciais = fila.filter(a => a.atendimento_preferencial === true);
+      const normais = fila.filter(a => !a.atendimento_preferencial);
+
+      // Verificar o último tipo chamado no localStorage
+      const ultimoTipo = localStorage.getItem('coleta_ultimo_tipo_chamado');
+
+      let proximo: AtendimentoFila | null = null;
+
+      if (ultimoTipo === 'preferencial') {
+        // Último foi preferencial → chamar normal (se houver)
+        proximo = normais.length > 0 ? normais[0] : preferenciais[0] || null;
+      } else if (ultimoTipo === 'normal') {
+        // Último foi normal → chamar preferencial (se houver)
+        proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
+      } else {
+        // Nunca chamou → começar com preferencial (se houver)
+        proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
+      }
+
+      if (!proximo) {
+        alert('Não há pessoas na fila para coleta de digitais');
+        return;
+      }
+
+      // Persistir o tipo que está sendo chamado agora
+      localStorage.setItem(
+        'coleta_ultimo_tipo_chamado',
+        proximo.atendimento_preferencial ? 'preferencial' : 'normal'
+      );
+
       await chamarPessoa(proximo);
 
     } catch (error: any) {
@@ -251,6 +281,12 @@ export default function ColetaDigitaisPage() {
   const chamarPessoa = async (atendimento: AtendimentoFila) => {
     try {
       setProcessando(true);
+
+      // Persistir o tipo que está sendo chamado (para manter alternância)
+      localStorage.setItem(
+        'coleta_ultimo_tipo_chamado',
+        atendimento.atendimento_preferencial ? 'preferencial' : 'normal'
+      );
 
       // Mudar status para 'chamando' para evitar que outro atendente chame a mesma pessoa
       const { error: updateError } = await supabase
