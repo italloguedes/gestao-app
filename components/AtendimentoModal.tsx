@@ -352,6 +352,107 @@ export default function AtendimentoModal({
     }
   };
 
+  const handleGerarDeclaracao = async () => {
+    try {
+      const logoUrl = '/logoautismo.png';
+      const getBase64FromUrl = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+
+      const doc = new jsPDF();
+      const now = new Date();
+      const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
+
+      const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
+      const formatDateDecl = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Fortaleza' });
+      };
+
+      // LOGO E CABEÇALHO
+      doc.addImage(logoBase64, 'PNG', 75, 10, 22, 22);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text('ALECE', 100, 16, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('ASSEMBLEIA LEGISLATIVA', 100, 21, { align: 'center' });
+      doc.text('DO ESTADO DO CEARÁ', 100, 25, { align: 'center' });
+
+      // TÍTULO
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(15, 23, 42);
+      doc.text('DECLARAÇÃO', 105, 55, { align: 'center' });
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.5);
+      doc.line(75, 58, 135, 58);
+
+      // CORPO
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+
+      const dataAtendimento = formatDateDecl(atendimento.dia_atual);
+      const textoDeclaracao = `Declaro, para fins comprobatórios, o requerente, "${atendimento.nome}", inscrito no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", na SALA SENSORIAL NO ANEXO III da Assembleia Legislativa do Estado do Ceará, para ASSUNTOS REFERENTE A EMISSÃO de Carteiras de Identidade Nacional (CIN).`;
+
+      const marginLeft = 25;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const maxWidth = pageWidth - marginLeft - 25;
+
+      doc.text(textoDeclaracao, marginLeft, 80, {
+        maxWidth: maxWidth,
+        align: 'justify',
+        lineHeightFactor: 1.8
+      });
+
+      // ASSINATURA
+      const assinaturaY = 180;
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.4);
+      doc.line(55, assinaturaY, 155, assinaturaY);
+
+      const servidorNome = currentUserName || user?.user_metadata?.name || user?.user_metadata?.full_name || 'SERVIDOR';
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text(servidorNome.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('MATRÍCULA', 105, assinaturaY + 13, { align: 'center' });
+
+      // RODAPÉ
+      const rodapeY = 270;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(15, rodapeY, 195, rodapeY);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Documento gerado pelo Sistema de Gestão - Assembleia Legislativa do Estado do Ceará', 105, rodapeY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Emitido em: ${now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' })} às ${horaGeracao}`, 105, rodapeY + 9, { align: 'center' });
+
+      doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+    } catch (err) {
+      console.error('Erro ao gerar declaração:', err);
+      alert('Erro ao gerar declaração. Tente novamente.');
+    }
+  };
+
   const statusConfig = getStatusConfig(formData.status || '');
 
   const TABS: { key: TabKey; label: string; icon: React.ReactElement; badge?: number }[] = [
@@ -522,6 +623,15 @@ export default function AtendimentoModal({
                       value={formData.protocolo || ''} onChange={(v) => handleChange('protocolo', v)} mono />
                   </div>
                 </fieldset>
+
+                {/* Gerar Declaração */}
+                <button
+                  onClick={handleGerarDeclaracao}
+                  className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200"
+                >
+                  <FiFileText className="w-4 h-4" />
+                  Gerar Declaração
+                </button>
 
                 {/* Comprovante */}
                 {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
