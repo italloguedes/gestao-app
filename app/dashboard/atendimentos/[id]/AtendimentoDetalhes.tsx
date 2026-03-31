@@ -553,6 +553,21 @@ export default function AtendimentoDetalhes({ id }: Props) {
       // ===== ASSINATURA DO SERVIDOR =====
       const assinaturaY = 180;
 
+      // ASSINATURA IMAGEM (Apenas para Ítallo)
+      const userEmailStr = user?.email?.toLowerCase() || '';
+      const userNameStr = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').toLowerCase();
+      
+      if (userEmailStr.includes('itallo') || userNameStr.includes('itallo')) {
+         try {
+           const assinaturaUrl = '/assinatura-italo.png';
+           const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
+           // Inserir assinatura logo acima da linha (Y = 180)
+           doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24); 
+         } catch (e) {
+           console.error('Assinatura não encontrada ou erro no carregamento:', e);
+         }
+      }
+
       // Linha de assinatura
       doc.setDrawColor(30, 41, 59);
       doc.setLineWidth(0.4);

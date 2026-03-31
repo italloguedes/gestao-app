@@ -408,7 +408,23 @@ export default function AtendimentoModal({
         lineHeightFactor: 1.8
       });
 
-      // ASSINATURA
+      // ASSINATURA IMAGEM (Apenas para Ítallo)
+      const userEmailStr = user?.email?.toLowerCase() || '';
+      const userNameStr = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').toLowerCase();
+      
+      if (userEmailStr.includes('itallo') || userNameStr.includes('itallo')) {
+         try {
+           const assinaturaUrl = '/assinatura-italo.png';
+           const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
+           // Inserir assinatura logo acima da linha (Y = 180)
+           // Ajuste de (x, y, largura, altura) conforme proporção da imagem. Centro X=105, largura=50, Xinicial=80
+           doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24); 
+         } catch (e) {
+           console.error('Assinatura não encontrada ou erro no carregamento:', e);
+         }
+      }
+
+      // ASSINATURA LINHA
       const assinaturaY = 180;
       doc.setDrawColor(30, 41, 59);
       doc.setLineWidth(0.4);
