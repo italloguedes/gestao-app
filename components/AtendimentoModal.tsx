@@ -396,7 +396,7 @@ export default function AtendimentoModal({
       doc.setTextColor(30, 41, 59);
 
       const dataAtendimento = formatDateDecl(atendimento.dia_atual);
-      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente(a), "${atendimento.nome}", inscrito(a) no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
+      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente, "${atendimento.nome}", inscrito(a) no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
 
       const marginLeft = 25;
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -408,16 +408,13 @@ export default function AtendimentoModal({
         lineHeightFactor: 1.8
       });
 
-      // ASSINATURA IMAGEM (Apenas para Ítallo)
-      const userEmailStr = user?.email?.toLowerCase() || '';
-      const userNameStr = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').toLowerCase();
+      // ASSINATURA IMAGEM
+      const assinaturaUrl = user?.user_metadata?.assinatura_url;
       
-      if (userEmailStr.includes('itallo') || userNameStr.includes('itallo')) {
+      if (assinaturaUrl) {
          try {
-           const assinaturaUrl = '/assinatura-italo.png';
            const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
            // Inserir assinatura logo acima da linha (Y = 180)
-           // Ajuste de (x, y, largura, altura) conforme proporção da imagem. Centro X=105, largura=50, Xinicial=80
            doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24); 
          } catch (e) {
            console.error('Assinatura não encontrada ou erro no carregamento:', e);

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus, FiBriefcase, FiHash } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus, FiBriefcase, FiHash, FiImage, FiUpload } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -22,6 +22,7 @@ type UserFormData = {
   password?: string;
   funcao?: string;
   matricula?: string;
+  assinatura_url?: string;
 };
 
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
@@ -33,11 +34,39 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     status: user?.status || 'active',
     password: '',
     funcao: user?.funcao || '',
-    matricula: user?.matricula || ''
+    matricula: user?.matricula || '',
+    assinatura_url: user?.assinatura_url || ''
   });
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
+
+  const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingSignature(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+      
+      const file = event.target.files[0];
+      if (file.size > 2 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 2MB');
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `signature-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      setFormData(prev => ({ ...prev, assinatura_url: data.publicUrl }));
+    } catch (err: any) {
+      setError(err.message || 'Erro no upload da assinatura');
+    } finally {
+      setUploadingSignature(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -70,7 +99,8 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           role: formData.role,
           status: formData.status,
           funcao: formData.funcao,
-          matricula: formData.matricula
+          matricula: formData.matricula,
+          assinatura_url: formData.assinatura_url
         };
         if (formData.phone) updateData.phone = formData.phone;
         if (formData.password) updateData.password = formData.password;
@@ -97,7 +127,8 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           phone: formData.phone,
           password: formData.password,
           funcao: formData.funcao,
-          matricula: formData.matricula
+          matricula: formData.matricula,
+          assinatura_url: formData.assinatura_url
         };
 
         const response = await fetch('/api/users', {
@@ -264,6 +295,34 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
                 />
               </div>
+            </div>
+            <div className="mt-4">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+                <FiImage className="text-gray-400 h-3.5 w-3.5" /> Assinatura para PDF
+              </label>
+              <div className="flex items-center gap-3">
+                <Input
+                  name="assinatura_url"
+                  value={formData.assinatura_url || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: /assinatura-italo.png ou URL da imagem"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100 flex-1"
+                />
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    onChange={handleSignatureUpload} 
+                    accept="image/*" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={uploadingSignature}
+                  />
+                  <Button type="button" variant="outline" className="h-10 px-4 rounded-xl flex items-center gap-2" disabled={uploadingSignature}>
+                    {uploadingSignature ? <FiRefreshCw className="animate-spin w-4 h-4" /> : <FiUpload className="w-4 h-4" />}
+                    <span>Upload</span>
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Dica: Você pode digitar "/assinatura-italo.png" para usar uma assinatura já existente no sistema.</p>
             </div>
           </div>
 

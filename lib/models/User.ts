@@ -25,6 +25,7 @@ export interface User {
   avatar_url?: string;
   funcao?: string;
   matricula?: string;
+  assinatura_url?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -43,6 +44,7 @@ export function mapAuthUserToUser(authUser: any): User {
     avatar_url: authUser.user_metadata?.avatar_url || '',
     funcao: authUser.user_metadata?.funcao || '',
     matricula: authUser.user_metadata?.matricula || '',
+    assinatura_url: authUser.user_metadata?.assinatura_url || '',
     created_at: authUser.created_at,
     updated_at: authUser.updated_at
   };
@@ -64,6 +66,7 @@ export function userToMetadata(user: Partial<User>): Record<string, any> {
   if (user.phone !== undefined) metadata.phone = user.phone;
   if (user.funcao !== undefined) metadata.funcao = user.funcao;
   if (user.matricula !== undefined) metadata.matricula = user.matricula;
+  if (user.assinatura_url !== undefined) metadata.assinatura_url = user.assinatura_url;
 
   return metadata;
 }

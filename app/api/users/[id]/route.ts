@@ -39,6 +39,7 @@ function mapAuthUserToUser(authUser: any) {
     avatar_url: authUser.user_metadata?.avatar_url || '',
     funcao: authUser.user_metadata?.funcao || '',
     matricula: authUser.user_metadata?.matricula || '',
+    assinatura_url: authUser.user_metadata?.assinatura_url || '',
     created_at: authUser.created_at,
     updated_at: authUser.updated_at
   };
@@ -122,7 +123,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, name, role, status, phone, avatar_url, funcao, matricula } = body;
+    const { email, password, name, role, status, phone, avatar_url, funcao, matricula, assinatura_url } = body;
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -156,6 +157,7 @@ export async function PUT(request: NextRequest) {
     if (avatar_url !== undefined) newMetadata.avatar_url = avatar_url;
     if (funcao !== undefined) newMetadata.funcao = funcao;
     if (matricula !== undefined) newMetadata.matricula = matricula;
+    if (assinatura_url !== undefined) newMetadata.assinatura_url = assinatura_url;
 
     updateData.user_metadata = newMetadata;
 

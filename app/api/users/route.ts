@@ -39,6 +39,7 @@ function mapAuthUserToUser(authUser: any) {
     avatar_url: authUser.user_metadata?.avatar_url || '',
     funcao: authUser.user_metadata?.funcao || '',
     matricula: authUser.user_metadata?.matricula || '',
+    assinatura_url: authUser.user_metadata?.assinatura_url || '',
     created_at: authUser.created_at,
     updated_at: authUser.updated_at
   };
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, name, role = 'user', status = 'active', phone, funcao, matricula } = body;
+    const { email, password, name, role = 'user', status = 'active', phone, funcao, matricula, assinatura_url } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -150,7 +151,8 @@ export async function POST(request: NextRequest) {
         role: role,
         status: status,
         funcao: funcao || '',
-        matricula: matricula || ''
+        matricula: matricula || '',
+        assinatura_url: assinatura_url || ''
       }
     });
 
