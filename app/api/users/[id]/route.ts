@@ -165,11 +165,32 @@ export async function PUT(request: NextRequest) {
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, updateData);
 
     if (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      console.error('Erro ao atualizar usuário no auth:', error);
       return NextResponse.json(
-        { error: 'Erro ao atualizar usuário', details: error.message },
+        { error: 'Erro ao atualizar usuário no auth', details: error.message },
         { status: 400 }
       );
+    }
+
+    // Try to update public.users table as well to keep data in sync
+    try {
+      const publicUpdateData: any = {};
+      if (email) publicUpdateData.email = email;
+      if (name !== undefined) publicUpdateData.name = name;
+      if (role !== undefined) publicUpdateData.role = role;
+      if (status !== undefined) publicUpdateData.status = status;
+      publicUpdateData.updated_at = new Date().toISOString();
+
+      const { error: publicError } = await supabaseAdmin
+        .from('users')
+        .update(publicUpdateData)
+        .eq('auth_id', userId);
+
+      if (publicError) {
+        console.warn('Erro não-fatal: Falha ao atualizar public.users:', publicError);
+      }
+    } catch (e) {
+      console.warn('Erro não-fatal: Exceção ao atualizar public.users:', e);
     }
 
     return NextResponse.json(mapAuthUserToUser(data.user));

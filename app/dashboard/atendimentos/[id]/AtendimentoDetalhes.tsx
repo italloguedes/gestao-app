@@ -575,7 +575,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(15, 23, 42);
-      doc.text(currentUserName.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
+      const servidorNome = currentUserName || user?.user_metadata?.name || user?.user_metadata?.full_name || 'SERVIDOR';
+      doc.text(servidorNome.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
 
       // Matrícula
       const funcao = user?.user_metadata?.funcao || 'SERVIDOR';

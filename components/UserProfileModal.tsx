@@ -152,6 +152,15 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
 
       if (error) throw error;
 
+      // Try to update public.users as well 
+      try {
+        await supabase.from('users').update({ 
+          name: profile.name 
+        }).eq('auth_id', authUser.id);
+      } catch (e) {
+        console.warn('Erro ao atualizar public.users (nao-fatal):', e);
+      }
+
       showMessage('Perfil atualizado com sucesso!', 'success');
       setTimeout(() => {
         onSuccess();

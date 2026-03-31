@@ -58,10 +58,15 @@ export default function GerarRelatorioPage() {
   };
 
   const generatePDF = async (atendimentos: Atendimento[]) => {
-    // Buscar nome do atendente para o rodapé
+    // Buscar nome do atendente atualizado para o rodapé
     let atendenteNome = 'Não identificado';
     if (user) {
-      atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
+      const { data } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+      atendenteNome = data?.name || user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
     }
 
     const doc = new jsPDF();
@@ -195,10 +200,15 @@ export default function GerarRelatorioPage() {
   };
 
   const generateSignaturePDF = async (atendimentos: Atendimento[]) => {
-    // Buscar nome do atendente para o rodapé
+    // Buscar nome do atendente atualizado para o rodapé
     let atendenteNome = 'Não identificado';
     if (user) {
-      atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
+      const { data } = await supabase
+        .from('users')
+        .select('name')
+        .eq('auth_id', user.id)
+        .single();
+      atendenteNome = data?.name || user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
     }
 
     const doc = new jsPDF();
