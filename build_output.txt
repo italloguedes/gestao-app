@@ -1,0 +1,337 @@
+﻿Ôû▓ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+node.exe : Browserslist: 
+browsers data 
+(caniuse-lite) is 13 
+months old. Please run:
+No linha:1 caractere:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (Bro  
+  wserslist: b...ld. Ple   
+ ase run::String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+  npx update-browserslist-d
+b@latest
+  Why you should do it 
+regularly: https://github.c
+om/browserslist/update-db#r
+eadme
+Ô£ô Compiled successfully in 12.4s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+Error: 
+NEXT_PUBLIC_SUPABASE_URL 
+n├úo est├í definido
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__78d36b83._.js:
+1:1082)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at getOrInstantiateModu
+leFromParent (C:\Users\ALEC
+E\Documents\itallo-estudos\
+gestao-app-1\.next\server\c
+hunks\[turbopack]_runtime.j
+s:763:12)
+    at Context.esmImport 
+[as i] (C:\Users\ALECE\Docu
+ments\itallo-estudos\gestao
+-app-1\.next\server\chunks\
+[turbopack]_runtime.js:228:
+20)
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__78d36b83._.js:
+105:998)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at 
+instantiateRuntimeModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:768:12)
+    at getOrInstantiateRunt
+imeModule (C:\Users\ALECE\D
+ocuments\itallo-estudos\ges
+tao-app-1\.next\server\chun
+ks\[turbopack]_runtime.js:7
+81:12)
+    at Object.m (C:\Users\A
+LECE\Documents\itallo-estud
+os\gestao-app-1\.next\serve
+r\chunks\[turbopack]_runtim
+e.js:790:18)
+    at Object.<anonymous> (
+C:\Users\ALECE\Documents\it
+allo-estudos\gestao-app-1\.
+next\server\app\api\cron\ro
+ute.js:8:3)
+Error: 
+NEXT_PUBLIC_SUPABASE_URL 
+n├úo est├í definido
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__ee54ddce._.js:
+1:2584)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at getOrInstantiateModu
+leFromParent (C:\Users\ALEC
+E\Documents\itallo-estudos\
+gestao-app-1\.next\server\c
+hunks\[turbopack]_runtime.j
+s:763:12)
+    at Context.esmImport 
+[as i] (C:\Users\ALECE\Docu
+ments\itallo-estudos\gestao
+-app-1\.next\server\chunks\
+[turbopack]_runtime.js:228:
+20)
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__ee54ddce._.js:
+1:3213)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at 
+instantiateRuntimeModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:768:12)
+    at getOrInstantiateRunt
+imeModule (C:\Users\ALECE\D
+ocuments\itallo-estudos\ges
+tao-app-1\.next\server\chun
+ks\[turbopack]_runtime.js:7
+81:12)
+    at Object.m (C:\Users\A
+LECE\Documents\itallo-estud
+os\gestao-app-1\.next\serve
+r\chunks\[turbopack]_runtim
+e.js:790:18)
+    at Object.<anonymous> (
+C:\Users\ALECE\Documents\it
+allo-estudos\gestao-app-1\.
+next\server\app\api\atendim
+entos-observacoes\route.js:
+8:3)
+Error: 
+NEXT_PUBLIC_SUPABASE_URL 
+n├úo est├í definido
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__3cf74d25._.js:
+1:1076)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at getOrInstantiateModu
+leFromParent (C:\Users\ALEC
+E\Documents\itallo-estudos\
+gestao-app-1\.next\server\c
+hunks\[turbopack]_runtime.j
+s:763:12)
+    at Context.esmImport 
+[as i] (C:\Users\ALECE\Docu
+ments\itallo-estudos\gestao
+-app-1\.next\server\chunks\
+[turbopack]_runtime.js:228:
+20)
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__3cf74d25._.js:
+1:1706)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at 
+instantiateRuntimeModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:768:12)
+    at getOrInstantiateRunt
+imeModule (C:\Users\ALECE\D
+ocuments\itallo-estudos\ges
+tao-app-1\.next\server\chun
+ks\[turbopack]_runtime.js:7
+81:12)
+    at Object.m (C:\Users\A
+LECE\Documents\itallo-estud
+os\gestao-app-1\.next\serve
+r\chunks\[turbopack]_runtim
+e.js:790:18)
+    at Object.<anonymous> (
+C:\Users\ALECE\Documents\it
+allo-estudos\gestao-app-1\.
+next\server\app\api\agendam
+entos\disponibilidade\route
+.js:8:3)
+Error: 
+NEXT_PUBLIC_SUPABASE_URL 
+n├úo est├í definido
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__e0df2bdb._.js:
+1:2584)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at getOrInstantiateModu
+leFromParent (C:\Users\ALEC
+E\Documents\itallo-estudos\
+gestao-app-1\.next\server\c
+hunks\[turbopack]_runtime.j
+s:763:12)
+    at Context.esmImport 
+[as i] (C:\Users\ALECE\Docu
+ments\itallo-estudos\gestao
+-app-1\.next\server\chunks\
+[turbopack]_runtime.js:228:
+20)
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__e0df2bdb._.js:
+105:998)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at 
+instantiateRuntimeModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:768:12)
+    at getOrInstantiateRunt
+imeModule (C:\Users\ALECE\D
+ocuments\itallo-estudos\ges
+tao-app-1\.next\server\chun
+ks\[turbopack]_runtime.js:7
+81:12)
+    at Object.m (C:\Users\A
+LECE\Documents\itallo-estud
+os\gestao-app-1\.next\serve
+r\chunks\[turbopack]_runtim
+e.js:790:18)
+    at Object.<anonymous> (
+C:\Users\ALECE\Documents\it
+allo-estudos\gestao-app-1\.
+next\server\app\api\agendam
+entos\route.js:8:3)
+Error: 
+NEXT_PUBLIC_SUPABASE_URL 
+n├úo est├í definido
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__74ba9f83._.js:
+1:1076)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at getOrInstantiateModu
+leFromParent (C:\Users\ALEC
+E\Documents\itallo-estudos\
+gestao-app-1\.next\server\c
+hunks\[turbopack]_runtime.j
+s:763:12)
+    at Context.esmImport 
+[as i] (C:\Users\ALECE\Docu
+ments\itallo-estudos\gestao
+-app-1\.next\server\chunks\
+[turbopack]_runtime.js:228:
+20)
+    at module evaluation (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[root-of-
+the-server]__74ba9f83._.js:
+1:1706)
+    at instantiateModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:740:9)
+    at 
+instantiateRuntimeModule (C
+:\Users\ALECE\Documents\ita
+llo-estudos\gestao-app-1\.n
+ext\server\chunks\[turbopac
+k]_runtime.js:768:12)
+    at getOrInstantiateRunt
+imeModule (C:\Users\ALECE\D
+ocuments\itallo-estudos\ges
+tao-app-1\.next\server\chun
+ks\[turbopack]_runtime.js:7
+81:12)
+    at Object.m (C:\Users\A
+LECE\Documents\itallo-estud
+os\gestao-app-1\.next\serve
+r\chunks\[turbopack]_runtim
+e.js:790:18)
+    at Object.<anonymous> (
+C:\Users\ALECE\Documents\it
+allo-estudos\gestao-app-1\.
+next\server\app\api\painel\
+chamadas\route.js:8:3)
+
+> Build error occurred
+Error: Failed to collect 
+page data for /api/cron
+    at ignore-listed 
+frames {
+  type: 'Error'
+}
