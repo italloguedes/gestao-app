@@ -11,6 +11,8 @@ interface UserProfile {
   phone?: string;
   avatar_url?: string;
   role: string;
+  funcao?: string;
+  matricula?: string;
 }
 
 interface UserProfileModalProps {
@@ -26,7 +28,9 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
     email: '',
     phone: '',
     avatar_url: '',
-    role: 'user'
+    role: 'user',
+    funcao: '',
+    matricula: ''
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,7 +63,9 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
           email: user.email || '',
           phone: user.phone || user.user_metadata?.phone || '',
           avatar_url: user.user_metadata?.avatar_url || '',
-          role: user.user_metadata?.role || 'user'
+          role: user.user_metadata?.role || 'user',
+          funcao: user.user_metadata?.funcao || '',
+          matricula: user.user_metadata?.matricula || ''
         });
       }
     } catch (error) {
@@ -138,7 +144,9 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
           full_name: profile.name,
           name: profile.name,
           phone: profile.phone,
-          avatar_url: profile.avatar_url
+          avatar_url: profile.avatar_url,
+          funcao: profile.funcao,
+          matricula: profile.matricula
         }
       });
 
@@ -316,6 +324,34 @@ export default function UserProfileModal({ show, onClose, onSuccess }: UserProfi
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition bg-gray-50"
                   placeholder="(85) 99999-9999"
                 />
+              </div>
+
+              {/* Função e Matrícula */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                     Função
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.funcao || ''}
+                    onChange={(e) => handleInputChange('funcao', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition bg-gray-50"
+                    placeholder="Ex: Técnico Legislativo"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                     Matrícula
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.matricula || ''}
+                    onChange={(e) => handleInputChange('matricula', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition bg-gray-50"
+                    placeholder="Ex: 12345"
+                  />
+                </div>
               </div>
 
               {/* Email (readonly) */}

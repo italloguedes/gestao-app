@@ -37,6 +37,8 @@ function mapAuthUserToUser(authUser: any) {
     status: authUser.user_metadata?.status || 'active',
     phone: authUser.phone || authUser.user_metadata?.phone || '',
     avatar_url: authUser.user_metadata?.avatar_url || '',
+    funcao: authUser.user_metadata?.funcao || '',
+    matricula: authUser.user_metadata?.matricula || '',
     created_at: authUser.created_at,
     updated_at: authUser.updated_at
   };
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, name, role = 'user', status = 'active', phone } = body;
+    const { email, password, name, role = 'user', status = 'active', phone, funcao, matricula } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -146,7 +148,9 @@ export async function POST(request: NextRequest) {
         full_name: name,
         name: name,
         role: role,
-        status: status
+        status: status,
+        funcao: funcao || '',
+        matricula: matricula || ''
       }
     });
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
-import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus, FiBriefcase, FiHash } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -20,6 +20,8 @@ type UserFormData = {
   role: User['role'];
   status: User['status'];
   password?: string;
+  funcao?: string;
+  matricula?: string;
 };
 
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
@@ -29,7 +31,9 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     phone: user?.phone || '',
     role: user?.role || 'user',
     status: user?.status || 'active',
-    password: ''
+    password: '',
+    funcao: user?.funcao || '',
+    matricula: user?.matricula || ''
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +68,9 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-          status: formData.status
+          status: formData.status,
+          funcao: formData.funcao,
+          matricula: formData.matricula
         };
         if (formData.phone) updateData.phone = formData.phone;
         if (formData.password) updateData.password = formData.password;
@@ -89,7 +95,9 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           role: formData.role,
           status: formData.status,
           phone: formData.phone,
-          password: formData.password
+          password: formData.password,
+          funcao: formData.funcao,
+          matricula: formData.matricula
         };
 
         const response = await fetch('/api/users', {
@@ -227,6 +235,37 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           </div>
 
           <div className="h-px bg-gray-100" />
+
+          {/* Dados do Servidor */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Dados do Servidor</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiBriefcase className="text-gray-400 h-3.5 w-3.5" /> Função
+                </label>
+                <Input
+                  name="funcao"
+                  value={formData.funcao || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: Técnico Legislativo"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiHash className="text-gray-400 h-3.5 w-3.5" /> Matrícula
+                </label>
+                <Input
+                  name="matricula"
+                  value={formData.matricula || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: 12345"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Permissions */}
           <div>

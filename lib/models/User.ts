@@ -9,6 +9,8 @@
  * - user_metadata.status: 'active' | 'inactive'
  * - user_metadata.avatar_url: URL da foto de perfil
  * - user_metadata.phone: telefone
+ * - user_metadata.funcao: função/cargo do servidor
+ * - user_metadata.matricula: matrícula do servidor
  */
 
 export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user';
@@ -21,6 +23,8 @@ export interface User {
   status: 'active' | 'inactive';
   phone?: string;
   avatar_url?: string;
+  funcao?: string;
+  matricula?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -37,6 +41,8 @@ export function mapAuthUserToUser(authUser: any): User {
     status: authUser.user_metadata?.status || 'active',
     phone: authUser.phone || authUser.user_metadata?.phone || '',
     avatar_url: authUser.user_metadata?.avatar_url || '',
+    funcao: authUser.user_metadata?.funcao || '',
+    matricula: authUser.user_metadata?.matricula || '',
     created_at: authUser.created_at,
     updated_at: authUser.updated_at
   };
@@ -56,6 +62,8 @@ export function userToMetadata(user: Partial<User>): Record<string, any> {
   if (user.status !== undefined) metadata.status = user.status;
   if (user.avatar_url !== undefined) metadata.avatar_url = user.avatar_url;
   if (user.phone !== undefined) metadata.phone = user.phone;
+  if (user.funcao !== undefined) metadata.funcao = user.funcao;
+  if (user.matricula !== undefined) metadata.matricula = user.matricula;
 
   return metadata;
 }

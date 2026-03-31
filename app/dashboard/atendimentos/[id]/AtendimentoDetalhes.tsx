@@ -495,7 +495,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
     try {
       // Carregar logo
-      const logoUrl = '/logoautismo.png';
+      const logoUrl = '/alece.png';
       const getBase64FromUrl = async (url: string) => {
         const res = await fetch(url);
         const blob = await res.blob();
@@ -515,17 +515,8 @@ export default function AtendimentoDetalhes({ id }: Props) {
       // Formatar CPF
       const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 
-      // ===== LOGO E CABEÇALHO =====
-      doc.addImage(logoBase64, 'PNG', 75, 10, 22, 22);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(30, 41, 59);
-      doc.text('ALECE', 100, 16, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text('ASSEMBLEIA LEGISLATIVA', 100, 21, { align: 'center' });
-      doc.text('DO ESTADO DO CEARÁ', 100, 25, { align: 'center' });
+      // ===== LOGO ALECE (imagem já contém brasão + texto) =====
+      doc.addImage(logoBase64, 'PNG', 55, 8, 100, 28);
 
       // ===== TÍTULO =====
       doc.setFont('helvetica', 'bold');
@@ -574,10 +565,13 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.text(currentUserName.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
 
       // Matrícula
+      const funcao = user?.user_metadata?.funcao || 'SERVIDOR';
+      const matricula = user?.user_metadata?.matricula || 'NÃO INFORMADA';
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
-      doc.text('MATRÍCULA', 105, assinaturaY + 13, { align: 'center' });
+      doc.text(`${funcao.toUpperCase()} - MATRÍCULA: ${matricula}`, 105, assinaturaY + 13, { align: 'center' });
 
       // ===== RODAPÉ =====
       const rodapeY = 270;
