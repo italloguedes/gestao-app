@@ -536,7 +536,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
       const dataAtendimento = formatDate(atendimento.dia_atual);
 
-      const textoDeclaracao = `Declaro, para fins comprobatórios, o requerente, "${atendimento.nome}", inscrito no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", na SALA SENSORIAL NO ANEXO III da Assembleia Legislativa do Estado do Ceará, para ASSUNTOS REFERENTE A EMISSÃO de Carteiras de Identidade Nacional (CIN).`;
+      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente(a), "${atendimento.nome}", inscrito(a) no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
 
       // Texto justificado com quebra de linha automática
       const marginLeft = 25;
