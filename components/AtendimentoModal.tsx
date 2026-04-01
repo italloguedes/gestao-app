@@ -371,6 +371,11 @@ export default function AtendimentoModal({
       const now = new Date();
       const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
 
+      // Horário do atendimento registrado no sistema (não a hora de geração)
+      const horarioAtendimento = atendimento.horario
+        ? atendimento.horario.substring(0, 5)
+        : horaGeracao;
+
       const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 
       const formatDateDecl = (dateString: string) => {
@@ -396,7 +401,7 @@ export default function AtendimentoModal({
       doc.setTextColor(30, 41, 59);
 
       const dataAtendimento = formatDateDecl(atendimento.dia_atual);
-      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente, "${atendimento.nome}", inscrito(a) no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
+      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente ${atendimento.nome}, inscrito(a) no CPF nº ${cpfFormatado}, compareceu em ${dataAtendimento} às ${horarioAtendimento} para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
 
       const marginLeft = 25;
       const pageWidth = doc.internal.pageSize.getWidth();
