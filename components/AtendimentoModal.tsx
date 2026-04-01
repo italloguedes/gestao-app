@@ -82,17 +82,17 @@ export default function AtendimentoModal({
   }, [isOpen, atendimento]);
 
   const fetchCurrentUserName = async () => {
-    if (!user) return;
+    // Sempre buscar dados frescos do auth - nunca da tabela public.users
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('name, email')
-        .eq('auth_id', user.id)
-        .single();
-      if (!error && data) {
-        setCurrentUserName(data.name);
-        setCurrentUserEmail(data.email);
-      }
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      if (!freshUser) return;
+      setCurrentUserName(
+        freshUser.user_metadata?.full_name ||
+        freshUser.user_metadata?.name ||
+        freshUser.email?.split('@')[0] ||
+        'Usuário'
+      );
+      setCurrentUserEmail(freshUser.email || '');
     } catch (err) {
       console.error('Erro ao buscar nome do usuário:', err);
     }
@@ -408,17 +408,26 @@ export default function AtendimentoModal({
         lineHeightFactor: 1.8
       });
 
+      // Buscar dados frescos do auth para garantir nome/funcao/matricula/assinatura atualizados
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const servidorNome = (
+        freshUser?.user_metadata?.full_name ||
+        freshUser?.user_metadata?.name ||
+        freshUser?.email?.split('@')[0] ||
+        currentUserName ||
+        'SERVIDOR'
+      );
+
       // ASSINATURA IMAGEM
-      const assinaturaUrl = user?.user_metadata?.assinatura_url;
-      
+      const assinaturaUrl = freshUser?.user_metadata?.assinatura_url;
+
       if (assinaturaUrl) {
-         try {
-           const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
-           // Inserir assinatura logo acima da linha (Y = 180)
-           doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24); 
-         } catch (e) {
-           console.error('Assinatura não encontrada ou erro no carregamento:', e);
-         }
+        try {
+          const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
+          doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24);
+        } catch (e) {
+          console.error('Assinatura não encontrada ou erro no carregamento:', e);
+        }
       }
 
       // ASSINATURA LINHA
@@ -427,14 +436,14 @@ export default function AtendimentoModal({
       doc.setLineWidth(0.4);
       doc.line(55, assinaturaY, 155, assinaturaY);
 
-      const servidorNome = currentUserName || user?.user_metadata?.name || user?.user_metadata?.full_name || 'SERVIDOR';
+      // Nome do servidor - sempre do auth metadata (dados frescos)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(15, 23, 42);
       doc.text(servidorNome.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
 
-      const funcao = user?.user_metadata?.funcao || 'SERVIDOR';
-      const matricula = user?.user_metadata?.matricula || 'NÃO INFORMADA';
+      const funcao = freshUser?.user_metadata?.funcao || 'SERVIDOR';
+      const matricula = freshUser?.user_metadata?.matricula || 'NÃO INFORMADA';
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
