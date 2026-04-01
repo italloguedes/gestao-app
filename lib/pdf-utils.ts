@@ -6,7 +6,6 @@ interface GeneratePdfParams {
         nome: string;
         cpf: string;
         dia_atual: string;
-        horario?: string;
     };
     recebedor: {
         nome: string;
@@ -85,20 +84,16 @@ export const generateComprovantePDF = async ({
     doc.setFont('helvetica', 'bold');
     doc.text(atendimento.protocolo || 'N/A', 18, 78);
 
-    // Data e Hora do Atendimento
+    // Data e Hora de Emissão
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139); // Slate-500
     doc.setFont('helvetica', 'normal');
-    doc.text('DATA E HORA DO ATENDIMENTO', 113, 70);
-
-    const horarioAtendimento = atendimento.horario
-        ? atendimento.horario.substring(0, 5)
-        : now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    doc.text('DATA E HORA DA ENTREGA', 113, 70);
 
     doc.setFontSize(11);
     doc.setTextColor(30, 41, 59); // Slate-800
     doc.setFont('helvetica', 'bold');
-    doc.text(`${formatDate(atendimento.dia_atual)} às ${horarioAtendimento}`, 113, 78);
+    doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
 
     // ===== SEÇÃO 1: DADOS DO TITULAR =====
     const secaoY = 93;
@@ -193,22 +188,10 @@ export const generateComprovantePDF = async ({
     doc.setTextColor(71, 85, 105); // Slate-600
     doc.setFont('helvetica', 'normal');
 
-    const vinculoRecebedor = recebedor.vinculo && recebedor.vinculo !== 'Próprio titular'
-        ? `, na qualidade de ${recebedor.vinculo.toLowerCase()},`
-        : ',';
-
-    const dataAtendimentoFormatada = formatDate(atendimento.dia_atual);
-    const horarioFmt = atendimento.horario ? atendimento.horario.substring(0, 5) : '';
-    const referenciaAtendimento = horarioFmt
-        ? `realizado em ${dataAtendimentoFormatada} às ${horarioFmt}`
-        : `realizado em ${dataAtendimentoFormatada}`;
-
     const declaracao = [
-        `Declaro, para os devidos fins, que recebi a Carteira de Identidade Nacional (CIN) do`,
-        `titular ${atendimento.nome}, CPF ${atendimento.cpf}, referente ao atendimento`,
-        `${referenciaAtendimento} na Sala Sensorial da Assembleia Legislativa do Estado do Ceará.`,
-        `O documento foi entregue em perfeitas condições${vinculoRecebedor} e assumo integral`,
-        `responsabilidade pela guarda, conservação e uso correto do documento recebido.`
+        'Declaro que recebi nesta data a Carteira de Identidade Nacional (CIN) acima identificada,',
+        'estando o documento em perfeitas condições. Confirmo a veracidade das informações prestadas',
+        'e assumo total responsabilidade pela guarda e uso do documento.'
     ];
 
     declaracao.forEach((linha, index) => {
@@ -276,9 +259,9 @@ export const generateComprovantePDF = async ({
     doc.setFont('helvetica', 'bold');
     doc.text(atendenteNome, 15, rodapeY + 9);
 
-    // Centro - Data/Hora de geração
+    // Centro - Data/Hora
     doc.setFont('helvetica', 'normal');
-    doc.text('Gerado em:', 105, rodapeY + 5, { align: 'center' });
+    doc.text('Data e hora de emissão:', 105, rodapeY + 5, { align: 'center' });
     doc.setFont('helvetica', 'bold');
     doc.text(`${formatDate(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, rodapeY + 9, { align: 'center' });
 
