@@ -82,10 +82,17 @@ export default function AtendimentoDetalhes({ id }: Props) {
   }, [user, router, id]);
 
   const fetchCurrentUserName = async () => {
-    if (!user) return;
+    // Sempre buscar dados frescos do auth para evitar cache desatualizado
+    const { data: { user: freshUser } } = await supabase.auth.getUser();
+    if (!freshUser) return;
 
-    setCurrentUserName(user.user_metadata?.name || user.user_metadata?.full_name || 'Usuário');
-    setCurrentUserEmail(user.email || '');
+    setCurrentUserName(
+      freshUser.user_metadata?.full_name ||
+      freshUser.user_metadata?.name ||
+      freshUser.email?.split('@')[0] ||
+      'Usuário'
+    );
+    setCurrentUserEmail(freshUser.email || '');
   };
 
   const fetchObservacoes = async () => {
@@ -551,10 +558,20 @@ export default function AtendimentoDetalhes({ id }: Props) {
       });
 
       // ===== ASSINATURA DO SERVIDOR =====
+      // Buscar dados frescos do auth para garantir que nome/função/matrícula estejam atualizados
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const nomeServidor = (
+        freshUser?.user_metadata?.full_name ||
+        freshUser?.user_metadata?.name ||
+        freshUser?.email?.split('@')[0] ||
+        currentUserName ||
+        'Servidor'
+      );
+
       const assinaturaY = 180;
 
       // ASSINATURA IMAGEM
-      const assinaturaUrl = user?.user_metadata?.assinatura_url;
+      const assinaturaUrl = freshUser?.user_metadata?.assinatura_url;
       
       if (assinaturaUrl) {
          try {
@@ -571,15 +588,15 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.setLineWidth(0.4);
       doc.line(55, assinaturaY, 155, assinaturaY);
 
-      // Nome do servidor (usuário logado)
+      // Nome do servidor (sempre do auth metadata - dados frescos)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(15, 23, 42);
-      doc.text(currentUserName.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
+      doc.text(nomeServidor.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
 
-      // Matrícula
-      const funcao = user?.user_metadata?.funcao || 'SERVIDOR';
-      const matricula = user?.user_metadata?.matricula || 'NÃO INFORMADA';
+      // Função e Matrícula (sempre do auth metadata - dados frescos)
+      const funcao = freshUser?.user_metadata?.funcao || 'SERVIDOR';
+      const matricula = freshUser?.user_metadata?.matricula || 'NÃO INFORMADA';
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
