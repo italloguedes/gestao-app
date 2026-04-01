@@ -25,6 +25,7 @@ function AtualizarCINForm() {
   const [cpf, setCpf] = useState(searchParams?.get('cpf') || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<{ nome: string; cpf: string; solicitante: string; hora: string } | null>(null);
   const cpfInputRef = useRef<HTMLInputElement>(null);
   const shouldFocusRef = useRef(false);
 
@@ -162,6 +163,15 @@ function AtualizarCINForm() {
       setMessage({
         text: `CIN atualizada com sucesso! Email de notificação será enviado para ${atendimento.nome}.`,
         type: 'success'
+      });
+
+      // Guardar último atendimento processado
+      const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastUpdated({
+        nome: atendimento.nome,
+        cpf: atendimento.cpf,
+        solicitante: user?.user_metadata?.name || user?.email || 'Desconhecido',
+        hora: agora,
       });
 
       // Limpar formulário e refocar imediatamente para próxima digitação
@@ -359,6 +369,43 @@ function AtualizarCINForm() {
                 </button>
               </div>
             </form>
+
+            {/* Último atendimento processado */}
+            {lastUpdated && (
+              <div className="mt-8 rounded-2xl border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 p-6 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex items-center mb-4">
+                  <div className="p-2 bg-emerald-100 rounded-xl mr-3">
+                    <FiCheckCircle className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Último Atendimento Atualizado</p>
+                    <p className="text-xs text-slate-400 font-medium">{lastUpdated.hora}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white/70 rounded-xl p-4 border border-emerald-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                      <FiUser className="w-3 h-3 mr-1" /> Nome
+                    </p>
+                    <p className="text-base font-bold text-emerald-900 truncate">{lastUpdated.nome}</p>
+                  </div>
+                  <div className="bg-white/70 rounded-xl p-4 border border-emerald-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                      <FiHash className="w-3 h-3 mr-1" /> CPF
+                    </p>
+                    <p className="text-base font-bold text-emerald-900 tracking-wider">
+                      {lastUpdated.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                    </p>
+                  </div>
+                  <div className="bg-white/70 rounded-xl p-4 border border-emerald-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                      <FiCreditCard className="w-3 h-3 mr-1" /> Solicitante
+                    </p>
+                    <p className="text-base font-bold text-emerald-900 truncate">{lastUpdated.solicitante}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Rodapé informativo */}
             <div className="mt-10 pt-6 border-t border-slate-100">
