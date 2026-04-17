@@ -905,9 +905,7 @@ export default function AcoesItinerantesPage() {
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Total</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Concluídos</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Em Andamento</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Correção</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Bloqueados</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Outros</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Cancelados</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% Conclusão</th>
                 </tr>
               </thead>
@@ -937,16 +935,6 @@ export default function AcoesItinerantesPage() {
                     <td className="px-4 py-3 text-center">
                       <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
                         {acao.emAndamento}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        {acao.correcao}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
-                        {acao.bloqueados}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
