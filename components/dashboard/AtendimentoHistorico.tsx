@@ -76,7 +76,7 @@ export default function AtendimentoHistorico({ atendimentoId }: Props) {
             .select('*')
             .eq('atendimento_id', atendimentoId)
             .order('created_at', { ascending: true })
-            .then(({ data, error: err }) => {
+            .then(({ data, error: err }: { data: HistoricoItem[] | null; error: { message: string } | null }) => {
                 if (err) setError(err.message);
                 else setHistorico(data || []);
                 setLoading(false);
