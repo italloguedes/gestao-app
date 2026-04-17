@@ -380,10 +380,15 @@ export default function AtendimentoModal({
       const { data: { user: freshUser } } = await supabase.auth.getUser();
       const token = session?.access_token;
 
-      const meta = freshUser?.user_metadata ?? {};
+      // Combina metadata do freshUser + do user do contexto
+      const meta = { ...(user?.user_metadata ?? {}), ...(freshUser?.user_metadata ?? {}) };
+      console.log('[declaração] user_metadata:', meta);
+
       const servidorNome = (
-        meta.full_name || meta.name || meta.nome ||
-        freshUser?.email?.split('@')[0] || currentUserName || 'SERVIDOR'
+        meta.full_name || meta.name || meta.nome || meta.display_name ||
+        freshUser?.email?.split('@')[0] ||
+        user?.email?.split('@')[0] ||
+        currentUserName || 'SERVIDOR'
       ).toUpperCase();
       const funcao = meta.funcao || meta.cargo || 'Atendente';
       const matricula = meta.matricula || '';
@@ -465,17 +470,18 @@ export default function AtendimentoModal({
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
       doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
 
-      // Texto simplificado
+      // Texto simplificado — mencionando CIADI
       const textoDecl =
         `Declaramos que o(a) cidadão(ã) ${atendimento.nome}, portador(a) do CPF nº ${cpfFormatado}, ` +
         `compareceu à Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, ` +
+        `vinculada ao CIADI (Centro Integrado de Atendimento Digital e Inclusão), ` +
         `no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de atendimento referente ` +
         `à emissão da Carteira de Identidade Nacional — CIN.`;
 
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
       doc.text(textoDecl, 18, s2Y + 18, { maxWidth: pageW - 36, align: 'justify', lineHeightFactor: 1.8 });
 
-      const dataLocalY = s2Y + 60;
+      const dataLocalY = s2Y + 68;
       doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
       doc.text(`Fortaleza/CE, ${dataExtenso}.`, pageW / 2, dataLocalY, { align: 'center' });
 
