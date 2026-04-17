@@ -545,8 +545,6 @@ export default function AcoesItinerantesPage() {
         acao.total.toString(),
         acao.concluidos.toString(),
         acao.emAndamento.toString(),
-        acao.correcao.toString(),
-        acao.bloqueados.toString(),
         acao.outros.toString(),
         `${acao.percentualConclusao.toFixed(1)}%`
       ];
@@ -554,7 +552,7 @@ export default function AcoesItinerantesPage() {
 
     autoTable(doc, {
       startY: 45,
-      head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
+      head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Cancelados', '% Conclusão']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: aleceGreen },
