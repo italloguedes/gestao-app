@@ -355,8 +355,11 @@ export default function AtendimentoModal({
 
   const handleGerarDeclaracao = async () => {
     try {
-      const getBase64FromUrl = async (url: string) => {
-        const res = await fetch(url);
+      // ── helpers ──────────────────────────────────────────────
+      const getBase64FromUrl = async (url: string, token?: string) => {
+        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -366,224 +369,148 @@ export default function AtendimentoModal({
         });
       };
 
+      const formatDateDecl = (dateString: string) =>
+        new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Fortaleza' });
+
+      const formatDateExtenso = (dateString: string) =>
+        new Date(dateString + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Fortaleza' });
+
+      // ── user / assinatura ─────────────────────────────────────
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const token = session?.access_token;
+
+      const meta = freshUser?.user_metadata ?? {};
+      const servidorNome = (
+        meta.full_name || meta.name || meta.nome ||
+        freshUser?.email?.split('@')[0] || currentUserName || 'SERVIDOR'
+      ).toUpperCase();
+      const funcao = meta.funcao || meta.cargo || 'Atendente';
+      const matricula = meta.matricula || '';
+
+      let assinaturaBase64: string | null = null;
+      const assinaturaUrl: string | undefined = meta.assinatura_url;
+      if (assinaturaUrl) {
+        try {
+          assinaturaBase64 = await getBase64FromUrl(assinaturaUrl, token);
+        } catch (e) {
+          console.warn('[declaração] Assinatura não carregada:', e);
+        }
+      }
+
+      // ── logos ─────────────────────────────────────────────────
       const [aleceBase64, salaBase64] = await Promise.all([
         getBase64FromUrl('/alece.png'),
         getBase64FromUrl('/logoautismo.png'),
       ]);
 
+      // ── dados do atendimento ──────────────────────────────────
       const doc = new jsPDF();
       const now = new Date();
       const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
       const dataGeracao = now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
-
-      const horarioAtendimento = atendimento.horario
-        ? atendimento.horario.substring(0, 5)
-        : horaGeracao;
-
+      const horarioAtendimento = atendimento.horario ? atendimento.horario.substring(0, 5) : horaGeracao;
       const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-
-      const formatDateDecl = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Fortaleza' });
-      };
-
-      const formatDateExtenso = (dateString: string) => {
-        const date = new Date(dateString + 'T12:00:00');
-        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Fortaleza' });
-      };
-
+      const dataExtenso = formatDateExtenso(atendimento.dia_atual);
       const pageW = doc.internal.pageSize.getWidth();
 
-      // ===== CABEÇALHO: BARRA VERDE + LOGOS =====
+      // ── CABEÇALHO ─────────────────────────────────────────────
       doc.setFillColor(5, 95, 60);
       doc.rect(0, 0, pageW, 38, 'F');
-
       doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
       doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 13, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(200, 240, 220);
-      doc.text('Secretaria de Tecnologia da Informação', pageW / 2, 20, { align: 'center' });
-      doc.text('Sala Sensorial — Atendimento Especializado | Identidade Nacional', pageW / 2, 26, { align: 'center' });
-
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 240, 220);
+      doc.text('Sala Sensorial — Atendimento Especializado | Identidade Nacional', pageW / 2, 23, { align: 'center' });
       doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32);
 
-      // Faixa cinza endereço
-      doc.setFillColor(241, 245, 249);
-      doc.rect(0, 38, pageW, 8, 'F');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(71, 85, 105);
+      // faixa endereço
+      doc.setFillColor(241, 245, 249); doc.rect(0, 38, pageW, 8, 'F');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(71, 85, 105);
       doc.text('CNPJ: 07.954.481/0001-04  |  Av. Desembargador Moreira, 2807 — Dionísio Torres — Fortaleza/CE — CEP 60.170-900', pageW / 2, 43, { align: 'center' });
 
-      // ===== TÍTULO =====
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.setTextColor(5, 95, 60);
+      // ── TÍTULO ────────────────────────────────────────────────
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(5, 95, 60);
       doc.text('D E C L A R A Ç Ã O', pageW / 2, 62, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      doc.text('de Comparecimento para Emissão de CIN', pageW / 2, 69, { align: 'center' });
+      doc.setDrawColor(5, 95, 60); doc.setLineWidth(1); doc.line(40, 73, pageW - 40, 73);
+      doc.setLineWidth(0.3); doc.line(40, 75, pageW - 40, 75);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text('de Comparecimento e Prestação de Serviço Público', pageW / 2, 69, { align: 'center' });
-
-      doc.setDrawColor(5, 95, 60);
-      doc.setLineWidth(1);
-      doc.line(40, 73, pageW - 40, 73);
-      doc.setLineWidth(0.3);
-      doc.line(40, 75, pageW - 40, 75);
-
-      // ===== CAIXA DE PROTOCOLO =====
-      doc.setDrawColor(203, 213, 225);
-      doc.setFillColor(248, 250, 252);
-      doc.setLineWidth(0.3);
-      doc.rect(15, 80, 80, 14, 'FD');
-      doc.rect(110, 80, 80, 14, 'FD');
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.text('PROTOCOLO DO ATENDIMENTO', 18, 85);
-      doc.text('DATA DO ATENDIMENTO', 113, 85);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
+      // ── PROTOCOLO / DATA ──────────────────────────────────────
+      doc.setDrawColor(203, 213, 225); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+      doc.rect(15, 80, 80, 14, 'FD'); doc.rect(110, 80, 80, 14, 'FD');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+      doc.text('PROTOCOLO', 18, 85); doc.text('DATA DO ATENDIMENTO', 113, 85);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
       doc.text(atendimento.protocolo || 'N/A', 18, 91);
       doc.text(`${formatDateDecl(atendimento.dia_atual)} — ${horarioAtendimento}h`, 113, 91);
 
-      // ===== SEÇÃO I =====
+      // ── SEÇÃO I — IDENTIFICAÇÃO ───────────────────────────────
       const s1Y = 103;
-      doc.setFillColor(5, 95, 60);
-      doc.rect(15, s1Y, pageW - 30, 7, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(255, 255, 255);
-      doc.text('I.  IDENTIFICAÇÃO DO(A) REQUERENTE', 18, s1Y + 5);
-
-      doc.setDrawColor(203, 213, 225);
-      doc.setFillColor(252, 253, 254);
+      doc.setFillColor(5, 95, 60); doc.rect(15, s1Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã)', 18, s1Y + 5);
+      doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
       doc.rect(15, s1Y + 7, pageW - 30, 26, 'FD');
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Nome Completo:', 18, s1Y + 14);
-      doc.text('CPF:', 18, s1Y + 24);
-      doc.text('Situação:', 110, s1Y + 14);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+      doc.text('Nome Completo:', 18, s1Y + 14); doc.text('CPF:', 18, s1Y + 24);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
       doc.text(atendimento.nome, 18, s1Y + 20);
       doc.text(cpfFormatado, 18, s1Y + 30);
-      doc.text('Cidadão(ã) atendido(a)', 110, s1Y + 20);
 
-      // ===== SEÇÃO II =====
+      // ── SEÇÃO II — DECLARAÇÃO ─────────────────────────────────
       const s2Y = s1Y + 40;
-      doc.setFillColor(5, 95, 60);
-      doc.rect(15, s2Y, pageW - 30, 7, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(255, 255, 255);
-      doc.text('II.  OBJETO E TEOR DA DECLARAÇÃO', 18, s2Y + 5);
+      doc.setFillColor(5, 95, 60); doc.rect(15, s2Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(15, 23, 42);
+      // Texto simplificado
+      const textoDecl =
+        `Declaramos que o(a) cidadão(ã) ${atendimento.nome}, portador(a) do CPF nº ${cpfFormatado}, ` +
+        `compareceu à Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, ` +
+        `no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de atendimento referente ` +
+        `à emissão da Carteira de Identidade Nacional — CIN.`;
 
-      const dataExtenso = formatDateExtenso(atendimento.dia_atual);
-      const textoDeclaracao =
-        `A Assembleia Legislativa do Estado do Ceará — ALECE, por intermédio da Sala Sensorial,` +
-        ` unidade de atendimento especializado vinculada à Secretaria de Tecnologia da Informação,` +
-        ` DECLARA, para os devidos fins de direito, que o(a) cidadão(ã) ${atendimento.nome},` +
-        ` inscrito(a) no Cadastro de Pessoas Físicas sob o nº ${cpfFormatado}, compareceu a esta` +
-        ` unidade no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de captação biométrica` +
-        ` e emissão da Carteira de Identidade Nacional — CIN, nos termos da Lei nº 14.534, de 11 de` +
-        ` janeiro de 2023, e demais normas regulamentares aplicáveis.`;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+      doc.text(textoDecl, 18, s2Y + 18, { maxWidth: pageW - 36, align: 'justify', lineHeightFactor: 1.8 });
 
-      doc.text(textoDeclaracao, 18, s2Y + 15, { maxWidth: pageW - 36, align: 'justify', lineHeightFactor: 1.7 });
+      const dataLocalY = s2Y + 60;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
+      doc.text(`Fortaleza/CE, ${dataExtenso}.`, pageW / 2, dataLocalY, { align: 'center' });
 
-      const textoComplementar =
-        `O atendimento foi realizado por equipe técnica habilitada, em conformidade com os procedimentos` +
-        ` operacionais estabelecidos pela Secretaria de Segurança Pública do Estado do Ceará e pelo` +
-        ` Instituto de Identificação do Ceará — ICER.`;
-
-      doc.text(textoComplementar, 18, s2Y + 62, { maxWidth: pageW - 36, align: 'justify', lineHeightFactor: 1.7 });
-
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Fortaleza/CE, ${dataExtenso}.`, pageW / 2, s2Y + 88, { align: 'center' });
-
-      // ===== SEÇÃO III — ASSINATURA =====
-      const s3Y = s2Y + 98;
-      doc.setFillColor(5, 95, 60);
-      doc.rect(15, s3Y, pageW - 30, 7, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(255, 255, 255);
+      // ── SEÇÃO III — ASSINATURA ────────────────────────────────
+      const s3Y = dataLocalY + 14;
+      doc.setFillColor(5, 95, 60); doc.rect(15, s3Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
       doc.text('III.  IDENTIFICAÇÃO E ASSINATURA DO SERVIDOR RESPONSÁVEL', 18, s3Y + 5);
 
-      const { data: { user: freshUser } } = await supabase.auth.getUser();
-      const servidorNome = (
-        freshUser?.user_metadata?.full_name ||
-        freshUser?.user_metadata?.name ||
-        freshUser?.email?.split('@')[0] ||
-        currentUserName ||
-        'SERVIDOR'
-      );
-      const funcao = freshUser?.user_metadata?.funcao || 'Servidor Público';
-      const matricula = freshUser?.user_metadata?.matricula || 'Não informada';
-
-      const assinaturaUrl = freshUser?.user_metadata?.assinatura_url;
-      if (assinaturaUrl) {
-        try {
-          const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
-          doc.addImage(assinaturaBase64, 'PNG', 70, s3Y + 10, 70, 22);
-        } catch (e) {
-          console.error('Erro ao carregar assinatura:', e);
-        }
+      // Assinatura (imagem)
+      if (assinaturaBase64) {
+        doc.addImage(assinaturaBase64, 'PNG', 65, s3Y + 9, 80, 22);
       }
 
-      const linhaY = s3Y + 34;
-      doc.setDrawColor(15, 23, 42);
-      doc.setLineWidth(0.4);
-      doc.line(55, linhaY, pageW - 55, linhaY);
+      // Linha de assinatura
+      const linhaY = s3Y + 33;
+      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.4);
+      doc.line(50, linhaY, pageW - 50, linhaY);
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-      doc.text(servidorNome.toUpperCase(), pageW / 2, linhaY + 6, { align: 'center' });
+      // Nome e função do servidor
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(servidorNome, pageW / 2, linhaY + 7, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+      const subText = matricula ? `${funcao} — Matrícula: ${matricula}` : funcao;
+      doc.text(subText, pageW / 2, linhaY + 13, { align: 'center' });
+      doc.text('Sala Sensorial | ALECE', pageW / 2, linhaY + 19, { align: 'center' });
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`${funcao.toUpperCase()} — MATRÍCULA: ${matricula}`, pageW / 2, linhaY + 12, { align: 'center' });
-      doc.text('Sala Sensorial | ALECE', pageW / 2, linhaY + 18, { align: 'center' });
-
-      // ===== RODAPÉ =====
+      // ── RODAPÉ ────────────────────────────────────────────────
       const rodapeY = 272;
-      doc.setFillColor(5, 95, 60);
-      doc.rect(0, rodapeY, pageW, 0.8, 'F');
-      doc.setFillColor(241, 245, 249);
-      doc.rect(0, rodapeY + 0.8, pageW, 25, 'F');
-
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Este documento possui validade jurídica como declaração de comparecimento e prestação de serviço público,', pageW / 2, rodapeY + 7, { align: 'center' });
-      doc.text('nos termos da legislação vigente. Qualquer adulteração constitui crime previsto no Código Penal Brasileiro.', pageW / 2, rodapeY + 12, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 19, { align: 'center' });
+      doc.setFillColor(5, 95, 60); doc.rect(0, rodapeY, pageW, 0.8, 'F');
+      doc.setFillColor(241, 245, 249); doc.rect(0, rodapeY + 0.8, pageW, 25, 'F');
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+      doc.text('Declaração emitida pela Sala Sensorial da ALECE para fins de comprovação de comparecimento.', pageW / 2, rodapeY + 7, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+      doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 15, { align: 'center' });
 
       doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
     } catch (err) {
