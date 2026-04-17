@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { registrarHistorico } from '@/lib/historico-utils';
 import { FiUser, FiCreditCard, FiMail, FiFileText, FiSave, FiArrowLeft, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 
 export default function NovoAtendimentoPage() {
@@ -88,6 +89,17 @@ export default function NovoAtendimentoPage() {
       setMessage('Erro ao cadastrar atendimento: ' + error.message);
       setLoading(false);
       return;
+    }
+
+    // Registrar histórico de criação
+    const { data: novoAte } = await supabase.from('atendimentos').select('id').eq('cpf', cpf).order('created_at', { ascending: false }).limit(1).single();
+    if (novoAte?.id) {
+      await registrarHistorico({
+        atendimento_id: novoAte.id,
+        acao: 'criacao',
+        atendente_id: user.id,
+        atendente_nome: atendenteNome,
+      });
     }
 
     try {

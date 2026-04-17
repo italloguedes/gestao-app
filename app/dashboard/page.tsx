@@ -14,9 +14,10 @@ import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
 import PdfModal from '@/components/dashboard/PdfModal';
 import { generateComprovantePDF, generateLotePDF } from '@/lib/pdf-utils';
 import type { ItemLoteExport } from '@/components/dashboard/EntregarCinModal';
+import { registrarHistorico } from '@/lib/historico-utils';
 import {
   FiPlus, FiRefreshCw, FiAlertTriangle, FiCheckCircle,
-  FiSearch, FiActivity
+  FiSearch, FiActivity, FiPackage
 } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
 import { Input } from '@/components/ui/input';
@@ -263,6 +264,19 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
+      // Registrar histórico de entrega individual
+      await registrarHistorico({
+        atendimento_id: selectedAtendimento.id,
+        acao: 'entrega_cin',
+        atendente_id: user.id,
+        atendente_nome: atendenteNome,
+        detalhes: {
+          recebedor_nome: nomeRecebedor,
+          recebedor_cpf: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+        },
+      });
+
       const logoUrl = '/logoautismo.png';
       const getBase64FromUrl = async (url: string) => {
         const res = await fetch(url);
@@ -323,6 +337,21 @@ export default function DashboardPage() {
           status: 'entregue',
           data_hora_entrega: dataHoraEntrega,
         }).eq('id', atendimento.id)
+      ));
+
+      // Registrar histórico para cada item do lote
+      await Promise.all(items.map(({ atendimento, nomeRecebedor, cpfRecebedor, vinculo, outroVinculo }) =>
+        registrarHistorico({
+          atendimento_id: atendimento.id,
+          acao: 'entrega_cin',
+          atendente_id: user.id,
+          atendente_nome: atendenteNome,
+          detalhes: {
+            recebedor_nome: nomeRecebedor,
+            recebedor_cpf: cpfRecebedor,
+            vinculo: vinculo === 'Outros' ? outroVinculo : vinculo,
+          },
+        })
       ));
 
       const getBase64 = async (url: string) => {
@@ -524,6 +553,10 @@ export default function DashboardPage() {
                 </div>
                 <span className="font-bold text-xs">Entregar CIN</span>
               </Button>
+
+              <QuickAction href="/dashboard/entrega-lote" color="border-indigo-200 text-indigo-800 bg-indigo-50 hover:bg-indigo-100" icon={<FiPackage className="h-4 w-4" />}>
+                Entrega em Lote
+              </QuickAction>
             </div>
 
             {/* Mini Help */}

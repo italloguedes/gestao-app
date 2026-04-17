@@ -10,8 +10,9 @@ import {
   FiX, FiUser, FiMail, FiCalendar, FiClock, FiFileText,
   FiAlertCircle, FiSave, FiTrash2, FiMessageSquare, FiSend,
   FiCheckCircle, FiXCircle, FiLock, FiDownload, FiEye,
-  FiEdit3, FiHash, FiPhone
+  FiEdit3, FiHash, FiPhone, FiList
 } from 'react-icons/fi';
+import AtendimentoHistorico from '@/components/dashboard/AtendimentoHistorico';
 
 export interface Atendimento {
   id: number;
@@ -42,7 +43,7 @@ interface AtendimentoModalProps {
   onDelete?: (id: number) => void;
 }
 
-type TabKey = 'dados' | 'observacoes';
+type TabKey = 'dados' | 'observacoes' | 'historico';
 
 export default function AtendimentoModal({
   atendimento,
@@ -596,6 +597,7 @@ export default function AtendimentoModal({
   const TABS: { key: TabKey; label: string; icon: React.ReactElement; badge?: number }[] = [
     { key: 'dados', label: 'Dados', icon: <FiEdit3 className="w-4 h-4" /> },
     { key: 'observacoes', label: 'Notas', icon: <FiMessageSquare className="w-4 h-4" />, badge: historicoObservacoes.length },
+    { key: 'historico', label: 'Histórico', icon: <FiList className="w-4 h-4" /> },
   ];
 
   const InputField = ({ label, icon, value, onChange, type = 'text', error, mono, placeholder }: {
@@ -837,6 +839,11 @@ export default function AtendimentoModal({
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ─── TAB HISTÓRICO ─── */}
+            {activeTab === 'historico' && (
+              <AtendimentoHistorico atendimentoId={atendimento.id} />
             )}
           </div>
 

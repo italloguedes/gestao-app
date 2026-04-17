@@ -16,6 +16,7 @@ import {
   FiSend,
   FiUser
 } from 'react-icons/fi';
+import { registrarHistorico } from '@/lib/historico-utils';
 function AtualizarCINForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -128,6 +129,15 @@ function AtualizarCINForm() {
         setLoading(false);
         return;
       }
+
+      // Registrar histórico
+      const atendenteNome = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Não identificado';
+      await registrarHistorico({
+        atendimento_id: atendimento.id,
+        acao: 'atualizacao_cin',
+        atendente_id: user?.id,
+        atendente_nome: atendenteNome,
+      });
 
       console.log('Status atualizado, enviando email...');
 
