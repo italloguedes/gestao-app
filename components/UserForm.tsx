@@ -45,22 +45,31 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingSignature(true);
+      setError(null);
       if (!event.target.files || event.target.files.length === 0) return;
-      
+
       const file = event.target.files[0];
       if (file.size > 2 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 2MB');
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `signature-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setFormData(prev => ({ ...prev, assinatura_url: data.publicUrl }));
+
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) throw new Error('Use PNG, JPG ou WebP');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const form = new FormData();
+      form.append('file', file);
+
+      const response = await fetch('/api/upload-assinatura', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: form,
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro no upload');
+
+      setFormData(prev => ({ ...prev, assinatura_url: result.publicUrl }));
     } catch (err: any) {
       setError(err.message || 'Erro no upload da assinatura');
     } finally {

@@ -356,10 +356,14 @@ export default function AtendimentoModal({
   const handleGerarDeclaracao = async () => {
     try {
       // ── helpers ──────────────────────────────────────────────
-      const getBase64FromUrl = async (url: string, token?: string) => {
-        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const getBase64FromUrl = async (url: string, useToken?: string) => {
+        // URLs públicas do Storage não precisam (e rejeitam) o header de Auth
+        const isPrivate = url.includes('/object/authenticated/');
+        const headers: Record<string, string> = (isPrivate && useToken)
+          ? { Authorization: `Bearer ${useToken}` }
+          : {};
         const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status} - ${url}`);
         const blob = await res.blob();
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -382,13 +386,15 @@ export default function AtendimentoModal({
 
       // Combina metadata do freshUser + do user do contexto
       const meta = { ...(user?.user_metadata ?? {}), ...(freshUser?.user_metadata ?? {}) };
-      console.log('[declaração] user_metadata:', meta);
+      console.log('[declaração] user_metadata:', meta, '| currentUserName:', currentUserName);
 
+      // currentUserName já foi buscado pelo fetchCurrentUserName ao abrir o modal
       const servidorNome = (
+        currentUserName ||
         meta.full_name || meta.name || meta.nome || meta.display_name ||
         freshUser?.email?.split('@')[0] ||
         user?.email?.split('@')[0] ||
-        currentUserName || 'SERVIDOR'
+        'SERVIDOR'
       ).toUpperCase();
       const funcao = meta.funcao || meta.cargo || 'Atendente';
       const matricula = meta.matricula || '';
