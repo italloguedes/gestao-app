@@ -399,9 +399,156 @@ export const generateLotePDF = async ({
 }): Promise<string> => {
     const doc = new jsPDF();
     const now = new Date();
+    const pageW = doc.internal.pageSize.getWidth();
+
+    // ===== PÁGINA DE RESUMO (CAPA) =====
+    const drawResumoPage = (startIndex: number, endIndex: number, pageNum: number, totalResumoPages: number) => {
+        // Cabeçalho institucional
+        doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 41, 59);
+        doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
+        doc.text('Centro Inclusivo para Atendimento e Desenvolvimento Infantil - CIADI', 105, 21, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+        doc.text('Sala Sensorial — Atendimento Especializado', 105, 27, { align: 'center' });
+
+        // Linha divisória
+        doc.setDrawColor(5, 95, 60); doc.setLineWidth(0.8); doc.line(15, 38, pageW - 15, 38);
+        doc.setLineWidth(0.3); doc.line(15, 39.5, pageW - 15, 39.5);
+
+        // Título
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(5, 95, 60);
+        doc.text('RESUMO DE ENTREGA EM LOTE', 105, 50, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
+        doc.text('Carteira de Identidade Nacional — CIN', 105, 57, { align: 'center' });
+
+        // Info boxes
+        doc.setDrawColor(203, 213, 225); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+        doc.rect(15, 63, 55, 18, 'FD');
+        doc.rect(75, 63, 55, 18, 'FD');
+        doc.rect(135, 63, 60, 18, 'FD');
+
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+        doc.text('QUANTIDADE DE CINs', 18, 68);
+        doc.text('DATA DA ENTREGA', 78, 68);
+        doc.text('SERVIDOR RESPONSÁVEL', 138, 68);
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(5, 95, 60);
+        doc.text(`${items.length}`, 18, 77);
+        doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+        doc.text(fmt(dataEntrega), 78, 77);
+        doc.setFontSize(8);
+        doc.text(atendenteNome, 138, 77);
+
+        // Recebedor info
+        const recebedor = items[0]?.recebedor;
+        if (recebedor) {
+            doc.setFillColor(5, 95, 60); doc.rect(15, 87, pageW - 30, 7, 'F');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+            doc.text('DADOS DO RECEBEDOR', 18, 92);
+
+            doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
+            doc.rect(15, 94, pageW - 30, 16, 'FD');
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+            doc.text('Nome:', 18, 100);
+            doc.text('CPF:', 110, 100);
+            doc.text('Vínculo:', 18, 107);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42);
+            doc.text(recebedor.nome, 35, 100);
+            doc.text(recebedor.cpf, 122, 100);
+            doc.text(recebedor.vinculo, 40, 107);
+        }
+
+        // Título da tabela
+        const tableStartY = recebedor ? 117 : 87;
+        doc.setFillColor(5, 95, 60); doc.rect(15, tableStartY, pageW - 30, 7, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+        doc.text('RELAÇÃO DAS CINs ENTREGUES', 18, tableStartY + 5);
+
+        // Cabeçalho da tabela
+        const headerY = tableStartY + 7;
+        doc.setFillColor(241, 245, 249);
+        doc.rect(15, headerY, pageW - 30, 8, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(71, 85, 105);
+        doc.text('Nº', 20, headerY + 5.5);
+        doc.text('NOME COMPLETO', 32, headerY + 5.5);
+        doc.text('CPF', 140, headerY + 5.5);
+
+        // Linhas verticais da tabela
+        doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2);
+        doc.line(28, headerY, 28, headerY + 8);
+        doc.line(136, headerY, 136, headerY + 8);
+
+        // Itens da tabela
+        let y = headerY + 8;
+        for (let i = startIndex; i < endIndex; i++) {
+            const item = items[i];
+            const isEven = (i - startIndex) % 2 === 0;
+
+            if (isEven) {
+                doc.setFillColor(252, 253, 254);
+            } else {
+                doc.setFillColor(248, 250, 252);
+            }
+            doc.rect(15, y, pageW - 30, 8, 'F');
+
+            // Linhas verticais
+            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.15);
+            doc.line(28, y, 28, y + 8);
+            doc.line(136, y, 136, y + 8);
+
+            // Dados
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(5, 95, 60);
+            doc.text(`${i + 1}`, 20, y + 5.5);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(15, 23, 42);
+            doc.text(item.atendimento.nome, 32, y + 5.5);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 85, 105);
+            doc.text(item.atendimento.cpf, 140, y + 5.5);
+
+            // Borda inferior
+            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
+            doc.line(15, y + 8, pageW - 15, y + 8);
+
+            y += 8;
+        }
+
+        // Borda da tabela completa
+        doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
+        doc.rect(15, headerY, pageW - 30, y - headerY);
+
+        // Total
+        doc.setFillColor(5, 95, 60); doc.rect(15, y, pageW - 30, 8, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+        doc.text(`TOTAL: ${items.length} CIN(s)`, 20, y + 5.5);
+
+        // Rodapé
+        const rodY = 272;
+        doc.setDrawColor(5, 95, 60); doc.setLineWidth(0.5); doc.line(15, rodY, pageW - 15, rodY);
+        doc.setFontSize(7); doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'italic');
+        doc.text('Documento de controle interno — Entrega em lote de CINs', 105, rodY + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+        doc.text(
+            `Emitido em: ${fmt(dataEntrega)} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}  |  Servidor: ${atendenteNome}  |  Resumo ${pageNum} de ${totalResumoPages}`,
+            105, rodY + 10, { align: 'center' }
+        );
+    };
+
+    // Calcular quantas páginas de resumo são necessárias (máx ~18 itens por página)
+    const maxItemsPerPage = 18;
+    const totalResumoPages = Math.ceil(items.length / maxItemsPerPage);
+
+    for (let p = 0; p < totalResumoPages; p++) {
+        if (p > 0) doc.addPage();
+        const startIdx = p * maxItemsPerPage;
+        const endIdx = Math.min(startIdx + maxItemsPerPage, items.length);
+        drawResumoPage(startIdx, endIdx, p + 1, totalResumoPages);
+    }
+
+    // ===== PÁGINAS INDIVIDUAIS DE COMPROVANTE =====
     items.forEach((item, i) => {
-        if (i > 0) doc.addPage();
+        doc.addPage();
         drawPage(doc, item, atendenteNome, dataEntrega, logoBase64, now, i + 1, items.length);
     });
+
     return URL.createObjectURL(doc.output('blob'));
 };

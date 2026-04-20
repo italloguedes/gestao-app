@@ -27,6 +27,7 @@ import {
   FiArrowLeft,
   FiCreditCard,
   FiPrinter,
+  FiDownload,
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 
@@ -70,6 +71,11 @@ export default function AtendimentoDetalhes({ id }: Props) {
   const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
   const router = useRouter();
   const { user } = useAuth();
+
+  // Estados para declaração
+  const [showDeclaracaoMenu, setShowDeclaracaoMenu] = useState(false);
+  const [gerandoDeclaracao, setGerandoDeclaracao] = useState(false);
+  const [enviandoEmailDecl, setEnviandoEmailDecl] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -497,8 +503,11 @@ export default function AtendimentoDetalhes({ id }: Props) {
     }
   };
 
-  const handleGerarDeclaracao = async () => {
+  const handleGerarDeclaracao = async (modo: 'download' | 'email') => {
     if (!atendimento) return;
+    if (modo === 'download') setGerandoDeclaracao(true);
+    if (modo === 'email') setEnviandoEmailDecl(true);
+    setShowDeclaracaoMenu(false);
 
     try {
       const getBase64FromUrl = async (url: string) => {
@@ -731,10 +740,60 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.setTextColor(71, 85, 105);
       doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 19, { align: 'center' });
 
-      doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      if (modo === 'download') {
+        doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      } else {
+        // Enviar por email
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const emailDest = atendimento.email;
+        if (!emailDest) {
+          alert('Este atendimento não possui e-mail cadastrado.');
+          return;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          alert('Sessão expirada. Faça login novamente.');
+          return;
+        }
+        const response = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: emailDest,
+            subject: `Declaração de Comparecimento - ${atendimento.nome} - Protocolo ${atendimento.protocolo}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #047857;">Declaração de Comparecimento</h2>
+                <p>Olá,</p>
+                <p>Segue em anexo a Declaração de Comparecimento referente ao atendimento realizado na Sala Sensorial da ALECE.</p>
+                <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Nome:</strong> ${atendimento.nome}</p>
+                  <p><strong>Protocolo:</strong> ${atendimento.protocolo}</p>
+                </div>
+                <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
+              </div>
+            `,
+            attachments: [{
+              filename: `declaracao-${atendimento.protocolo}.pdf`,
+              content: pdfBase64,
+              contentType: 'application/pdf',
+            }],
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Erro ao enviar email');
+        }
+        alert(`Declaração enviada com sucesso para ${emailDest}`);
+      }
     } catch (err) {
       console.error('Erro ao gerar declaração:', err);
-      alert('Erro ao gerar declaração. Tente novamente.');
+      alert(modo === 'email' ? 'Erro ao enviar declaração por email. Tente novamente.' : 'Erro ao gerar declaração. Tente novamente.');
+    } finally {
+      setGerandoDeclaracao(false);
+      setEnviandoEmailDecl(false);
     }
   };
 
@@ -849,14 +908,42 @@ export default function AtendimentoDetalhes({ id }: Props) {
 
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Botão Gerar Declaração */}
-                <button
-                  onClick={handleGerarDeclaracao}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl border-2 border-white/30 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
-                  title="Gerar declaração de comparecimento"
-                >
-                  <FiFileText className="w-5 h-5" />
-                  Gerar Declaração
-                </button>
+                {!showDeclaracaoMenu ? (
+                  <button
+                    onClick={() => setShowDeclaracaoMenu(true)}
+                    disabled={gerandoDeclaracao || enviandoEmailDecl}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl border-2 border-white/30 transition-all duration-300 font-bold shadow-lg hover:shadow-xl disabled:opacity-50"
+                    title="Gerar declaração de comparecimento"
+                  >
+                    {gerandoDeclaracao ? (
+                      <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Gerando...</>
+                    ) : enviandoEmailDecl ? (
+                      <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Enviando...</>
+                    ) : (
+                      <><FiFileText className="w-5 h-5" /> Gerar Declaração</>
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-xl p-2 border-2 border-white/30">
+                    <button
+                      onClick={() => handleGerarDeclaracao('download')}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-white/90 text-indigo-700 hover:bg-white rounded-lg font-bold transition-all text-sm"
+                    >
+                      <FiDownload className="w-4 h-4" /> Baixar PDF
+                    </button>
+                    <button
+                      onClick={() => handleGerarDeclaracao('email')}
+                      disabled={!atendimento.email}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition-all text-sm disabled:opacity-40"
+                      title={atendimento.email || 'Sem email cadastrado'}
+                    >
+                      <FiMail className="w-4 h-4" /> Email {atendimento.email ? `(${atendimento.email.substring(0, 15)}...)` : ''}
+                    </button>
+                    <button onClick={() => setShowDeclaracaoMenu(false)} className="text-white/60 hover:text-white p-1.5 rounded-lg transition-colors">
+                      <FiX className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
 
                 {/* Botão Gerar Comprovante - só aparece se entregue */}
                 {atendimento.status === 'entregue' && atendimento.nome_recebedor && (

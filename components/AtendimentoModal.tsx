@@ -70,6 +70,11 @@ export default function AtendimentoModal({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
 
+  // Estados para declaração
+  const [showDeclaracaoMenu, setShowDeclaracaoMenu] = useState(false);
+  const [gerandoDeclaracao, setGerandoDeclaracao] = useState(false);
+  const [enviandoEmailDecl, setEnviandoEmailDecl] = useState(false);
+
   const canDelete = isAdmin || isSuperAdmin;
 
   useEffect(() => {
@@ -353,7 +358,10 @@ export default function AtendimentoModal({
     }
   };
 
-  const handleGerarDeclaracao = async () => {
+  const handleGerarDeclaracao = async (modo: 'download' | 'email') => {
+    if (modo === 'download') setGerandoDeclaracao(true);
+    if (modo === 'email') setEnviandoEmailDecl(true);
+    setShowDeclaracaoMenu(false);
     try {
       // ── helpers ──────────────────────────────────────────────
       const getBase64FromUrl = async (url: string, useToken?: string) => {
@@ -480,7 +488,7 @@ export default function AtendimentoModal({
       const textoDecl =
         `Declaramos que o(a) cidadão(ã) ${atendimento.nome}, portador(a) do CPF nº ${cpfFormatado}, ` +
         `compareceu à Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, ` +
-        `vinculada ao CIADI (Centro Integrado de Atendimento Digital e Inclusão), ` +
+        `vinculada ao CIADI (Centro Inclusivo para Atendimento e Desenvolvimento Infantil), ` +
         `no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de atendimento referente ` +
         `à emissão da Carteira de Identidade Nacional — CIN.`;
 
@@ -524,10 +532,60 @@ export default function AtendimentoModal({
       doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
       doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 15, { align: 'center' });
 
-      doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      if (modo === 'download') {
+        doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      } else {
+        // Enviar por email
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const emailDest = formData.email || atendimento.email;
+        if (!emailDest) {
+          alert('Este atendimento não possui e-mail cadastrado.');
+          return;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          alert('Sessão expirada. Faça login novamente.');
+          return;
+        }
+        const response = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: emailDest,
+            subject: `Declaração de Comparecimento - ${atendimento.nome} - Protocolo ${atendimento.protocolo}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #047857;">Declaração de Comparecimento</h2>
+                <p>Olá,</p>
+                <p>Segue em anexo a Declaração de Comparecimento referente ao atendimento realizado na Sala Sensorial da ALECE.</p>
+                <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Nome:</strong> ${atendimento.nome}</p>
+                  <p><strong>Protocolo:</strong> ${atendimento.protocolo}</p>
+                </div>
+                <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
+              </div>
+            `,
+            attachments: [{
+              filename: `declaracao-${atendimento.protocolo}.pdf`,
+              content: pdfBase64,
+              contentType: 'application/pdf',
+            }],
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Erro ao enviar email');
+        }
+        alert(`Declaração enviada com sucesso para ${emailDest}`);
+      }
     } catch (err) {
       console.error('Erro ao gerar declaração:', err);
-      alert('Erro ao gerar declaração. Tente novamente.');
+      alert(modo === 'email' ? 'Erro ao enviar declaração por email. Tente novamente.' : 'Erro ao gerar declaração. Tente novamente.');
+    } finally {
+      setGerandoDeclaracao(false);
+      setEnviandoEmailDecl(false);
     }
   };
 
@@ -704,13 +762,47 @@ export default function AtendimentoModal({
                 </fieldset>
 
                 {/* Gerar Declaração */}
-                <button
-                  onClick={handleGerarDeclaracao}
-                  className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200"
-                >
-                  <FiFileText className="w-4 h-4" />
-                  Gerar Declaração
-                </button>
+                {!showDeclaracaoMenu ? (
+                  <button
+                    onClick={() => setShowDeclaracaoMenu(true)}
+                    disabled={gerandoDeclaracao || enviandoEmailDecl}
+                    className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200 disabled:opacity-50"
+                  >
+                    {gerandoDeclaracao ? (
+                      <><div className="w-4 h-4 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" /> Gerando...</>
+                    ) : enviandoEmailDecl ? (
+                      <><div className="w-4 h-4 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" /> Enviando...</>
+                    ) : (
+                      <><FiFileText className="w-4 h-4" /> Gerar Declaração</>
+                    )}
+                  </button>
+                ) : (
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Declaração de Comparecimento</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleGerarDeclaracao('download')}
+                        className="flex-1 py-2.5 bg-white text-indigo-700 hover:bg-indigo-100 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm border border-indigo-200"
+                      >
+                        <FiDownload className="w-4 h-4" /> Baixar PDF
+                      </button>
+                      <button
+                        onClick={() => handleGerarDeclaracao('email')}
+                        disabled={!formData.email && !atendimento.email}
+                        className="flex-1 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={formData.email || atendimento.email || 'Sem email cadastrado'}
+                      >
+                        <FiMail className="w-4 h-4" /> Enviar Email
+                      </button>
+                    </div>
+                    {(formData.email || atendimento.email) && (
+                      <p className="text-[11px] text-indigo-500 text-center truncate">📧 {formData.email || atendimento.email}</p>
+                    )}
+                    <button onClick={() => setShowDeclaracaoMenu(false)} className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                )}
 
                 {/* Comprovante */}
                 {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
