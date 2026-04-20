@@ -32,12 +32,12 @@ export const generateComprovantePDF = async ({
     logoBase64,
     signatureDataUrl
 }: GeneratePdfParams): Promise<string> => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ compress: true });
     const now = new Date();
 
     // ===== CABEÇALHO INSTITUCIONAL =====
     // Brasão/Logo à esquerda
-    doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+    doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25, undefined, 'FAST');
 
     // Informações institucionais
     doc.setFont('helvetica', 'bold');
@@ -225,7 +225,7 @@ export const generateComprovantePDF = async ({
 
     if (signatureDataUrl) {
         // INSERIR ASSINATURA DIGITAL
-        doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 20, 90, 22);
+        doc.addImage(signatureDataUrl, 'PNG', 60, assinaturaY + 20, 90, 22, undefined, 'FAST');
     } else {
         // Linha para assinatura manual
         doc.setDrawColor(100, 116, 139); // Slate-500
@@ -313,7 +313,7 @@ const drawPage = (
     const lbl = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139); };
     const val = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(15, 23, 42); };
 
-    doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+    doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25, undefined, 'FAST');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 41, 59);
     doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
@@ -397,14 +397,14 @@ export const generateLotePDF = async ({
     dataEntrega: string;
     logoBase64: string;
 }): Promise<string> => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ compress: true });
     const now = new Date();
     const pageW = doc.internal.pageSize.getWidth();
 
     // ===== PÁGINA DE RESUMO (CAPA) =====
     const drawResumoPage = (startIndex: number, endIndex: number, pageNum: number, totalResumoPages: number) => {
         // Cabeçalho institucional
-        doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+        doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25, undefined, 'FAST');
         doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 41, 59);
         doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', 105, 15, { align: 'center' });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);

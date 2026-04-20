@@ -278,10 +278,10 @@ export default function AtendimentoModal({
         });
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
-      const doc = new jsPDF();
+      const doc = new jsPDF({ compress: true });
       doc.setFillColor(16, 185, 129); doc.rect(0, 0, 210, 35, 'F');
       doc.setFillColor(255, 255, 255); doc.circle(30, 18, 12, 'F');
-      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
+      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20, undefined, 'FAST');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(255, 255, 255);
       doc.text('COMPROVANTE DE ENTREGA', 105, 18, { align: 'center' });
       doc.setFontSize(14); doc.setFont('helvetica', 'normal');
@@ -332,7 +332,7 @@ export default function AtendimentoModal({
       doc.setFontSize(12); doc.setTextColor(16, 185, 129); doc.setFont('helvetica', 'bold');
       doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
       if (atendimento.assinatura_base64) {
-        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 10, 90, 20);
+        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 10, 90, 20, undefined, 'FAST');
       }
       doc.setFontSize(9); doc.setTextColor(120, 120, 120); doc.setFont('helvetica', 'normal');
       doc.text(`${atendimento.nome_recebedor || 'N/A'} - CPF: ${atendimento.cpf_recebedor || 'N/A'}`, 105, assinaturaY + 35, { align: 'center' });
@@ -424,7 +424,7 @@ export default function AtendimentoModal({
       ]);
 
       // ── dados do atendimento ──────────────────────────────────
-      const doc = new jsPDF();
+      const doc = new jsPDF({ compress: true });
       const now = new Date();
       const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
       const dataGeracao = now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
@@ -436,12 +436,12 @@ export default function AtendimentoModal({
       // ── CABEÇALHO ─────────────────────────────────────────────
       doc.setFillColor(5, 95, 60);
       doc.rect(0, 0, pageW, 38, 'F');
-      doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32);
+      doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32, undefined, 'FAST');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
       doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 13, { align: 'center' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 240, 220);
       doc.text('Sala Sensorial — Atendimento Especializado | Identidade Nacional', pageW / 2, 23, { align: 'center' });
-      doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32);
+      doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32, undefined, 'FAST');
 
       // faixa endereço
       doc.setFillColor(241, 245, 249); doc.rect(0, 38, pageW, 8, 'F');
@@ -507,7 +507,7 @@ export default function AtendimentoModal({
 
       // Assinatura (imagem)
       if (assinaturaBase64) {
-        doc.addImage(assinaturaBase64, 'PNG', 65, s3Y + 9, 80, 22);
+        doc.addImage(assinaturaBase64, 'PNG', 65, s3Y + 9, 80, 22, undefined, 'FAST');
       }
 
       // Linha de assinatura

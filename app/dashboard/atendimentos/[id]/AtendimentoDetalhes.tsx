@@ -312,7 +312,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
         : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
       // ===== CABEÇALHO =====
-      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+      doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25, undefined, 'FAST');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
@@ -455,7 +455,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       // VERIFICAR SE TEM ASSINATURA SALVA
       if (atendimento.assinatura_base64) {
         // Tem assinatura digital salva - incluir no PDF
-        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 20, 90, 22);
+        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 20, 90, 22, undefined, 'FAST');
       } else {
         // Não tem assinatura - deixar espaço para assinatura manual
         doc.setDrawColor(100, 116, 139);
@@ -526,7 +526,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
         getBase64FromUrl('/logoautismo.png'),
       ]);
 
-      const doc = new jsPDF();
+      const doc = new jsPDF({ compress: true });
       const now = new Date();
       const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
       const dataGeracao = now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
@@ -553,7 +553,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.setFillColor(5, 95, 60);
       doc.rect(0, 0, pageW, 38, 'F');
 
-      doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32);
+      doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32, undefined, 'FAST');
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
@@ -566,7 +566,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       doc.text('Secretaria de Tecnologia da Informação', pageW / 2, 20, { align: 'center' });
       doc.text('Sala Sensorial — Atendimento Especializado | Identidade Nacional', pageW / 2, 26, { align: 'center' });
 
-      doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32);
+      doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32, undefined, 'FAST');
 
       // Faixa cinza endereço
       doc.setFillColor(241, 245, 249);
@@ -700,7 +700,7 @@ export default function AtendimentoDetalhes({ id }: Props) {
       if (assinaturaUrl) {
         try {
           const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
-          doc.addImage(assinaturaBase64, 'PNG', 70, s3Y + 10, 70, 22);
+          doc.addImage(assinaturaBase64, 'PNG', 70, s3Y + 10, 70, 22, undefined, 'FAST');
         } catch (e) {
           console.error('Erro ao carregar assinatura:', e);
         }
