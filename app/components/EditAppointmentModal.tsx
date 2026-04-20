@@ -2,6 +2,7 @@ import React from 'react';
 import { FiX, FiUser, FiPhone, FiCalendar, FiClock, FiCheck, FiXCircle, FiCopy, FiMail, FiHash, FiFileText, FiStar, FiAlertTriangle, FiCheckCircle, FiSlash, FiEdit3, FiTrash2 } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
 import Loading from './Loading';
+import { registrarHistorico } from '@/lib/historico-utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface EditAppointmentModalProps {
@@ -223,6 +224,19 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
           throw atendimentoError;
         }
+
+        // Registrar histórico de criação
+        const cpfFinalHist = formData.get('cpf') || appointment.cpf;
+        const { data: novoAte } = await supabase.from('atendimentos').select('id').eq('cpf', cpfFinalHist).order('created_at', { ascending: false }).limit(1).single();
+        if (novoAte?.id && user) {
+          await registrarHistorico({
+            atendimento_id: novoAte.id,
+            acao: 'criacao',
+            atendente_id: user.id,
+            atendente_nome: atendenteNome,
+          });
+        }
+
         try {
           const nomeEditado = formData.get('nome') || appointment.nome;
           const emailEditado = formData.get('email') || appointment.email;
