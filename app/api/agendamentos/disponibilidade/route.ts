@@ -3,6 +3,8 @@ import { supabaseServer as supabase } from '@/lib/supabase-server';
 
 import { HORARIOS_MANHA, HORARIOS_TARDE } from '@/lib/constants';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const data = searchParams.get('data');

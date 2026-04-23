@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 // Configuração de runtime para Vercel
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 30; // 30 segundos (máximo no plano gratuito)
 

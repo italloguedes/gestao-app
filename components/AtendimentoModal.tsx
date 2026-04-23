@@ -33,6 +33,7 @@ export interface Atendimento {
   vinculo?: string;
   data_entrega?: string;
   data_hora_entrega?: string;
+  posto?: string;
 }
 
 interface AtendimentoModalProps {
