@@ -103,13 +103,13 @@ export const generateComprovantePDF = async ({
     doc.text(`${formatDate(dataEntrega)} - ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 113, 78);
 
     // ===== SEÇÃO 1: DADOS DO TITULAR =====
-    const secaoY = 90;
+    const secaoY = 93;
 
     // Título da seção
     doc.setFontSize(12);
     doc.setTextColor(30, 41, 59); // Slate-800
     doc.setFont('helvetica', 'bold');
-    doc.text('I. DADOS DO TITULAR DO DOCUMENTO E SOLICITANTE', 15, secaoY);
+    doc.text('I. DADOS DO TITULAR DO DOCUMENTO', 15, secaoY);
 
     // Linha divisória
     doc.setDrawColor(203, 213, 225); // Slate-300
@@ -119,7 +119,7 @@ export const generateComprovantePDF = async ({
     // Box de dados
     doc.setDrawColor(226, 232, 240); // Slate-200
     doc.setFillColor(248, 250, 252); // Slate-50
-    doc.rect(15, secaoY + 5, 180, 48, 'FD');
+    doc.rect(15, secaoY + 5, 180, 38, 'FD');
 
     // Estilo para labels e valores
     const labelStyle = () => {
@@ -134,40 +134,25 @@ export const generateComprovantePDF = async ({
     };
 
     // Dados do titular
-    let yData = secaoY + 11;
-    
-    // Linha 1
+    let yData = secaoY + 12;
     labelStyle();
-    doc.text('Nome do Titular da CIN:', 18, yData);
+    doc.text('Nome Completo:', 18, yData);
     valueStyle();
-    doc.text(atendimento.nome, 18, yData + 4);
+    doc.text(atendimento.nome, 18, yData + 5);
+
+    yData += 13;
+    labelStyle();
+    doc.text('CPF:', 18, yData);
+    valueStyle();
+    doc.text(atendimento.cpf, 18, yData + 5);
 
     labelStyle();
-    doc.text('CPF do Titular:', 120, yData);
+    doc.text('Data do Atendimento:', 110, yData);
     valueStyle();
-    doc.text(atendimento.cpf, 120, yData + 4);
-
-    yData += 12;
-    // Linha 2
-    labelStyle();
-    doc.text('Nome do Solicitante:', 18, yData);
-    valueStyle();
-    doc.text(atendimento.solicitante || 'Não informado', 18, yData + 4);
-
-    labelStyle();
-    doc.text('Data do Atendimento:', 120, yData);
-    valueStyle();
-    doc.text(formatDate(atendimento.dia_atual), 120, yData + 4);
-
-    yData += 12;
-    // Linha 3
-    labelStyle();
-    doc.text('E-mail do Solicitante:', 18, yData);
-    valueStyle();
-    doc.text(atendimento.email || 'Não informado', 18, yData + 4);
+    doc.text(formatDate(atendimento.dia_atual), 110, yData + 5);
 
     // ===== SEÇÃO 2: DADOS DO RECEBEDOR =====
-    const recebedorY = secaoY + 58;
+    const recebedorY = secaoY + 50;
 
     // Título da seção
     doc.setFontSize(12);
@@ -204,7 +189,7 @@ export const generateComprovantePDF = async ({
     doc.text(recebedor.vinculo, 110, yData + 5);
 
     // ===== DECLARAÇÃO =====
-    const infoY = recebedorY + 48;
+    const infoY = recebedorY + 50;
 
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105); // Slate-600
@@ -221,7 +206,7 @@ export const generateComprovantePDF = async ({
     });
 
     // ===== SEÇÃO 3: ASSINATURA =====
-    const assinaturaY = infoY + 20;
+    const assinaturaY = 210;
 
     // Título da seção
     doc.setFontSize(12);

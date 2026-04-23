@@ -483,30 +483,21 @@ export default function AtendimentoModal({
       const s1Y = 103;
       doc.setFillColor(5, 95, 60); doc.rect(15, s1Y, pageW - 30, 7, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text(`I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã) E ${isAleceItinerante ? 'AÇÃO' : 'SOLICITANTE'}`, 18, s1Y + 5);
+      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã)', 18, s1Y + 5);
       doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
-      doc.rect(15, s1Y + 7, pageW - 30, 38, 'FD');
+      doc.rect(15, s1Y + 7, pageW - 30, 26, 'FD');
       
       const acaoNome = formData.solicitante || atendimento.solicitante || 'Ação Itinerante';
-      const solicitanteNome = formData.solicitante || atendimento.solicitante || 'Não informado';
-      const solicitanteEmail = declEmail || 'Não informado';
 
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-      doc.text('Nome do Titular da CIN:', 18, s1Y + 14); 
-      doc.text('CPF do Titular:', 120, s1Y + 14);
+      doc.text('Nome Completo:', 18, s1Y + 14); 
+      doc.text('CPF:', 18, s1Y + 24);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
       doc.text(atendimento.nome, 18, s1Y + 20);
-      doc.text(cpfFormatado, 120, s1Y + 20);
-
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-      doc.text(isAleceItinerante ? 'Nome da Ação:' : 'Nome do Solicitante:', 18, s1Y + 28); 
-      doc.text('E-mail para Contato:', 120, s1Y + 28);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-      doc.text(isAleceItinerante ? acaoNome : solicitanteNome, 18, s1Y + 34);
-      doc.text(solicitanteEmail, 120, s1Y + 34);
+      doc.text(cpfFormatado, 18, s1Y + 30);
 
       // ── SEÇÃO II — DECLARAÇÃO ─────────────────────────────────
-      const s2Y = s1Y + 52;
+      const s2Y = s1Y + 40;
       doc.setFillColor(5, 95, 60); doc.rect(15, s2Y, pageW - 30, 7, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
       doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
