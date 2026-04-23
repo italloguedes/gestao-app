@@ -75,6 +75,15 @@ export default function AtendimentoModal({
   const [showDeclaracaoMenu, setShowDeclaracaoMenu] = useState(false);
   const [gerandoDeclaracao, setGerandoDeclaracao] = useState(false);
   const [enviandoEmailDecl, setEnviandoEmailDecl] = useState(false);
+  const [declEmail, setDeclEmail] = useState('');
+  const [declModel, setDeclModel] = useState<'sensorial' | 'itinerante'>('sensorial');
+
+  const openDeclaracaoMenu = () => {
+    setDeclEmail(formData.email || atendimento.email || '');
+    const postoAtual = formData.posto || atendimento.posto || '';
+    setDeclModel(postoAtual.toLowerCase().includes('itinerante') ? 'itinerante' : 'sensorial');
+    setShowDeclaracaoMenu(true);
+  };
 
   const canDelete = isAdmin || isSuperAdmin;
 
@@ -434,8 +443,8 @@ export default function AtendimentoModal({
       const dataExtenso = formatDateExtenso(atendimento.dia_atual);
       const pageW = doc.internal.pageSize.getWidth();
 
-      const postoNome = formData.posto || atendimento.posto || 'Sala Sensorial';
-      const isAleceItinerante = postoNome.toLowerCase().includes('itinerante');
+      const isAleceItinerante = declModel === 'itinerante';
+      const postoNome = isAleceItinerante ? 'Alece Itinerante' : 'Sala Sensorial';
       const headerSubtitle = isAleceItinerante ? `${postoNome} | Identidade Nacional` : 'Sala Sensorial — Atendimento Especializado | Identidade Nacional';
 
       // ── CABEÇALHO ─────────────────────────────────────────────
@@ -474,12 +483,13 @@ export default function AtendimentoModal({
       const s1Y = 103;
       doc.setFillColor(5, 95, 60); doc.rect(15, s1Y, pageW - 30, 7, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã) E SOLICITANTE', 18, s1Y + 5);
+      doc.text(`I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã) E ${isAleceItinerante ? 'AÇÃO' : 'SOLICITANTE'}`, 18, s1Y + 5);
       doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
       doc.rect(15, s1Y + 7, pageW - 30, 38, 'FD');
       
+      const acaoNome = formData.solicitante || atendimento.solicitante || 'Ação Itinerante';
       const solicitanteNome = formData.solicitante || atendimento.solicitante || 'Não informado';
-      const solicitanteEmail = formData.email || atendimento.email || 'Não informado';
+      const solicitanteEmail = declEmail || 'Não informado';
 
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
       doc.text('Nome do Titular da CIN:', 18, s1Y + 14); 
@@ -489,10 +499,10 @@ export default function AtendimentoModal({
       doc.text(cpfFormatado, 120, s1Y + 20);
 
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-      doc.text('Nome do Solicitante:', 18, s1Y + 28); 
-      doc.text('E-mail do Solicitante:', 120, s1Y + 28);
+      doc.text(isAleceItinerante ? 'Nome da Ação:' : 'Nome do Solicitante:', 18, s1Y + 28); 
+      doc.text('E-mail para Contato:', 120, s1Y + 28);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-      doc.text(solicitanteNome, 18, s1Y + 34);
+      doc.text(isAleceItinerante ? acaoNome : solicitanteNome, 18, s1Y + 34);
       doc.text(solicitanteEmail, 120, s1Y + 34);
 
       // ── SEÇÃO II — DECLARAÇÃO ─────────────────────────────────
@@ -502,7 +512,7 @@ export default function AtendimentoModal({
       doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
 
       const localInstituicao = isAleceItinerante 
-        ? `${postoNome} da Assembleia Legislativa do Estado do Ceará — ALECE` 
+        ? `ação ${acaoNome} da Assembleia Legislativa do Estado do Ceará — ALECE` 
         : `Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, vinculada ao CIADI (Centro Inclusivo para Atendimento e Desenvolvimento Infantil)`;
 
       const textoDecl =
@@ -556,9 +566,9 @@ export default function AtendimentoModal({
       } else {
         // Enviar por email
         const pdfBase64 = doc.output('datauristring').split(',')[1];
-        const emailDest = formData.email || atendimento.email;
+        const emailDest = declEmail;
         if (!emailDest) {
-          alert('Este atendimento não possui e-mail cadastrado.');
+          alert('Por favor, informe um e-mail para envio na tela de declaração.');
           return;
         }
         const { data: { session } } = await supabase.auth.getSession();
@@ -783,7 +793,7 @@ export default function AtendimentoModal({
                 {/* Gerar Declaração */}
                 {!showDeclaracaoMenu ? (
                   <button
-                    onClick={() => setShowDeclaracaoMenu(true)}
+                    onClick={openDeclaracaoMenu}
                     disabled={gerandoDeclaracao || enviandoEmailDecl}
                     className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200 disabled:opacity-50"
                   >
@@ -796,9 +806,40 @@ export default function AtendimentoModal({
                     )}
                   </button>
                 ) : (
-                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-3 space-y-2">
-                    <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Declaração de Comparecimento</p>
-                    <div className="flex gap-2">
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 space-y-4">
+                    <p className="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-2">
+                      <FiFileText className="w-4 h-4" /> Configurar Declaração
+                    </p>
+                    
+                    <div className="space-y-3 bg-white p-3 rounded-lg border border-indigo-100">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Modelo de Declaração</label>
+                        <select 
+                          value={declModel} 
+                          onChange={(e) => setDeclModel(e.target.value as 'sensorial' | 'itinerante')}
+                          className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                        >
+                          <option value="sensorial">Sala Sensorial</option>
+                          <option value="itinerante">Alece Itinerante</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-widest">E-mail para envio</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><FiMail className="w-4 h-4"/></span>
+                          <input 
+                            type="email" 
+                            value={declEmail} 
+                            onChange={(e) => setDeclEmail(e.target.value)}
+                            placeholder="exemplo@email.com"
+                            className="w-full pl-9 pr-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
                       <button
                         onClick={() => handleGerarDeclaracao('download')}
                         className="flex-1 py-2.5 bg-white text-indigo-700 hover:bg-indigo-100 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm border border-indigo-200"
@@ -807,17 +848,14 @@ export default function AtendimentoModal({
                       </button>
                       <button
                         onClick={() => handleGerarDeclaracao('email')}
-                        disabled={!formData.email && !atendimento.email}
+                        disabled={!declEmail}
                         className="flex-1 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={formData.email || atendimento.email || 'Sem email cadastrado'}
                       >
-                        <FiMail className="w-4 h-4" /> Enviar Email
+                        <FiSend className="w-4 h-4" /> Enviar Email
                       </button>
                     </div>
-                    {(formData.email || atendimento.email) && (
-                      <p className="text-[11px] text-indigo-500 text-center truncate">📧 {formData.email || atendimento.email}</p>
-                    )}
-                    <button onClick={() => setShowDeclaracaoMenu(false)} className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 transition-colors">
+                    
+                    <button onClick={() => setShowDeclaracaoMenu(false)} className="w-full text-xs text-gray-500 hover:text-gray-700 py-1 transition-colors font-semibold">
                       Cancelar
                     </button>
                   </div>
