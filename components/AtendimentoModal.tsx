@@ -433,6 +433,10 @@ export default function AtendimentoModal({
       const dataExtenso = formatDateExtenso(atendimento.dia_atual);
       const pageW = doc.internal.pageSize.getWidth();
 
+      const postoNome = formData.posto || atendimento.posto || 'Sala Sensorial';
+      const isAleceItinerante = postoNome.toLowerCase().includes('itinerante');
+      const headerSubtitle = isAleceItinerante ? `${postoNome} | Identidade Nacional` : 'Sala Sensorial — Atendimento Especializado | Identidade Nacional';
+
       // ── CABEÇALHO ─────────────────────────────────────────────
       doc.setFillColor(5, 95, 60);
       doc.rect(0, 0, pageW, 38, 'F');
@@ -440,7 +444,7 @@ export default function AtendimentoModal({
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
       doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 13, { align: 'center' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 240, 220);
-      doc.text('Sala Sensorial — Atendimento Especializado | Identidade Nacional', pageW / 2, 23, { align: 'center' });
+      doc.text(headerSubtitle, pageW / 2, 23, { align: 'center' });
       doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32, undefined, 'FAST');
 
       // faixa endereço
@@ -469,26 +473,40 @@ export default function AtendimentoModal({
       const s1Y = 103;
       doc.setFillColor(5, 95, 60); doc.rect(15, s1Y, pageW - 30, 7, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã)', 18, s1Y + 5);
+      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã) E SOLICITANTE', 18, s1Y + 5);
       doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
-      doc.rect(15, s1Y + 7, pageW - 30, 26, 'FD');
+      doc.rect(15, s1Y + 7, pageW - 30, 38, 'FD');
+      
+      const solicitanteNome = formData.solicitante || atendimento.solicitante || 'Não informado';
+      const solicitanteEmail = formData.email || atendimento.email || 'Não informado';
+
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-      doc.text('Nome Completo:', 18, s1Y + 14); doc.text('CPF:', 18, s1Y + 24);
+      doc.text('Nome do Titular da CIN:', 18, s1Y + 14); 
+      doc.text('CPF do Titular:', 120, s1Y + 14);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
       doc.text(atendimento.nome, 18, s1Y + 20);
-      doc.text(cpfFormatado, 18, s1Y + 30);
+      doc.text(cpfFormatado, 120, s1Y + 20);
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+      doc.text('Nome do Solicitante:', 18, s1Y + 28); 
+      doc.text('E-mail do Solicitante:', 120, s1Y + 28);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(solicitanteNome, 18, s1Y + 34);
+      doc.text(solicitanteEmail, 120, s1Y + 34);
 
       // ── SEÇÃO II — DECLARAÇÃO ─────────────────────────────────
-      const s2Y = s1Y + 40;
+      const s2Y = s1Y + 52;
       doc.setFillColor(5, 95, 60); doc.rect(15, s2Y, pageW - 30, 7, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
       doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
 
-      // Texto simplificado — mencionando CIADI
+      const localInstituicao = isAleceItinerante 
+        ? `${postoNome} da Assembleia Legislativa do Estado do Ceará — ALECE` 
+        : `Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, vinculada ao CIADI (Centro Inclusivo para Atendimento e Desenvolvimento Infantil)`;
+
       const textoDecl =
         `Declaramos que o(a) cidadão(ã) ${atendimento.nome}, portador(a) do CPF nº ${cpfFormatado}, ` +
-        `compareceu à Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, ` +
-        `vinculada ao CIADI (Centro Inclusivo para Atendimento e Desenvolvimento Infantil), ` +
+        `compareceu à ${localInstituicao}, ` +
         `no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de atendimento referente ` +
         `à emissão da Carteira de Identidade Nacional — CIN.`;
 
@@ -521,14 +539,14 @@ export default function AtendimentoModal({
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
       const subText = matricula ? `${funcao} — Matrícula: ${matricula}` : funcao;
       doc.text(subText, pageW / 2, linhaY + 13, { align: 'center' });
-      doc.text('Sala Sensorial | ALECE', pageW / 2, linhaY + 19, { align: 'center' });
+      doc.text(`${postoNome} | ALECE`, pageW / 2, linhaY + 19, { align: 'center' });
 
       // ── RODAPÉ ────────────────────────────────────────────────
       const rodapeY = 272;
       doc.setFillColor(5, 95, 60); doc.rect(0, rodapeY, pageW, 0.8, 'F');
       doc.setFillColor(241, 245, 249); doc.rect(0, rodapeY + 0.8, pageW, 25, 'F');
       doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
-      doc.text('Declaração emitida pela Sala Sensorial da ALECE para fins de comprovação de comparecimento.', pageW / 2, rodapeY + 7, { align: 'center' });
+      doc.text(`Declaração emitida pel${isAleceItinerante ? 'o' : 'a'} ${postoNome} da ALECE para fins de comprovação de comparecimento.`, pageW / 2, rodapeY + 7, { align: 'center' });
       doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
       doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 15, { align: 'center' });
 
