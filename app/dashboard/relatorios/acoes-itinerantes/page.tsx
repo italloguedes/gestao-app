@@ -18,7 +18,9 @@ import {
   FiCheckCircle,
   FiClock,
   FiAlertCircle,
-  FiRefreshCw
+  FiRefreshCw,
+  FiFileText,
+  FiList
 } from 'react-icons/fi';
 import {
   BarChart,
@@ -121,6 +123,7 @@ export default function AcoesItinerantesPage() {
   const [totalAtendimentos, setTotalAtendimentos] = useState(0);
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
+  const [rawAtendimentosAcoes, setRawAtendimentosAcoes] = useState<any[]>([]);
 
   useEffect(() => {
     const hoje = new Date();
@@ -221,6 +224,7 @@ export default function AcoesItinerantesPage() {
       console.log('==========================');
 
       setTotalAtendimentos(atendimentosAcoes.length);
+      setRawAtendimentosAcoes(atendimentosAcoes);
 
       // Chronological processing
       const cronoMap = new Map<string, { dataInicio: string; dataFim: string; total: number }>();
@@ -633,6 +637,269 @@ export default function AcoesItinerantesPage() {
   };
 
   // =============================================
+  // PER-ACTION PDF GENERATORS
+  // =============================================
+
+  const generateActionDetailPDF = (nomeAcao: string) => {
+    const atendimentos = rawAtendimentosAcoes
+      .filter((a: any) => a.solicitante === nomeAcao)
+      .sort((a: any, b: any) => {
+        const dateCompare = (a.dia_atual || '').localeCompare(b.dia_atual || '');
+        if (dateCompare !== 0) return dateCompare;
+        return (a.horario || '').localeCompare(b.horario || '');
+      });
+
+    if (atendimentos.length === 0) {
+      alert('Nenhum atendimento encontrado para esta ação.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81];
+    const secondaryColor: [number, number, number] = [248, 249, 250];
+
+    const tableWidth = 150;
+    const marginLeft = (doc.internal.pageSize.getWidth() - tableWidth) / 2;
+
+    // Header
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    const title = 'Relatório de Atendimentos - Ação Itinerante';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    doc.text(title, (doc.internal.pageSize.getWidth() - titleWidth) / 2, 16);
+
+    // Period info
+    doc.setTextColor(90, 90, 90);
+    doc.setFontSize(9);
+    const crono = chronologicalData.find(c => c.acao === nomeAcao);
+    const periodoAcao = crono
+      ? (crono.dataInicio === crono.dataFim
+        ? formatDateFull(crono.dataInicio)
+        : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
+      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+
+    const periodoText = `Ação: ${nomeAcao}`;
+    const totalText = `Período: ${periodoAcao}  |  Total: ${atendimentos.length}`;
+    const periodoTextWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
+    const totalTextWidth = doc.getStringUnitWidth(totalText) * 9 / doc.internal.scaleFactor;
+    doc.setFont('helvetica', 'bold');
+    doc.text(periodoText, (doc.internal.pageSize.getWidth() - periodoTextWidth) / 2, 30);
+    doc.setFont('helvetica', 'normal');
+    doc.text(totalText, (doc.internal.pageSize.getWidth() - totalTextWidth) / 2, 36);
+
+    // Decorative line
+    const lineWidth = 170;
+    const lineStartX = (doc.internal.pageSize.getWidth() - lineWidth) / 2;
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.line(lineStartX, 39, lineStartX + lineWidth, 39);
+
+    // Table
+    const tableColumn = ['Data', 'Nome', 'CPF', 'Status'];
+    const tableRows = atendimentos.map((at: any) => [
+      formatDateFull(at.dia_atual),
+      at.nome && at.nome.length > 40 ? at.nome.substring(0, 37) + '...' : (at.nome || '—'),
+      at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—',
+      at.status ? at.status.charAt(0).toUpperCase() + at.status.slice(1).toLowerCase() : '—'
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 44,
+      styles: {
+        fontSize: 8,
+        cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
+        lineColor: [230, 230, 230],
+        lineWidth: 0.05,
+        minCellHeight: 6,
+        cellWidth: 'wrap',
+        overflow: 'hidden',
+        textColor: [50, 50, 50]
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 7.5,
+        fontStyle: 'bold',
+        halign: 'center',
+        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+        minCellHeight: 8
+      },
+      columnStyles: {
+        0: { cellWidth: 22, halign: 'center' },
+        1: { cellWidth: 65, halign: 'left' },
+        2: { cellWidth: 32, halign: 'center' },
+        3: { cellWidth: 22, halign: 'center' }
+      },
+      alternateRowStyles: {
+        fillColor: secondaryColor
+      },
+      margin: { left: marginLeft },
+      rowPageBreak: 'avoid',
+      showFoot: 'lastPage'
+    });
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(128, 128, 128);
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.3);
+      doc.line(lineStartX, doc.internal.pageSize.getHeight() - 15, lineStartX + lineWidth, doc.internal.pageSize.getHeight() - 15);
+      const now = new Date();
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`, marginLeft, doc.internal.pageSize.getHeight() - 8);
+      const atendenteText = `Gerado por: ${userName}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+      doc.text(atendenteText, (doc.internal.pageSize.getWidth() - atendenteTextWidth) / 2, doc.internal.pageSize.getHeight() - 8);
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, doc.internal.pageSize.getHeight() - 8);
+    }
+
+    const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    doc.save(`relatorio_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
+  };
+
+  const generateActionDeliveryPDF = (nomeAcao: string) => {
+    const atendimentos = rawAtendimentosAcoes
+      .filter((a: any) => a.solicitante === nomeAcao)
+      .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''));
+
+    if (atendimentos.length === 0) {
+      alert('Nenhum atendimento encontrado para esta ação.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81];
+    const accentColor: [number, number, number] = [232, 245, 233];
+    const borderColor: [number, number, number] = [200, 230, 201];
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'LISTA DE ENTREGA';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    doc.text(title, (pageWidth - titleWidth) / 2, 14);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = nomeAcao;
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
+    doc.text(subtitle, (pageWidth - subtitleWidth) / 2, 22);
+
+    // Period info box
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.roundedRect(15, 40, pageWidth - 30, 12, 2, 2, 'F');
+
+    const crono = chronologicalData.find(c => c.acao === nomeAcao);
+    const periodoAcao = crono
+      ? (crono.dataInicio === crono.dataFim
+        ? formatDateFull(crono.dataInicio)
+        : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
+      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const periodoLabel = `PERÍODO: ${periodoAcao}`;
+    const periodoLabelWidth = doc.getStringUnitWidth(periodoLabel) * 9 / doc.internal.scaleFactor;
+    doc.text(periodoLabel, (pageWidth - periodoLabelWidth) / 2, 47);
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
+    const totalTextWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
+    doc.text(totalText, pageWidth - 20 - totalTextWidth, 47);
+
+    // Table
+    const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
+    const tableRows = atendimentos.map((at: any, index: number) => [
+      (index + 1).toString(),
+      at.nome || '—',
+      at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—',
+      ''
+    ]);
+
+    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 57,
+      styles: {
+        fontSize: 9,
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+        lineColor: borderColor,
+        lineWidth: 0.1,
+        minCellHeight: 12,
+        textColor: [40, 40, 40],
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+        lineWidth: 0
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] },
+        1: { cellWidth: 85, halign: 'left', overflow: 'linebreak' },
+        2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' },
+        3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] }
+      },
+      alternateRowStyles: { fillColor: [252, 252, 252] },
+      margin: { left: 15, right: 15 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage',
+      didDrawPage: () => {
+        const pageCount = doc.internal.getNumberOfPages();
+        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.line(15, doc.internal.pageSize.getHeight() - 18, pageWidth - 15, doc.internal.pageSize.getHeight() - 18);
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(110, 110, 110);
+
+        const now = new Date();
+        doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 15, doc.internal.pageSize.getHeight() - 12);
+
+        doc.setFont('helvetica', 'bold');
+        const atendenteTextW = doc.getStringUnitWidth(userName) * 7 / doc.internal.scaleFactor;
+        doc.text(userName, (pageWidth - atendenteTextW) / 2, doc.internal.pageSize.getHeight() - 12);
+
+        doc.setFont('helvetica', 'normal');
+        const pageText = `Página ${currentPage} de ${pageCount}`;
+        const pageTextW = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+        doc.text(pageText, pageWidth - pageTextW - 15, doc.internal.pageSize.getHeight() - 12);
+      }
+    });
+
+    const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    doc.save(`lista_entrega_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
+  };
+
+  // =============================================
   // HELPERS
   // =============================================
 
@@ -905,6 +1172,7 @@ export default function AcoesItinerantesPage() {
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Em Andamento</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Cancelados</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% Conclusão</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Relatórios</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -951,6 +1219,26 @@ export default function AcoesItinerantesPage() {
                         <span className="text-xs font-bold text-gray-700 tabular-nums w-12 text-right">
                           {acao.percentualConclusao.toFixed(1)}%
                         </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => generateActionDetailPDF(acao.nome)}
+                          title="Relatório detalhado de atendimentos"
+                          className="group/btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all"
+                        >
+                          <FiFileText className="w-3 h-3" />
+                          <span className="hidden xl:inline">Detalhado</span>
+                        </button>
+                        <button
+                          onClick={() => generateActionDeliveryPDF(acao.nome)}
+                          title="Lista de entrega por ordem alfabética"
+                          className="group/btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all"
+                        >
+                          <FiList className="w-3 h-3" />
+                          <span className="hidden xl:inline">Entrega</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
