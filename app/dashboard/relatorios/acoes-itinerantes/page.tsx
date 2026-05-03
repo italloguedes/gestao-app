@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,9 @@ import {
   FiAlertCircle,
   FiRefreshCw,
   FiFileText,
-  FiList
+  FiList,
+  FiX,
+  FiUser
 } from 'react-icons/fi';
 import {
   BarChart,
@@ -124,6 +126,21 @@ export default function AcoesItinerantesPage() {
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
   const [rawAtendimentosAcoes, setRawAtendimentosAcoes] = useState<any[]>([]);
+  const [expandedEmAndamento, setExpandedEmAndamento] = useState<string | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setExpandedEmAndamento(null);
+      }
+    };
+    if (expandedEmAndamento) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [expandedEmAndamento]);
 
   useEffect(() => {
     const hoje = new Date();
@@ -1198,10 +1215,96 @@ export default function AcoesItinerantesPage() {
                         {acao.concluidos}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                        {acao.emAndamento}
-                      </span>
+                    <td className="px-4 py-3 text-center relative">
+                      {acao.emAndamento > 0 ? (
+                        <>
+                          <button
+                            onClick={() => setExpandedEmAndamento(expandedEmAndamento === acao.nome ? null : acao.nome)}
+                            className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                              expandedEmAndamento === acao.nome
+                                ? 'bg-teal-600 text-white border-teal-700 shadow-md shadow-teal-200'
+                                : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 hover:shadow-sm'
+                            }`}
+                            title="Clique para ver os atendimentos em andamento"
+                          >
+                            {acao.emAndamento}
+                          </button>
+
+                          {expandedEmAndamento === acao.nome && (
+                            <div
+                              ref={popoverRef}
+                              className="absolute z-50 top-full mt-1 right-0 w-[380px] bg-white rounded-xl border border-gray-200 shadow-2xl shadow-gray-300/40 animate-in fade-in slide-in-from-top-2 duration-200"
+                              style={{ maxHeight: '320px' }}
+                            >
+                              {/* Popover Header */}
+                              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-t-xl">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
+                                    <FiClock className="h-3 w-3 text-teal-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">Em Andamento</p>
+                                    <p className="text-[10px] text-gray-500 truncate max-w-[200px]">{acao.nome}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setExpandedEmAndamento(null)}
+                                  className="h-6 w-6 rounded-md hover:bg-gray-200/60 flex items-center justify-center transition-colors"
+                                >
+                                  <FiX className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+
+                              {/* Popover Content */}
+                              <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase() === 'em_andamento' ||
+                                    a.status?.toLowerCase() === 'em andamento' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('em_andamento') ||
+                                    a.status?.toLowerCase().includes('em andamento')
+                                  ))
+                                  .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''))
+                                  .map((at: any, i: number) => (
+                                    <div
+                                      key={at.id || i}
+                                      className={`flex items-center gap-3 px-4 py-2.5 text-xs ${
+                                        i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
+                                      } hover:bg-teal-50/40 transition-colors`}
+                                    >
+                                      <div className="h-7 w-7 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                                        <FiUser className="h-3 w-3 text-teal-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-800 truncate">{at.nome || '—'}</p>
+                                        <p className="text-[10px] text-gray-400">
+                                          CPF: {at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—'}
+                                          {at.dia_atual && ` • ${formatDateFull(at.dia_atual)}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))
+                                }
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase() === 'em_andamento' ||
+                                    a.status?.toLowerCase() === 'em andamento' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('em_andamento') ||
+                                    a.status?.toLowerCase().includes('em andamento')
+                                  )).length === 0 && (
+                                  <div className="px-4 py-6 text-center text-xs text-gray-400">
+                                    Nenhum atendimento em andamento encontrado
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                          {acao.emAndamento}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
