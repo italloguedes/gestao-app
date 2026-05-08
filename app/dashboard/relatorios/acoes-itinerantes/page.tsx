@@ -22,7 +22,9 @@ import {
   FiFileText,
   FiList,
   FiX,
-  FiUser
+  FiUser,
+  FiCopy,
+  FiCheck
 } from 'react-icons/fi';
 import {
   BarChart,
@@ -127,6 +129,7 @@ export default function AcoesItinerantesPage() {
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
   const [rawAtendimentosAcoes, setRawAtendimentosAcoes] = useState<any[]>([]);
   const [expandedEmAndamento, setExpandedEmAndamento] = useState<string | null>(null);
+  const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on outside click
@@ -1277,9 +1280,35 @@ export default function AcoesItinerantesPage() {
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <p className="font-semibold text-gray-800 truncate">{at.nome || '—'}</p>
-                                        <p className="text-[10px] text-gray-400">
-                                          CPF: {at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—'}
-                                          {at.dia_atual && ` • ${formatDateFull(at.dia_atual)}`}
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1 flex-wrap">
+                                          <span>CPF:</span>
+                                          {at.cpf ? (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const cpfFormatado = at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                                                navigator.clipboard.writeText(cpfFormatado);
+                                                setCopiedCpf(at.cpf);
+                                                setTimeout(() => setCopiedCpf(null), 1500);
+                                              }}
+                                              title="Clique para copiar o CPF"
+                                              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded transition-all cursor-pointer ${
+                                                copiedCpf === at.cpf
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'hover:bg-gray-200/60 text-gray-500 hover:text-gray-700'
+                                              }`}
+                                            >
+                                              <span className="font-mono">{at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>
+                                              {copiedCpf === at.cpf ? (
+                                                <FiCheck className="w-2.5 h-2.5 text-green-600" />
+                                              ) : (
+                                                <FiCopy className="w-2.5 h-2.5 opacity-50" />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <span>—</span>
+                                          )}
+                                          {at.dia_atual && <span>• {formatDateFull(at.dia_atual)}</span>}
                                         </p>
                                       </div>
                                     </div>
