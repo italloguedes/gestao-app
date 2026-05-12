@@ -46,6 +46,28 @@ interface AtendimentoModalProps {
 
 type TabKey = 'dados' | 'observacoes' | 'historico';
 
+function InputField({ label, icon, value, onChange, type = 'text', error, mono, placeholder }: {
+  label: string; icon: React.ReactElement; value: string; onChange: (v: string) => void;
+  type?: string; error?: string; mono?: boolean; placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50/80 border-2 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium ${mono ? 'font-mono' : ''} ${error ? 'border-red-300 bg-red-50/50 ring-2 ring-red-100' : 'border-slate-200'}`}
+        />
+      </div>
+      {error && <p className="text-red-500 text-[11px] mt-0.5 font-bold">{error}</p>}
+    </div>
+  );
+}
+
 export default function AtendimentoModal({
   atendimento,
   isOpen,
@@ -616,26 +638,6 @@ export default function AtendimentoModal({
     { key: 'observacoes', label: 'Notas', icon: <FiMessageSquare className="w-4 h-4" />, badge: historicoObservacoes.length },
     { key: 'historico', label: 'Histórico', icon: <FiList className="w-4 h-4" /> },
   ];
-
-  const InputField = ({ label, icon, value, onChange, type = 'text', error, mono, placeholder }: {
-    label: string; icon: React.ReactElement; value: string; onChange: (v: string) => void;
-    type?: string; error?: string; mono?: boolean; placeholder?: string;
-  }) => (
-    <div>
-      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50/80 border-2 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium ${mono ? 'font-mono' : ''} ${error ? 'border-red-300 bg-red-50/50 ring-2 ring-red-100' : 'border-slate-200'}`}
-        />
-      </div>
-      {error && <p className="text-red-500 text-[11px] mt-0.5 font-bold">{error}</p>}
-    </div>
-  );
 
   return (
     <>
