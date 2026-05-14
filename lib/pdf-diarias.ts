@@ -100,7 +100,6 @@ export const generateDiariasPDF = async ({
     let y = 36;
 
     const LABEL_X = MARGIN_LEFT + 3;
-    const VALUE_X = 80; // Coluna fixa para todos os valores
     const ROW_H = 7;
     const NUM_ROWS = 5;
 
@@ -111,17 +110,19 @@ export const generateDiariasPDF = async ({
     doc.setLineWidth(0.8);
     doc.rect(MARGIN_LEFT, y - 2, CONTENT_WIDTH, dataBoxH, 'FD');
 
-    // Helper para desenhar campo alinhado
-    const drawAlignedField = (label: string, value: string, yPos: number, maxW?: number) => {
+    // Helper: valor logo após o label, sem espaço grande
+    const drawField = (label: string, value: string, yPos: number) => {
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
+        doc.setFontSize(9);
         doc.setTextColor(50, 50, 50);
         doc.text(label, LABEL_X, yPos);
+        const labelW = doc.getTextWidth(label);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(10, 10, 10);
-        const vMaxW = maxW || (MARGIN_RIGHT - VALUE_X - 3);
-        doc.text(value, VALUE_X, yPos, { maxWidth: vMaxW });
+        const valueX = LABEL_X + labelW + 3;
+        const maxW = MARGIN_RIGHT - valueX - 2;
+        doc.text(value, valueX, yPos, { maxWidth: maxW });
     };
 
     // Helper para separador
@@ -132,27 +133,27 @@ export const generateDiariasPDF = async ({
     };
 
     // Linha 1: SETOR
-    drawAlignedField('SETOR:', setor.toUpperCase(), y + 3);
+    drawField('SETOR:', setor.toUpperCase(), y + 3);
     y += ROW_H;
     drawSep(y - 2);
 
     // Linha 2: TEMA DA ATIVIDADE
-    drawAlignedField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y + 3);
+    drawField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y + 3);
     y += ROW_H;
     drawSep(y - 2);
 
     // Linha 3: DEPUTADO/CHEFE SOLICITANTE
-    drawAlignedField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y + 3);
+    drawField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y + 3);
     y += ROW_H;
     drawSep(y - 2);
 
     // Linha 4: CIDADE
-    drawAlignedField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3);
+    drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3);
     y += ROW_H;
     drawSep(y - 2);
 
     // Linha 5: DATA DA ATIVIDADE
-    drawAlignedField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3);
+    drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3);
 
     y += ROW_H + 5;
 
