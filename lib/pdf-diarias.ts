@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { PDFDocument } from 'pdf-lib';
 
 // ===== TIPOS =====
 
@@ -441,51 +442,137 @@ export const generateDiariasPDF = async ({
                     doc.text(`Comprovantes — Pág. ${page + 1}/${totalPages}`, pageW / 2, 284, { align: 'center' });
                 }
             } else {
+                // PDFs serão inseridos via pdf-lib depois
+                // Marca posição para inserir depois
                 for (const anexo of grupo) {
                     doc.addPage();
-
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(8);
-                    doc.setTextColor(0, 100, 60);
-                    doc.text('ANEXO - DOCUMENTO', pageW / 2, 10, { align: 'center' });
-
+                    // Página marcadora (será substituída pelo pdf-lib)
                     doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(7);
-                    doc.setTextColor(100, 100, 100);
-                    doc.text(anexo.nome, pageW / 2, 15, { align: 'center' });
-
-                    drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
-
-                    doc.setFillColor(248, 250, 252);
-                    doc.setDrawColor(220, 220, 220);
-                    doc.rect(MARGIN_LEFT, 22, CONTENT_WIDTH, 245, 'FD');
-
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                    doc.setTextColor(100, 100, 100);
-                    doc.text('Documento PDF anexado:', pageW / 2, 130, { align: 'center' });
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(11);
-                    doc.setTextColor(30, 41, 59);
-                    doc.text(anexo.nome, pageW / 2, 140, { align: 'center' });
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8);
-                    doc.setTextColor(120, 120, 120);
-                    doc.text('(Este documento deve ser impresso separadamente)', pageW / 2, 150, { align: 'center' });
-
-                    doc.setDrawColor(0, 100, 60);
-                    doc.setLineWidth(0.3);
-                    doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);
-                    doc.setFont('helvetica', 'italic');
                     doc.setFontSize(6);
-                    doc.setTextColor(120, 120, 120);
-                    doc.text(`Anexo: ${anexo.nome}`, pageW / 2, 276, { align: 'center' });
+                    doc.setTextColor(255, 255, 255);
+                    doc.text(`__PDF_PLACEHOLDER__${anexo.id}`, 0, 0);
                 }
             }
         }
     }
 
-    // Gerar URL do PDF
-    const pdfBlob = doc.output('blob');
-    return URL.createObjectURL(pdfBlob);
+    // ============================
+    // MERGE com pdf-lib para embutir PDFs reais
+    // ============================
+
+    const pdfAnexos = anexos.filter(a => a.tipo === 'pdf');
+
+    if (pdfAnexos.length === 0) {
+        // Sem PDFs anexados, retorna direto
+        const pdfBlob = doc.output('blob');
+        return URL.createObjectURL(pdfBlob);
+    }
+
+    // Converter jsPDF para pdf-lib
+    const jspdfBytes = doc.output('arraybuffer');
+    const mergedPdf = await PDFDocument.load(jspdfBytes);
+
+    // Encontrar páginas marcadoras e substituir por páginas reais do PDF
+    const totalPages = mergedPdf.getPageCount();
+    const pagesToRemove: number[] = [];
+    const insertions: { pageIndex: number; anexo: AnexoDiaria }[] = [];
+
+    // Identificar páginas placeholder
+    for (let i = 0; i < totalPages; i++) {
+        const page = mergedPdf.getPage(i);
+        // Checar se é uma página placeholder (muito pequena em conteúdo)
+        // Usamos a correspondência por ordem: cada PDF placeholder corresponde a um pdfAnexo
+    }
+
+    // Abordagem simples: remover placeholders e inserir PDFs reais na posição correta
+    // Primeiro, encontrar quais páginas são placeholders (1 por pdf anexado)
+    // As páginas placeholder são as últimas N páginas correspondentes a PDFs
+    // Mas como a ordem pode ser mista, precisamos rastrear
+
+    // Reconstruir: criar novo PDF, copiar páginas do jsPDF e inserir PDFs reais
+    const finalPdf = await PDFDocument.create();
+    let pdfAnexoIdx = 0;
+
+    // Rastrear páginas do jsPDF que são placeholder
+    // Cada grupo 'pdf' gera 1 página placeholder por anexo
+    const placeholderPageIndices = new Set<number>();
+    let jspdfPageIdx = 0;
+
+    // Recalcular: percorrer os grupos na mesma ordem e identificar
+    const grupos2: AnexoDiaria[][] = [];
+    let ga: AnexoDiaria[] = [];
+    let ta: string | null = null;
+    for (const anexo of anexos) {
+        if (anexo.tipo !== ta) {
+            if (ga.length > 0) grupos2.push([...ga]);
+            ga = [anexo]; ta = anexo.tipo;
+        } else { ga.push(anexo); }
+    }
+    if (ga.length > 0) grupos2.push([...ga]);
+
+    // Contar páginas: relatório principal (antes dos anexos)
+    // O relatório principal ocupa as primeiras páginas até os anexos começarem
+    // Vamos contar quantas páginas cada grupo ocupa no jsPDF
+    const mainReportPages = totalPages - anexos.reduce((acc, a) => {
+        if (a.tipo === 'pdf') return acc + 1;
+        return acc;
+    }, 0) - (() => {
+        // Contar páginas de imagens
+        let imgPages = 0;
+        for (const g of grupos2) {
+            if (g[0].tipo === 'image') {
+                imgPages += Math.ceil(g.length / 4);
+            }
+        }
+        return imgPages;
+    })();
+
+    // Copiar páginas do relatório principal
+    let srcPageIdx = 0;
+    const mainPages = await finalPdf.copyPages(mergedPdf, Array.from({ length: mainReportPages }, (_, i) => i));
+    for (const p of mainPages) {
+        finalPdf.addPage(p);
+    }
+    srcPageIdx = mainReportPages;
+
+    // Agora processar grupos na ordem do usuário
+    for (const grupo of grupos2) {
+        if (grupo[0].tipo === 'image') {
+            const imgGroupPages = Math.ceil(grupo.length / 4);
+            const indices = Array.from({ length: imgGroupPages }, (_, i) => srcPageIdx + i);
+            const copiedPages = await finalPdf.copyPages(mergedPdf, indices);
+            for (const p of copiedPages) {
+                finalPdf.addPage(p);
+            }
+            srcPageIdx += imgGroupPages;
+        } else {
+            // PDF: inserir páginas reais do arquivo
+            for (const anexo of grupo) {
+                srcPageIdx++; // pular placeholder
+                try {
+                    // Converter data URL para bytes
+                    const base64Data = anexo.dataUrl.split(',')[1];
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const attachedPdf = await PDFDocument.load(bytes);
+                    const attachedPages = await finalPdf.copyPages(attachedPdf, attachedPdf.getPageIndices());
+                    for (const p of attachedPages) {
+                        finalPdf.addPage(p);
+                    }
+                } catch (e) {
+                    console.error(`Erro ao embutir PDF ${anexo.nome}:`, e);
+                    // Fallback: copiar a página placeholder
+                    const [fallback] = await finalPdf.copyPages(mergedPdf, [srcPageIdx - 1]);
+                    finalPdf.addPage(fallback);
+                }
+            }
+        }
+    }
+
+    const finalBytes = await finalPdf.save();
+    const finalBlob = new Blob([finalBytes], { type: 'application/pdf' });
+    return URL.createObjectURL(finalBlob);
 };
