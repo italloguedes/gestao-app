@@ -88,11 +88,11 @@ export const generateDiariasPDF = async ({
     doc.text('ANEXO II - RELATÓRIOS DE DIÁRIAS (Prestação de Contas)', pageW / 2, 22, { align: 'center' });
 
     // Linhas decorativas no cabeçalho
-    doc.setDrawColor(0, 100, 60);
-    doc.setLineWidth(0.8);
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(1.2);
     doc.line(MARGIN_LEFT, 28, MARGIN_RIGHT, 28);
-    doc.setLineWidth(0.3);
-    doc.line(MARGIN_LEFT, 29.5, MARGIN_RIGHT, 29.5);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN_LEFT, 30, MARGIN_RIGHT, 30);
 
     // ============================
     // DADOS GERAIS
@@ -117,17 +117,23 @@ export const generateDiariasPDF = async ({
     };
 
     // Background para seção de dados
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.3);
+    doc.setFillColor(245, 247, 250);
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.7);
     doc.rect(MARGIN_LEFT, y - 4, CONTENT_WIDTH, 30, 'FD');
 
     drawField('SETOR:', setor.toUpperCase(), y);
     y += 6;
+    // Linha separadora entre campos
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
     drawField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y, MARGIN_LEFT, 145);
     y += 6;
+    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
     drawField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y);
     y += 6;
+    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
     drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y);
     drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y, 110);
 
@@ -157,8 +163,8 @@ export const generateDiariasPDF = async ({
     doc.text('ASSINATURA', colAssinatura + 2, tableStartY + 5.5);
 
     // Linhas verticais do cabeçalho
-    doc.setDrawColor(255, 255, 255);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(200, 220, 200);
+    doc.setLineWidth(0.5);
     doc.line(colMatricula, tableStartY, colMatricula, tableStartY + 8);
     doc.line(colPeriodo, tableStartY, colPeriodo, tableStartY + 8);
     doc.line(colAssinatura, tableStartY, colAssinatura, tableStartY + 8);
@@ -178,8 +184,8 @@ export const generateDiariasPDF = async ({
         doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, ROW_HEIGHT, 'F');
 
         // Bordas
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.15);
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.4);
         doc.line(MARGIN_LEFT, y + ROW_HEIGHT, MARGIN_RIGHT, y + ROW_HEIGHT);
         doc.line(colMatricula, y, colMatricula, y + ROW_HEIGHT);
         doc.line(colPeriodo, y, colPeriodo, y + ROW_HEIGHT);
@@ -225,8 +231,8 @@ export const generateDiariasPDF = async ({
     }
 
     // Borda externa da tabela
-    doc.setDrawColor(0, 100, 60);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(0, 60, 40);
+    doc.setLineWidth(1.0);
     doc.rect(MARGIN_LEFT, tableStartY, CONTENT_WIDTH, y - tableStartY);
 
     y += 8;
@@ -247,8 +253,8 @@ export const generateDiariasPDF = async ({
     // Conteúdo da justificativa
     const justificativaHeight = Math.max(20, 8);
     doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.7);
     doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, justificativaHeight, 'FD');
 
     if (justificativa) {
@@ -280,8 +286,9 @@ export const generateDiariasPDF = async ({
     y += 7;
 
     // Texto explicativo
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(245, 247, 250);
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.7);
     doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 22, 'FD');
 
     doc.setFont('helvetica', 'italic');
@@ -315,8 +322,9 @@ export const generateDiariasPDF = async ({
         y = 20;
     }
 
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(245, 247, 250);
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.7);
     doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 30, 'FD');
 
     doc.setFont('helvetica', 'normal');
