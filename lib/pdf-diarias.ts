@@ -101,7 +101,7 @@ export const generateDiariasPDF = async ({
 
     const LABEL_X = MARGIN_LEFT + 3;
     const ROW_H = 7;
-    const NUM_ROWS = 5;
+    const NUM_ROWS = 4;
 
     // Caixa externa da seção de dados
     const dataBoxH = ROW_H * NUM_ROWS;
@@ -110,19 +110,19 @@ export const generateDiariasPDF = async ({
     doc.setLineWidth(0.8);
     doc.rect(MARGIN_LEFT, y - 2, CONTENT_WIDTH, dataBoxH, 'FD');
 
-    // Helper: valor logo após o label, sem espaço grande
-    const drawField = (label: string, value: string, yPos: number) => {
+    // Helper: valor logo após o label
+    const drawField = (label: string, value: string, yPos: number, startX: number = LABEL_X, endX: number = MARGIN_RIGHT) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(50, 50, 50);
-        doc.text(label, LABEL_X, yPos);
+        doc.text(label, startX, yPos);
         const labelW = doc.getTextWidth(label);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(10, 10, 10);
-        const valueX = LABEL_X + labelW + 3;
-        const maxW = MARGIN_RIGHT - valueX - 2;
-        doc.text(value, valueX, yPos, { maxWidth: maxW });
+        const valueX = startX + labelW + 2;
+        const maxW = endX - valueX - 2;
+        if (maxW > 0) doc.text(value, valueX, yPos, { maxWidth: maxW });
     };
 
     // Helper para separador
@@ -147,15 +147,18 @@ export const generateDiariasPDF = async ({
     y += ROW_H;
     drawSep(y - 2);
 
-    // Linha 4: CIDADE
-    drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3);
+    // Linha 4: CIDADE + DATA DA ATIVIDADE (mesma linha, dividida ao meio)
+    const halfX = MARGIN_LEFT + (CONTENT_WIDTH / 2);
+    drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3, LABEL_X, halfX - 2);
+
+    // Linha vertical divisória
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.4);
+    doc.line(halfX, y - 2, halfX, y - 2 + ROW_H);
+
+    drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3, halfX + 3, MARGIN_RIGHT);
+
     y += ROW_H;
-    drawSep(y - 2);
-
-    // Linha 5: DATA DA ATIVIDADE
-    drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3);
-
-    y += ROW_H + 5;
 
     // ============================
     // TABELA DE SERVIDORES
@@ -191,9 +194,9 @@ export const generateDiariasPDF = async ({
 
     // Linhas de servidores
     const ROW_HEIGHT = 14;
-    const maxRows = Math.max(servidores.length, 4); // Mínimo 4 linhas
+    const totalRows = servidores.length;
 
-    for (let i = 0; i < maxRows; i++) {
+    for (let i = 0; i < totalRows; i++) {
         const servidor = servidores[i];
         const isEven = i % 2 === 0;
 
@@ -253,8 +256,6 @@ export const generateDiariasPDF = async ({
     doc.setLineWidth(1.0);
     doc.rect(MARGIN_LEFT, tableStartY, CONTENT_WIDTH, y - tableStartY);
 
-    y += 8;
-
     // ============================
     // JUSTIFICATIVA
     // ============================
@@ -283,7 +284,7 @@ export const generateDiariasPDF = async ({
         doc.text(lines, MARGIN_LEFT + 3, y + 5);
     }
 
-    y += justificativaHeight + 5;
+    y += justificativaHeight;
 
     // ============================
     // NEXOS
