@@ -129,21 +129,27 @@ export default function AcoesItinerantesPage() {
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
   const [rawAtendimentosAcoes, setRawAtendimentosAcoes] = useState<any[]>([]);
   const [expandedEmAndamento, setExpandedEmAndamento] = useState<string | null>(null);
+  const [expandedCancelados, setExpandedCancelados] = useState<string | null>(null);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on outside click
+  const popoverCanceladosRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setExpandedEmAndamento(null);
       }
+      if (popoverCanceladosRef.current && !popoverCanceladosRef.current.contains(event.target as Node)) {
+        setExpandedCancelados(null);
+      }
     };
-    if (expandedEmAndamento) {
+    if (expandedEmAndamento || expandedCancelados) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [expandedEmAndamento]);
+  }, [expandedEmAndamento, expandedCancelados]);
 
   useEffect(() => {
     const hoje = new Date();
@@ -424,7 +430,7 @@ export default function AcoesItinerantesPage() {
           ...acao,
           percentualConclusao: acao.total > 0 ? (acao.concluidos / acao.total) * 100 : 0
         };
-      }).sort((a, b) => b.total - a.total);
+      }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
       setAcoes(acoesArray);
 
@@ -1335,10 +1341,134 @@ export default function AcoesItinerantesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
-                        {acao.outros}
-                      </span>
+                    <td className="px-4 py-3 text-center relative">
+                      {acao.outros > 0 ? (
+                        <>
+                          <button
+                            onClick={() => setExpandedCancelados(expandedCancelados === acao.nome ? null : acao.nome)}
+                            className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                              expandedCancelados === acao.nome
+                                ? 'bg-gray-600 text-white border-gray-700 shadow-md shadow-gray-200'
+                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                            title="Clique para ver os atendimentos cancelados"
+                          >
+                            {acao.outros}
+                          </button>
+
+                          {expandedCancelados === acao.nome && (
+                            <div
+                              ref={popoverCanceladosRef}
+                              className="absolute z-50 top-full mt-1 right-0 w-[380px] bg-white rounded-xl border border-gray-200 shadow-2xl shadow-gray-300/40 animate-in fade-in slide-in-from-top-2 duration-200"
+                              style={{ maxHeight: '320px' }}
+                            >
+                              {/* Popover Header */}
+                              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-slate-50 rounded-t-xl">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-6 w-6 rounded-md bg-gray-200 flex items-center justify-center">
+                                    <FiAlertCircle className="h-3 w-3 text-gray-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">Cancelados</p>
+                                    <p className="text-[10px] text-gray-500 truncate max-w-[200px]">{acao.nome}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setExpandedCancelados(null)}
+                                  className="h-6 w-6 rounded-md hover:bg-gray-200/60 flex items-center justify-center transition-colors"
+                                >
+                                  <FiX className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+
+                              {/* Popover Content */}
+                              <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('cancelado') ||
+                                    a.status?.toLowerCase() === 'cancelado' ||
+                                    a.status === 'Cancelado' ||
+                                    a.status === 'CANCELADO' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('correcao') ||
+                                    a.status?.toLowerCase().includes('correção') ||
+                                    a.status?.toLowerCase() === 'correcao' ||
+                                    a.status?.toLowerCase() === 'correção' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('bloqueado') ||
+                                    a.status?.toLowerCase() === 'bloqueado'
+                                  ))
+                                  .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''))
+                                  .map((at: any, i: number) => (
+                                    <div
+                                      key={at.id || i}
+                                      className={`flex items-center gap-3 px-4 py-2.5 text-xs ${
+                                        i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
+                                      } hover:bg-gray-50/80 transition-colors`}
+                                    >
+                                      <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                        <FiUser className="h-3 w-3 text-gray-500" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-800 truncate">{at.nome || '—'}</p>
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1 flex-wrap">
+                                          <span>CPF:</span>
+                                          {at.cpf ? (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const cpfFormatado = at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                                                navigator.clipboard.writeText(cpfFormatado);
+                                                setCopiedCpf(at.cpf);
+                                                setTimeout(() => setCopiedCpf(null), 1500);
+                                              }}
+                                              title="Clique para copiar o CPF"
+                                              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded transition-all cursor-pointer ${
+                                                copiedCpf === at.cpf
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'hover:bg-gray-200/60 text-gray-500 hover:text-gray-700'
+                                              }`}
+                                            >
+                                              <span className="font-mono">{at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>
+                                              {copiedCpf === at.cpf ? (
+                                                <FiCheck className="w-2.5 h-2.5 text-green-600" />
+                                              ) : (
+                                                <FiCopy className="w-2.5 h-2.5 opacity-50" />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <span>—</span>
+                                          )}
+                                          {at.dia_atual && <span>• {formatDateFull(at.dia_atual)}</span>}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))
+                                }
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('cancelado') ||
+                                    a.status?.toLowerCase() === 'cancelado' ||
+                                    a.status === 'Cancelado' ||
+                                    a.status === 'CANCELADO' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('correcao') ||
+                                    a.status?.toLowerCase().includes('correção') ||
+                                    a.status?.toLowerCase() === 'correcao' ||
+                                    a.status?.toLowerCase() === 'correção' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('bloqueado') ||
+                                    a.status?.toLowerCase() === 'bloqueado'
+                                  )).length === 0 && (
+                                  <div className="px-4 py-6 text-center text-xs text-gray-400">
+                                    Nenhum atendimento cancelado encontrado
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
+                          {acao.outros}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
