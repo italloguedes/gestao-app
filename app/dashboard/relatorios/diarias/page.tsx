@@ -10,8 +10,14 @@ import { useRouter } from 'next/navigation';
 export default function DiariasPage() {
   const router = useRouter();
 
+  // Mapeamento setor → deputado padrão
+  const deputadoPorSetor: Record<string, string> = {
+    'DIRETORIA GERAL': 'PAULO FERREIRA ROLIM',
+    'CIADI': 'CAROLINA OLIVEIRA DAS CHAGAS',
+  };
+
   // Form state
-  const [setor, setSetor] = useState('DIRETORIA GERAL');
+  const [setor, setSetorState] = useState('DIRETORIA GERAL');
   const [temaAtividade, setTemaAtividade] = useState('');
   const [deputadoChefe, setDeputadoChefe] = useState('PAULO FERREIRA ROLIM');
   const [cidade, setCidade] = useState('');
@@ -20,6 +26,12 @@ export default function DiariasPage() {
   const [nexoFotos, setNexoFotos] = useState(true);
   const [nexoRecibos, setNexoRecibos] = useState(true);
   const [nexoAta, setNexoAta] = useState(false);
+
+  // Ao mudar setor, atualiza o deputado automaticamente
+  const setSetor = (novoSetor: string) => {
+    setSetorState(novoSetor);
+    setDeputadoChefe(deputadoPorSetor[novoSetor] || '');
+  };
 
   // Servidores
   const [allUsers, setAllUsers] = useState<User[]>([]);
