@@ -53,7 +53,16 @@ export default function DiariasPage() {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const res = await fetch('/logo-alece-daf.png');
+        // Tenta carregar logo-alece-daf.png, fallback para alece.png
+        let res = await fetch('/logo-alece-daf.png');
+        if (!res.ok) {
+          res = await fetch('/alece.png');
+        }
+        if (!res.ok) return;
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.startsWith('image/')) return;
+
         const blob = await res.blob();
         const reader = new FileReader();
         reader.onloadend = () => setLogoBase64(reader.result as string);

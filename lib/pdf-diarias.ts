@@ -71,7 +71,8 @@ export const generateDiariasPDF = async ({
     
     // Logo ALECE à esquerda
     if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', MARGIN_LEFT, 6, 18, 20, undefined, 'FAST');
+        const logoFormat = logoBase64.includes('image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(logoBase64, logoFormat, MARGIN_LEFT, 6, 18, 20, undefined, 'FAST');
     }
 
     // Título principal
