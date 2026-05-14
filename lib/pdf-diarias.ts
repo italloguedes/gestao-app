@@ -71,7 +71,7 @@ export const generateDiariasPDF = async ({
     
     // Logo ALECE à esquerda
     if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', MARGIN_LEFT, 8, 22, 22, undefined, 'FAST');
+        doc.addImage(logoBase64, 'PNG', MARGIN_LEFT, 6, 18, 20, undefined, 'FAST');
     }
 
     // Título principal
@@ -285,7 +285,7 @@ export const generateDiariasPDF = async ({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(7);
     doc.setTextColor(80, 80, 80);
-    const nexoTexto = 'NEXOS ( Apresentação de docs comprobatórios, são eles: Lista de presença, Cópia de Atas, Certificados, Declarações, Relatórios, fotos, Recibos, ou outros Docs que comprovam a atividade que motivou o deslocamento)';
+    const nexoTexto = 'ANEXOS ( Apresentação de docs comprobatórios, são eles: Lista de presença, Cópia de Atas, Certificados, Declarações, Relatórios, fotos, Recibos, ou outros Docs que comprovam a atividade que motivou o deslocamento)';
     const nexoLines = doc.splitTextToSize(nexoTexto, CONTENT_WIDTH - 6);
     doc.text(nexoLines, MARGIN_LEFT + 3, y + 5);
 
@@ -352,18 +352,98 @@ export const generateDiariasPDF = async ({
     // ============================
 
     if (anexos.length > 0) {
-        // Separar por tipo
         const imageAnexos = anexos.filter(a => a.tipo === 'image');
+        const pdfAnexos = anexos.filter(a => a.tipo === 'pdf');
 
+        // ---- FOTOS: 4 por página (grid 2x2) ----
         if (imageAnexos.length > 0) {
-            for (const anexo of imageAnexos) {
+            const IMGS_PER_PAGE = 4;
+            const totalPages = Math.ceil(imageAnexos.length / IMGS_PER_PAGE);
+
+            for (let page = 0; page < totalPages; page++) {
                 doc.addPage();
 
                 // Mini cabeçalho
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
                 doc.setTextColor(0, 100, 60);
-                doc.text('ANEXO - COMPROVANTE', pageW / 2, 10, { align: 'center' });
+                doc.text('ANEXOS - COMPROVANTES FOTOGRÁFICOS', pageW / 2, 10, { align: 'center' });
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Página ${page + 1} de ${totalPages}`, pageW / 2, 15, { align: 'center' });
+
+                drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
+
+                // Grid 2x2 positions
+                const gridStartY = 22;
+                const cellPadding = 4;
+                const cellW = (CONTENT_WIDTH - cellPadding) / 2;
+                const cellH = 120;
+                const positions = [
+                    { x: MARGIN_LEFT, y: gridStartY },
+                    { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY },
+                    { x: MARGIN_LEFT, y: gridStartY + cellH + cellPadding + 8 },
+                    { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY + cellH + cellPadding + 8 },
+                ];
+
+                const startIdx = page * IMGS_PER_PAGE;
+                const endIdx = Math.min(startIdx + IMGS_PER_PAGE, imageAnexos.length);
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const anexo = imageAnexos[i];
+                    const pos = positions[i - startIdx];
+
+                    // Border around image cell
+                    doc.setDrawColor(220, 220, 220);
+                    doc.setLineWidth(0.3);
+                    doc.rect(pos.x, pos.y, cellW, cellH + 6, 'S');
+
+                    // Image
+                    try {
+                        doc.addImage(
+                            anexo.dataUrl, 'JPEG',
+                            pos.x + 2, pos.y + 2,
+                            cellW - 4, cellH - 4,
+                            undefined, 'FAST'
+                        );
+                    } catch (e) {
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(200, 50, 50);
+                        doc.text('Erro ao carregar', pos.x + cellW / 2, pos.y + cellH / 2, { align: 'center' });
+                    }
+
+                    // Label below image
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(6);
+                    doc.setTextColor(100, 100, 100);
+                    const labelText = anexo.nome.length > 30 ? anexo.nome.substring(0, 27) + '...' : anexo.nome;
+                    doc.text(labelText, pos.x + cellW / 2, pos.y + cellH + 3, { align: 'center' });
+                }
+
+                // Rodapé do anexo
+                doc.setDrawColor(0, 100, 60);
+                doc.setLineWidth(0.3);
+                doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(6);
+                doc.setTextColor(120, 120, 120);
+                doc.text(`Fotos comprobatórias — Pág. ${page + 1}/${totalPages}`, pageW / 2, 276, { align: 'center' });
+            }
+        }
+
+        // ---- PDFs: página inteira cada ----
+        if (pdfAnexos.length > 0) {
+            for (const anexo of pdfAnexos) {
+                doc.addPage();
+
+                // Mini cabeçalho
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.setTextColor(0, 100, 60);
+                doc.text('ANEXO - DOCUMENTO', pageW / 2, 10, { align: 'center' });
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(7);
@@ -372,19 +452,25 @@ export const generateDiariasPDF = async ({
 
                 drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
 
-                // Imagem centralizada
-                try {
-                    const imgW = CONTENT_WIDTH - 10;
-                    const imgH = 230; // Max height
-                    doc.addImage(anexo.dataUrl, 'JPEG', MARGIN_LEFT + 5, 22, imgW, imgH, undefined, 'FAST');
-                } catch (e) {
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                    doc.setTextColor(200, 50, 50);
-                    doc.text('Erro ao carregar imagem anexada', pageW / 2, 100, { align: 'center' });
-                }
+                // Placeholder for PDF content
+                doc.setFillColor(248, 250, 252);
+                doc.setDrawColor(220, 220, 220);
+                doc.rect(MARGIN_LEFT, 22, CONTENT_WIDTH, 245, 'FD');
 
-                // Rodapé do anexo
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text('📄 Documento PDF anexado:', pageW / 2, 130, { align: 'center' });
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(30, 41, 59);
+                doc.text(anexo.nome, pageW / 2, 140, { align: 'center' });
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(120, 120, 120);
+                doc.text('(Este documento deve ser impresso separadamente)', pageW / 2, 150, { align: 'center' });
+
+                // Rodapé
                 doc.setDrawColor(0, 100, 60);
                 doc.setLineWidth(0.3);
                 doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);

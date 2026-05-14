@@ -41,7 +41,7 @@ export default function DiariasPage() {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const res = await fetch('/alece.png');
+        const res = await fetch('/logo-alece-daf.png');
         const blob = await res.blob();
         const reader = new FileReader();
         reader.onloadend = () => setLogoBase64(reader.result as string);
@@ -170,7 +170,7 @@ export default function DiariasPage() {
         setor, temaAtividade, deputadoChefe, cidade, dataAtividade,
         servidores, justificativa, nexoFotos, nexoRecibos, nexoAta,
         logoBase64,
-        anexos: anexos.filter(a => a.tipo === 'image'),
+        anexos,
       });
 
       setPdfUrl(url);
