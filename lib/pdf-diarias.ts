@@ -100,81 +100,77 @@ export const generateDiariasPDF = async ({
     let y = 36;
 
     const LABEL_X = MARGIN_LEFT + 3;
-    const ROW_H = 7; // Altura de cada linha de campo
+    const VALUE_X = 80; // Coluna fixa para todos os valores
+    const ROW_H = 7;
 
-    // Caixa externa da seção de dados (4 linhas × ROW_H)
+    // Caixa externa da seção de dados
     const dataBoxH = ROW_H * 4;
     doc.setFillColor(245, 247, 250);
     doc.setDrawColor(0, 80, 50);
     doc.setLineWidth(0.8);
     doc.rect(MARGIN_LEFT, y - 2, CONTENT_WIDTH, dataBoxH, 'FD');
 
-    // Linha 1: SETOR
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(50, 50, 50);
-    doc.text('SETOR:', LABEL_X, y + 3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(10, 10, 10);
-    doc.text(setor.toUpperCase(), LABEL_X + 30, y + 3);
+    // Helper para desenhar campo alinhado
+    const drawAlignedField = (label: string, value: string, yPos: number, valX: number = VALUE_X, maxW?: number) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(50, 50, 50);
+        doc.text(label, LABEL_X, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(10, 10, 10);
+        if (maxW) {
+            doc.text(value, valX, yPos, { maxWidth: maxW });
+        } else {
+            doc.text(value, valX, yPos);
+        }
+    };
 
-    // Linha separadora
+    // Linha 1: SETOR
+    drawAlignedField('SETOR:', setor.toUpperCase(), y + 3);
+
+    // Separador
     y += ROW_H;
     doc.setDrawColor(0, 80, 50);
     doc.setLineWidth(0.4);
     doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
 
     // Linha 2: TEMA DA ATIVIDADE
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(50, 50, 50);
-    doc.text('TEMA DA ATIVIDADE:', LABEL_X, y + 3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(10, 10, 10);
-    doc.text(temaAtividade.toUpperCase(), LABEL_X + 55, y + 3, { maxWidth: CONTENT_WIDTH - 60 });
+    drawAlignedField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y + 3, VALUE_X, MARGIN_RIGHT - VALUE_X - 2);
 
-    // Linha separadora
+    // Separador
     y += ROW_H;
     doc.setDrawColor(0, 80, 50);
     doc.setLineWidth(0.4);
     doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
 
     // Linha 3: DEPUTADO/CHEFE SOLICITANTE
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(50, 50, 50);
-    doc.text('DEPUTADO/CHEFE SOLICITANTE:', LABEL_X, y + 3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(10, 10, 10);
-    doc.text(deputadoChefe.toUpperCase(), LABEL_X + 78, y + 3);
+    drawAlignedField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y + 3);
 
-    // Linha separadora
+    // Separador
     y += ROW_H;
     doc.setDrawColor(0, 80, 50);
     doc.setLineWidth(0.4);
     doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
 
-    // Linha 4: CIDADE + DATA DA ATIVIDADE
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(50, 50, 50);
-    doc.text('CIDADE:', LABEL_X, y + 3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(10, 10, 10);
-    doc.text(`${cidade.toUpperCase()} - CE`, LABEL_X + 30, y + 3);
+    // Linha 4: CIDADE + DATA DA ATIVIDADE (dividida em duas metades)
+    const midX = MARGIN_LEFT + (CONTENT_WIDTH / 2);
+    drawAlignedField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3);
 
+    // Linha vertical separadora no meio
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.4);
+    doc.line(midX, y - 2, midX, y - 2 + ROW_H);
+
+    // DATA DA ATIVIDADE na segunda metade
+    const DATA_LABEL_X = midX + 3;
+    const DATA_VALUE_X = midX + 48;
+    drawAlignedField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3, DATA_VALUE_X, MARGIN_RIGHT - DATA_VALUE_X - 2);
+    // Reposicionar o label na posição correta
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(50, 50, 50);
-    doc.text('DATA DA ATIVIDADE:', 110, y + 3);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(10, 10, 10);
-    doc.text(dataAtividade.toUpperCase(), 160, y + 3);
+    doc.text('DATA DA ATIVIDADE:', DATA_LABEL_X, y + 3);
 
     y += ROW_H + 5;
 
