@@ -344,18 +344,18 @@ export default function DiariasPage() {
 
                 {/* Grid de anexos para organizar */}
                 {anexos.length > 0 && (
-                  <div className="bg-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="bg-purple-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">2</span>
-                        <h3 className="font-bold text-white text-sm">Organizar Arquivos</h3>
-                        <span className="bg-slate-600 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">{anexos.length} arquivos</span>
+                        <span className="bg-emerald-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">2</span>
+                        <h3 className="font-bold text-gray-800 text-sm">Organizar Arquivos</h3>
+                        <span className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded-full">{anexos.length} arquivos</span>
                       </div>
-                      <button onClick={() => setAnexos([])} className="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                      <button onClick={() => setAnexos([])} className="text-red-500 hover:text-red-600 text-xs font-semibold flex items-center gap-1 transition-colors">
                         <FiTrash2 className="w-3.5 h-3.5" /> Limpar todos
                       </button>
                     </div>
-                    <p className="text-slate-400 text-xs">Arraste os itens para reordenar a sequência do PDF final.</p>
+                    <p className="text-gray-500 text-xs">Arraste os itens para reordenar a sequência do PDF final.</p>
 
                     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                       {anexos.map((anexo, idx) => (
@@ -367,8 +367,8 @@ export default function DiariasPage() {
                           onDragEnd={handleDragEnd}
                           className={`relative group rounded-xl overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 ${
                             dragIdx === idx
-                              ? 'ring-2 ring-purple-500 scale-105 shadow-xl shadow-purple-500/20 z-10'
-                              : 'ring-1 ring-slate-600 hover:ring-slate-400'
+                              ? 'ring-2 ring-emerald-500 scale-105 shadow-xl shadow-emerald-500/20 z-10'
+                              : 'ring-1 ring-gray-300 hover:ring-emerald-400'
                           }`}
                           style={{ aspectRatio: '3/4' }}
                         >
@@ -396,9 +396,9 @@ export default function DiariasPage() {
                               draggable={false}
                             />
                           ) : (
-                            <div className="w-full h-full bg-slate-700 flex flex-col items-center justify-center p-2">
-                              <FiFile className="w-8 h-8 text-slate-400 mb-2" />
-                              <p className="text-[10px] text-slate-300 text-center leading-tight line-clamp-3 px-1">
+                            <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center p-2">
+                              <FiFile className="w-8 h-8 text-gray-400 mb-2" />
+                              <p className="text-[10px] text-gray-600 text-center leading-tight line-clamp-3 px-1">
                                 {anexo.nome}
                               </p>
                             </div>

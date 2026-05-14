@@ -99,45 +99,84 @@ export const generateDiariasPDF = async ({
     // ============================
     let y = 36;
 
-    const drawField = (label: string, value: string, yPos: number, startX: number = MARGIN_LEFT, maxWidth?: number) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(80, 80, 80);
-        doc.text(label, startX, yPos);
+    const LABEL_X = MARGIN_LEFT + 3;
+    const ROW_H = 7; // Altura de cada linha de campo
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(15, 23, 42);
-        const labelWidth = doc.getTextWidth(label) + 2;
-        if (maxWidth) {
-            doc.text(value, startX + labelWidth, yPos, { maxWidth });
-        } else {
-            doc.text(value, startX + labelWidth, yPos);
-        }
-    };
-
-    // Background para seção de dados
+    // Caixa externa da seção de dados (4 linhas × ROW_H)
+    const dataBoxH = ROW_H * 4;
     doc.setFillColor(245, 247, 250);
     doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.7);
-    doc.rect(MARGIN_LEFT, y - 4, CONTENT_WIDTH, 30, 'FD');
+    doc.setLineWidth(0.8);
+    doc.rect(MARGIN_LEFT, y - 2, CONTENT_WIDTH, dataBoxH, 'FD');
 
-    drawField('SETOR:', setor.toUpperCase(), y);
-    y += 6;
-    // Linha separadora entre campos
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.3);
-    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
-    drawField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y, MARGIN_LEFT, 145);
-    y += 6;
-    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
-    drawField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y);
-    y += 6;
-    doc.line(MARGIN_LEFT + 2, y - 2, MARGIN_RIGHT - 2, y - 2);
-    drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y);
-    drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y, 110);
+    // Linha 1: SETOR
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    doc.text('SETOR:', LABEL_X, y + 3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(10, 10, 10);
+    doc.text(setor.toUpperCase(), LABEL_X + 30, y + 3);
 
-    y += 12;
+    // Linha separadora
+    y += ROW_H;
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
+
+    // Linha 2: TEMA DA ATIVIDADE
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    doc.text('TEMA DA ATIVIDADE:', LABEL_X, y + 3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(10, 10, 10);
+    doc.text(temaAtividade.toUpperCase(), LABEL_X + 55, y + 3, { maxWidth: CONTENT_WIDTH - 60 });
+
+    // Linha separadora
+    y += ROW_H;
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
+
+    // Linha 3: DEPUTADO/CHEFE SOLICITANTE
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    doc.text('DEPUTADO/CHEFE SOLICITANTE:', LABEL_X, y + 3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(10, 10, 10);
+    doc.text(deputadoChefe.toUpperCase(), LABEL_X + 78, y + 3);
+
+    // Linha separadora
+    y += ROW_H;
+    doc.setDrawColor(0, 80, 50);
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN_LEFT, y - 2, MARGIN_RIGHT, y - 2);
+
+    // Linha 4: CIDADE + DATA DA ATIVIDADE
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    doc.text('CIDADE:', LABEL_X, y + 3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(10, 10, 10);
+    doc.text(`${cidade.toUpperCase()} - CE`, LABEL_X + 30, y + 3);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    doc.text('DATA DA ATIVIDADE:', 110, y + 3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(10, 10, 10);
+    doc.text(dataAtividade.toUpperCase(), 160, y + 3);
+
+    y += ROW_H + 5;
 
     // ============================
     // TABELA DE SERVIDORES
