@@ -342,24 +342,70 @@ export default function DiariasPage() {
                   <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleFileUpload} />
                 </div>
 
-                {/* Anexos list */}
+                {/* Grid de anexos para organizar */}
                 {anexos.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Arraste para reordenar</p>
-                    {anexos.map((anexo, idx) => (
-                      <div key={anexo.id} draggable onDragStart={() => handleDragStart(idx)} onDragOver={e => handleDragOver(e, idx)} onDragEnd={handleDragEnd}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${dragIdx === idx ? 'border-blue-400 bg-blue-50 shadow-md scale-[1.02]' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
-                        <FiMove className="w-4 h-4 text-gray-400 cursor-grab flex-shrink-0" />
-                        {anexo.tipo === 'image' ? <FiImage className="w-4 h-4 text-emerald-500 flex-shrink-0" /> : <FiFile className="w-4 h-4 text-blue-500 flex-shrink-0" />}
-                        <span className="text-sm text-gray-700 truncate flex-1">{anexo.nome}</span>
-                        {anexo.tipo === 'image' && (
-                          <img src={anexo.dataUrl} alt="" className="w-10 h-10 object-cover rounded border" />
-                        )}
-                        <button onClick={() => removeAnexo(anexo.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
+                  <div className="bg-slate-800 rounded-2xl p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-purple-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">2</span>
+                        <h3 className="font-bold text-white text-sm">Organizar Arquivos</h3>
+                        <span className="bg-slate-600 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">{anexos.length} arquivos</span>
                       </div>
-                    ))}
+                      <button onClick={() => setAnexos([])} className="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                        <FiTrash2 className="w-3.5 h-3.5" /> Limpar todos
+                      </button>
+                    </div>
+                    <p className="text-slate-400 text-xs">Arraste os itens para reordenar a sequência do PDF final.</p>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {anexos.map((anexo, idx) => (
+                        <div
+                          key={anexo.id}
+                          draggable
+                          onDragStart={() => handleDragStart(idx)}
+                          onDragOver={e => handleDragOver(e, idx)}
+                          onDragEnd={handleDragEnd}
+                          className={`relative group rounded-xl overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 ${
+                            dragIdx === idx
+                              ? 'ring-2 ring-purple-500 scale-105 shadow-xl shadow-purple-500/20 z-10'
+                              : 'ring-1 ring-slate-600 hover:ring-slate-400'
+                          }`}
+                          style={{ aspectRatio: '3/4' }}
+                        >
+                          {/* Badge de ID */}
+                          <span className={`absolute top-1.5 left-1.5 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                            anexo.tipo === 'pdf' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'
+                          }`}>
+                            {anexo.id.slice(-2)}
+                          </span>
+
+                          {/* Botão remover */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeAnexo(anexo.id); }}
+                            className="absolute top-1.5 right-1.5 z-10 w-5 h-5 bg-red-500/80 hover:bg-red-500 text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <FiX className="w-3 h-3" />
+                          </button>
+
+                          {/* Conteúdo do card */}
+                          {anexo.tipo === 'image' ? (
+                            <img
+                              src={anexo.dataUrl}
+                              alt={anexo.nome}
+                              className="w-full h-full object-cover"
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-700 flex flex-col items-center justify-center p-2">
+                              <FiFile className="w-8 h-8 text-slate-400 mb-2" />
+                              <p className="text-[10px] text-slate-300 text-center leading-tight line-clamp-3 px-1">
+                                {anexo.nome}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
