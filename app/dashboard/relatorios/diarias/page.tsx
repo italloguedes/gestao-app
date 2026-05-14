@@ -48,6 +48,7 @@ export default function DiariasPage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [logoBase64, setLogoBase64] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [nomeArquivo, setNomeArquivo] = useState('relatorio-diarias');
 
   // Load logo
   useEffect(() => {
@@ -389,6 +390,15 @@ export default function DiariasPage() {
                   ))}
                 </div>
 
+                {/* Nome do arquivo */}
+                <div className="pt-3 border-t border-gray-100">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Nome do arquivo</label>
+                  <div className="flex items-center gap-1">
+                    <input value={nomeArquivo} onChange={e => setNomeArquivo(e.target.value)} className="flex-1 h-9 rounded-lg border border-gray-200 text-sm px-2 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" placeholder="relatorio-diarias" />
+                    <span className="text-xs text-gray-400">.pdf</span>
+                  </div>
+                </div>
+
                 <button onClick={handleGeneratePDF} disabled={generating}
                   className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4">
                   {generating ? (
@@ -407,9 +417,12 @@ export default function DiariasPage() {
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPdfUrl(null)}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center justify-between">
-                <h3 className="text-white font-bold">Pré-visualização do PDF</h3>
+                <h3 className="text-white font-bold">PDF Gerado</h3>
                 <div className="flex items-center gap-2">
-                  <a href={pdfUrl} download={`diarias-${cidade || 'relatorio'}.pdf`} className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
+                  <button onClick={() => { const w = window.open(pdfUrl, '_blank'); if (!w) alert('Permita popups para visualizar'); }} className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
+                    <FiFileText className="w-4 h-4" /> Visualizar
+                  </button>
+                  <a href={pdfUrl} download={`${nomeArquivo || 'relatorio-diarias'}.pdf`} className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
                     <FiDownload className="w-4 h-4" /> Baixar
                   </a>
                   <button onClick={() => setPdfUrl(null)} className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
@@ -417,7 +430,7 @@ export default function DiariasPage() {
                   </button>
                 </div>
               </div>
-              <iframe src={pdfUrl} className="flex-1 w-full" title="PDF Preview" />
+              <iframe src={pdfUrl} className="flex-1 w-full border-0" title="PDF Preview" />
             </div>
           </div>
         )}

@@ -350,135 +350,137 @@ export const generateDiariasPDF = async ({
 
     // ============================
     // PÁGINAS DE ANEXOS
+    // Respeita a ordem definida pelo usuário.
+    // Fotos consecutivas: 4 por página (grid 2x2)
+    // PDFs: página inteira cada
     // ============================
 
     if (anexos.length > 0) {
-        const imageAnexos = anexos.filter(a => a.tipo === 'image');
-        const pdfAnexos = anexos.filter(a => a.tipo === 'pdf');
+        // Agrupa anexos consecutivos do mesmo tipo
+        const grupos: AnexoDiaria[][] = [];
+        let grupoAtual: AnexoDiaria[] = [];
+        let tipoAtual: string | null = null;
 
-        // ---- FOTOS: 4 por página (grid 2x2) ----
-        if (imageAnexos.length > 0) {
-            const IMGS_PER_PAGE = 4;
-            const totalPages = Math.ceil(imageAnexos.length / IMGS_PER_PAGE);
-
-            for (let page = 0; page < totalPages; page++) {
-                doc.addPage();
-
-                // Mini cabeçalho
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
-                doc.setTextColor(0, 100, 60);
-                doc.text('ANEXOS - COMPROVANTES FOTOGRÁFICOS', pageW / 2, 10, { align: 'center' });
-
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Página ${page + 1} de ${totalPages}`, pageW / 2, 15, { align: 'center' });
-
-                drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
-
-                // Grid 2x2 positions
-                const gridStartY = 22;
-                const cellPadding = 4;
-                const cellW = (CONTENT_WIDTH - cellPadding) / 2;
-                const cellH = 120;
-                const positions = [
-                    { x: MARGIN_LEFT, y: gridStartY },
-                    { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY },
-                    { x: MARGIN_LEFT, y: gridStartY + cellH + cellPadding + 8 },
-                    { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY + cellH + cellPadding + 8 },
-                ];
-
-                const startIdx = page * IMGS_PER_PAGE;
-                const endIdx = Math.min(startIdx + IMGS_PER_PAGE, imageAnexos.length);
-
-                for (let i = startIdx; i < endIdx; i++) {
-                    const anexo = imageAnexos[i];
-                    const pos = positions[i - startIdx];
-
-                    // Border around image cell
-                    doc.setDrawColor(220, 220, 220);
-                    doc.setLineWidth(0.3);
-                    doc.rect(pos.x, pos.y, cellW, cellH + 6, 'S');
-
-                    // Image
-                    try {
-                        doc.addImage(
-                            anexo.dataUrl, 'JPEG',
-                            pos.x + 2, pos.y + 2,
-                            cellW - 4, cellH - 4,
-                            undefined, 'FAST'
-                        );
-                    } catch (e) {
-                        doc.setFont('helvetica', 'normal');
-                        doc.setFontSize(7);
-                        doc.setTextColor(200, 50, 50);
-                        doc.text('Erro ao carregar', pos.x + cellW / 2, pos.y + cellH / 2, { align: 'center' });
-                    }
-
-                    // Label below image
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(6);
-                    doc.setTextColor(100, 100, 100);
-                    const labelText = anexo.nome.length > 30 ? anexo.nome.substring(0, 27) + '...' : anexo.nome;
-                    doc.text(labelText, pos.x + cellW / 2, pos.y + cellH + 3, { align: 'center' });
-                }
-
-                // Rodapé do anexo
-                doc.setDrawColor(0, 100, 60);
-                doc.setLineWidth(0.3);
-                doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);
-                doc.setFont('helvetica', 'italic');
-                doc.setFontSize(6);
-                doc.setTextColor(120, 120, 120);
-                doc.text(`Fotos comprobatórias — Pág. ${page + 1}/${totalPages}`, pageW / 2, 276, { align: 'center' });
+        for (const anexo of anexos) {
+            if (anexo.tipo !== tipoAtual) {
+                if (grupoAtual.length > 0) grupos.push([...grupoAtual]);
+                grupoAtual = [anexo];
+                tipoAtual = anexo.tipo;
+            } else {
+                grupoAtual.push(anexo);
             }
         }
+        if (grupoAtual.length > 0) grupos.push([...grupoAtual]);
 
-        // ---- PDFs: página inteira cada ----
-        if (pdfAnexos.length > 0) {
-            for (const anexo of pdfAnexos) {
-                doc.addPage();
+        for (const grupo of grupos) {
+            const tipo = grupo[0].tipo;
 
-                // Mini cabeçalho
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
-                doc.setTextColor(0, 100, 60);
-                doc.text('ANEXO - DOCUMENTO', pageW / 2, 10, { align: 'center' });
+            if (tipo === 'image') {
+                const IMGS_PER_PAGE = 4;
+                const totalPages = Math.ceil(grupo.length / IMGS_PER_PAGE);
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
-                doc.setTextColor(100, 100, 100);
-                doc.text(anexo.nome, pageW / 2, 15, { align: 'center' });
+                for (let page = 0; page < totalPages; page++) {
+                    doc.addPage();
 
-                drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(8);
+                    doc.setTextColor(0, 100, 60);
+                    doc.text('ANEXOS - COMPROVANTES', pageW / 2, 10, { align: 'center' });
+                    drawHorizontalLine(doc, 14, [0, 100, 60], 0.5);
 
-                // Placeholder for PDF content
-                doc.setFillColor(248, 250, 252);
-                doc.setDrawColor(220, 220, 220);
-                doc.rect(MARGIN_LEFT, 22, CONTENT_WIDTH, 245, 'FD');
+                    const gridStartY = 18;
+                    const cellPadding = 4;
+                    const cellW = (CONTENT_WIDTH - cellPadding) / 2;
+                    const cellH = 122;
+                    const positions = [
+                        { x: MARGIN_LEFT, y: gridStartY },
+                        { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY },
+                        { x: MARGIN_LEFT, y: gridStartY + cellH + cellPadding + 6 },
+                        { x: MARGIN_LEFT + cellW + cellPadding, y: gridStartY + cellH + cellPadding + 6 },
+                    ];
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('📄 Documento PDF anexado:', pageW / 2, 130, { align: 'center' });
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(11);
-                doc.setTextColor(30, 41, 59);
-                doc.text(anexo.nome, pageW / 2, 140, { align: 'center' });
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8);
-                doc.setTextColor(120, 120, 120);
-                doc.text('(Este documento deve ser impresso separadamente)', pageW / 2, 150, { align: 'center' });
+                    const startIdx = page * IMGS_PER_PAGE;
+                    const endIdx = Math.min(startIdx + IMGS_PER_PAGE, grupo.length);
 
-                // Rodapé
-                doc.setDrawColor(0, 100, 60);
-                doc.setLineWidth(0.3);
-                doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);
-                doc.setFont('helvetica', 'italic');
-                doc.setFontSize(6);
-                doc.setTextColor(120, 120, 120);
-                doc.text(`Anexo: ${anexo.nome}`, pageW / 2, 276, { align: 'center' });
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const anexo = grupo[i];
+                        const pos = positions[i - startIdx];
+
+                        doc.setDrawColor(220, 220, 220);
+                        doc.setLineWidth(0.3);
+                        doc.rect(pos.x, pos.y, cellW, cellH + 6, 'S');
+
+                        try {
+                            const imgFormat = anexo.dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+                            doc.addImage(
+                                anexo.dataUrl, imgFormat,
+                                pos.x + 2, pos.y + 2,
+                                cellW - 4, cellH - 4,
+                                undefined, 'FAST'
+                            );
+                        } catch (e) {
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(7);
+                            doc.setTextColor(200, 50, 50);
+                            doc.text('Erro ao carregar', pos.x + cellW / 2, pos.y + cellH / 2, { align: 'center' });
+                        }
+
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(6);
+                        doc.setTextColor(100, 100, 100);
+                        const labelText = anexo.nome.length > 30 ? anexo.nome.substring(0, 27) + '...' : anexo.nome;
+                        doc.text(labelText, pos.x + cellW / 2, pos.y + cellH + 3, { align: 'center' });
+                    }
+
+                    doc.setDrawColor(0, 100, 60);
+                    doc.setLineWidth(0.3);
+                    doc.line(MARGIN_LEFT, 280, MARGIN_RIGHT, 280);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(6);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(`Comprovantes — Pág. ${page + 1}/${totalPages}`, pageW / 2, 284, { align: 'center' });
+                }
+            } else {
+                for (const anexo of grupo) {
+                    doc.addPage();
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(8);
+                    doc.setTextColor(0, 100, 60);
+                    doc.text('ANEXO - DOCUMENTO', pageW / 2, 10, { align: 'center' });
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(anexo.nome, pageW / 2, 15, { align: 'center' });
+
+                    drawHorizontalLine(doc, 18, [0, 100, 60], 0.5);
+
+                    doc.setFillColor(248, 250, 252);
+                    doc.setDrawColor(220, 220, 220);
+                    doc.rect(MARGIN_LEFT, 22, CONTENT_WIDTH, 245, 'FD');
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('Documento PDF anexado:', pageW / 2, 130, { align: 'center' });
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(30, 41, 59);
+                    doc.text(anexo.nome, pageW / 2, 140, { align: 'center' });
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text('(Este documento deve ser impresso separadamente)', pageW / 2, 150, { align: 'center' });
+
+                    doc.setDrawColor(0, 100, 60);
+                    doc.setLineWidth(0.3);
+                    doc.line(MARGIN_LEFT, 272, MARGIN_RIGHT, 272);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(6);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(`Anexo: ${anexo.nome}`, pageW / 2, 276, { align: 'center' });
+                }
             }
         }
     }
