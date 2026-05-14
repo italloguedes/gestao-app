@@ -122,6 +122,38 @@ export default function RelatoriosPage() {
               </div>
             </div>
           </button>
+
+          {/* Relatório de Diárias (DAF) */}
+          <button
+            onClick={() => router.push('/dashboard/relatorios/diarias')}
+            className="bg-white border border-gray-200 rounded-lg p-6 hover:border-amber-500 hover:shadow-md transition-all text-left group"
+          >
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+                <svg
+                  className="w-6 h-6 text-amber-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-amber-700 transition-colors">
+                  Relatório de Diárias (DAF)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Gere o Anexo II de Prestação de Contas de diárias com servidores, anexos e comprovantes
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
     </div>

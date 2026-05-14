@@ -22,6 +22,7 @@ type UserFormData = {
   password?: string;
   funcao?: string;
   matricula?: string;
+  cpf?: string;
   assinatura_url?: string;
 };
 
@@ -35,6 +36,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     password: '',
     funcao: user?.funcao || '',
     matricula: user?.matricula || '',
+    cpf: user?.cpf || '',
     assinatura_url: user?.assinatura_url || ''
   });
 
@@ -109,6 +111,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           status: formData.status,
           funcao: formData.funcao,
           matricula: formData.matricula,
+          cpf: formData.cpf,
           assinatura_url: formData.assinatura_url
         };
         if (formData.phone) updateData.phone = formData.phone;
@@ -137,6 +140,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           password: formData.password,
           funcao: formData.funcao,
           matricula: formData.matricula,
+          cpf: formData.cpf,
           assinatura_url: formData.assinatura_url
         };
 
@@ -301,6 +305,18 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   value={formData.matricula || ''}
                   onChange={handleChange}
                   placeholder="Ex: 12345"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiHash className="text-gray-400 h-3.5 w-3.5" /> CPF
+                </label>
+                <Input
+                  name="cpf"
+                  value={formData.cpf || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: 00000000000"
                   className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
                 />
               </div>
