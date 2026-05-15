@@ -34,17 +34,26 @@ export interface DiariasPdfParams {
     anexos: AnexoDiaria[];
 }
 
-// ===== HELPERS =====
+// ===== CONSTANTES DE COR E LAYOUT (baseadas na planilha original) =====
 
-const MARGIN_LEFT = 15;
-const MARGIN_RIGHT = 195;
-const PAGE_WIDTH = 210; // A4
+// Cores da planilha original
+const BORDER_COLOR: [number, number, number] = [0, 0, 0]; // Preto para bordas
+const HEADER_BG: [number, number, number] = [198, 170, 105]; // Dourado/tan do cabeçalho da tabela
+const HEADER_TEXT: [number, number, number] = [0, 0, 0]; // Texto preto
+const CELL_BG: [number, number, number] = [255, 255, 255]; // Branco
+const TITLE_COLOR: [number, number, number] = [0, 0, 0]; // Preto
+
+const MARGIN_LEFT = 10;
+const MARGIN_RIGHT = 200;
 const CONTENT_WIDTH = MARGIN_RIGHT - MARGIN_LEFT;
 
-function drawHorizontalLine(doc: jsPDF, y: number, color: number[] = [180, 180, 180], width = 0.3) {
-    doc.setDrawColor(color[0], color[1], color[2]);
-    doc.setLineWidth(width);
-    doc.line(MARGIN_LEFT, y, MARGIN_RIGHT, y);
+function drawBorderedRect(doc: jsPDF, x: number, y: number, w: number, h: number, fillColor?: [number, number, number]) {
+    if (fillColor) {
+        doc.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
+    }
+    doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
+    doc.setLineWidth(0.4);
+    doc.rect(x, y, w, h, fillColor ? 'FD' : 'S');
 }
 
 // ===== GERADOR PRINCIPAL =====
@@ -67,167 +76,163 @@ export const generateDiariasPDF = async ({
     const pageW = doc.internal.pageSize.getWidth();
 
     // ============================
-    // CABEÇALHO INSTITUCIONAL
+    // LINHA 1-2: CABEÇALHO COM LOGO + TÍTULO
     // ============================
-    
-    // Logo ALECE à esquerda
+
+    // Célula do logo (coluna A, linhas 1-2)
+    const logoColW = 30;
+    const headerH = 20;
+    drawBorderedRect(doc, MARGIN_LEFT, 8, logoColW, headerH, CELL_BG);
+
+    // Logo ALECE
     if (logoBase64) {
         const logoFormat = logoBase64.includes('image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(logoBase64, logoFormat, MARGIN_LEFT, 6, 18, 20, undefined, 'FAST');
+        doc.addImage(logoBase64, logoFormat, MARGIN_LEFT + 2, 9, 26, 18, undefined, 'FAST');
     }
 
-    // Título principal
+    // Célula do título (colunas B-H, linha 1)
+    const titleCellW = CONTENT_WIDTH - logoColW;
+    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 8, titleCellW, 10, CELL_BG);
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
-    doc.text('DIRETORIA ADMINISTRAÇÃO FINANCEIRA - DAF', pageW / 2, 15, { align: 'center' });
+    doc.setTextColor(TITLE_COLOR[0], TITLE_COLOR[1], TITLE_COLOR[2]);
+    doc.text('DIRETORIA ADMINISTRAÇÃO FINANCEIRA - DAF', MARGIN_LEFT + logoColW + titleCellW / 2, 15, { align: 'center' });
+
+    // Célula do subtítulo (colunas B-H, linha 2)
+    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 18, titleCellW, 10, CELL_BG);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(60, 60, 60);
-    doc.text('ANEXO II - RELATÓRIOS DE DIÁRIAS (Prestação de Contas)', pageW / 2, 22, { align: 'center' });
-
-    // Linhas decorativas no cabeçalho
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(1.2);
-    doc.line(MARGIN_LEFT, 28, MARGIN_RIGHT, 28);
-    doc.setLineWidth(0.5);
-    doc.line(MARGIN_LEFT, 30, MARGIN_RIGHT, 30);
+    doc.setTextColor(TITLE_COLOR[0], TITLE_COLOR[1], TITLE_COLOR[2]);
+    doc.text('ANEXO II - RELATÓRIOS DE DIÁRIAS (Prestação de Contas)', MARGIN_LEFT + logoColW + titleCellW / 2, 25, { align: 'center' });
 
     // ============================
-    // DADOS GERAIS
+    // LINHA 3: Vazia (separador)
     // ============================
-    let y = 36;
-
-    const LABEL_X = MARGIN_LEFT + 3;
+    let y = 28;
     const ROW_H = 7;
-    const NUM_ROWS = 4;
-
-    // Caixa externa da seção de dados
-    const dataBoxH = ROW_H * NUM_ROWS;
-    doc.setFillColor(245, 247, 250);
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.8);
-    doc.rect(MARGIN_LEFT, y - 2, CONTENT_WIDTH, dataBoxH, 'FD');
-
-    // Helper: valor logo após o label
-    const drawField = (label: string, value: string, yPos: number, startX: number = LABEL_X, endX: number = MARGIN_RIGHT) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(50, 50, 50);
-        doc.text(label, startX, yPos);
-        const labelW = doc.getTextWidth(label);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(10, 10, 10);
-        const valueX = startX + labelW + 2;
-        const maxW = endX - valueX - 2;
-        if (maxW > 0) doc.text(value, valueX, yPos, { maxWidth: maxW });
-    };
-
-    // Helper para separador
-    const drawSep = (yPos: number) => {
-        doc.setDrawColor(0, 80, 50);
-        doc.setLineWidth(0.4);
-        doc.line(MARGIN_LEFT, yPos, MARGIN_RIGHT, yPos);
-    };
-
-    // Linha 1: SETOR
-    drawField('SETOR:', setor.toUpperCase(), y + 3);
-    y += ROW_H;
-    drawSep(y - 2);
-
-    // Linha 2: TEMA DA ATIVIDADE
-    drawField('TEMA DA ATIVIDADE:', temaAtividade.toUpperCase(), y + 3);
-    y += ROW_H;
-    drawSep(y - 2);
-
-    // Linha 3: DEPUTADO/CHEFE SOLICITANTE
-    drawField('DEPUTADO/CHEFE SOLICITANTE:', deputadoChefe.toUpperCase(), y + 3);
-    y += ROW_H;
-    drawSep(y - 2);
-
-    // Linha 4: CIDADE + DATA DA ATIVIDADE (mesma linha, dividida ao meio)
-    const halfX = MARGIN_LEFT + (CONTENT_WIDTH / 2);
-    drawField('CIDADE:', `${cidade.toUpperCase()} - CE`, y + 3, LABEL_X, halfX - 2);
-
-    // Linha vertical divisória
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.4);
-    doc.line(halfX, y - 2, halfX, y - 2 + ROW_H);
-
-    drawField('DATA DA ATIVIDADE:', dataAtividade.toUpperCase(), y + 3, halfX + 3, MARGIN_RIGHT);
-
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
     y += ROW_H;
 
     // ============================
-    // TABELA DE SERVIDORES
+    // LINHA 4: SETOR
     // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`SETOR: ${setor.toUpperCase()}`, MARGIN_LEFT + 3, y + 5);
+    y += ROW_H;
 
-    // Cabeçalho da tabela
-    const tableStartY = y;
+    // ============================
+    // LINHA 5: TEMA DA ATIVIDADE
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('TEMA DA ATIVIDADE: ', MARGIN_LEFT + 3, y + 5);
+    const temaLabelW = doc.getTextWidth('TEMA DA ATIVIDADE: ');
+    doc.setFont('helvetica', 'normal');
+    doc.text(temaAtividade.toUpperCase(), MARGIN_LEFT + 3 + temaLabelW, y + 5, { maxWidth: CONTENT_WIDTH - temaLabelW - 6 });
+    y += ROW_H;
+
+    // ============================
+    // LINHA 6: DEPUTADO/CHEFE SOLICITANTE
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('DEPUTADO/CHEFE SOLICITANTE: ', MARGIN_LEFT + 3, y + 5);
+    const depLabelW = doc.getTextWidth('DEPUTADO/CHEFE SOLICITANTE: ');
+    doc.setFont('helvetica', 'normal');
+    doc.text(deputadoChefe.toUpperCase(), MARGIN_LEFT + 3 + depLabelW, y + 5);
+    y += ROW_H;
+
+    // ============================
+    // LINHA 7: CIDADE + DATA DA ATIVIDADE
+    // ============================
+    const halfW = CONTENT_WIDTH / 2;
+    // Célula da cidade
+    drawBorderedRect(doc, MARGIN_LEFT, y, halfW, ROW_H, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('CIDADE: ', MARGIN_LEFT + 3, y + 5);
+    const cidLabelW = doc.getTextWidth('CIDADE: ');
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${cidade.toUpperCase()} - CE`, MARGIN_LEFT + 3 + cidLabelW, y + 5);
+
+    // Célula da data
+    drawBorderedRect(doc, MARGIN_LEFT + halfW, y, halfW, ROW_H, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DATA DA ATIVIDADE:  ', MARGIN_LEFT + halfW + 3, y + 5);
+    const dataLabelW = doc.getTextWidth('DATA DA ATIVIDADE:  ');
+    doc.setFont('helvetica', 'normal');
+    doc.text(dataAtividade.toUpperCase(), MARGIN_LEFT + halfW + 3 + dataLabelW, y + 5);
+    y += ROW_H;
+
+    // ============================
+    // LINHA 8: Vazia (separador)
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    y += ROW_H;
+
+    // ============================
+    // LINHA 9: CABEÇALHO DA TABELA DE SERVIDORES
+    // ============================
     const colServidor = MARGIN_LEFT;
-    const colMatricula = 110;
-    const colPeriodo = 130;
-    const colAssinatura = 165;
+    const colMatricula = 115;
+    const colPeriodo = 140;
+    const colAssinatura = 175;
 
-    // Header background
-    doc.setFillColor(0, 100, 60);
-    doc.rect(MARGIN_LEFT, tableStartY, CONTENT_WIDTH, 8, 'F');
+    const headerRowH = 8;
+
+    // Background dourado/tan para o cabeçalho
+    drawBorderedRect(doc, colServidor, y, colMatricula - colServidor, headerRowH, HEADER_BG);
+    drawBorderedRect(doc, colMatricula, y, colPeriodo - colMatricula, headerRowH, HEADER_BG);
+    drawBorderedRect(doc, colPeriodo, y, colAssinatura - colPeriodo, headerRowH, HEADER_BG);
+    drawBorderedRect(doc, colAssinatura, y, MARGIN_RIGHT - colAssinatura, headerRowH, HEADER_BG);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text('SERVIDOR / CPF', colServidor + 2, tableStartY + 5.5);
-    doc.text('MATRÍCULA', colMatricula + 2, tableStartY + 5.5);
-    doc.text('PERÍODO DA VIAGEM', colPeriodo + 2, tableStartY + 5.5);
-    doc.text('ASSINATURA', colAssinatura + 2, tableStartY + 5.5);
+    doc.setTextColor(HEADER_TEXT[0], HEADER_TEXT[1], HEADER_TEXT[2]);
+    doc.text('SERVIDOR / CPF', colServidor + (colMatricula - colServidor) / 2, y + 5.5, { align: 'center' });
+    doc.text('MATRÍCULA', colMatricula + (colPeriodo - colMatricula) / 2, y + 5.5, { align: 'center' });
+    doc.text('PERÍODO DA VIAGEM', colPeriodo + (colAssinatura - colPeriodo) / 2, y + 5.5, { align: 'center' });
+    doc.text('ASSINATURA', colAssinatura + (MARGIN_RIGHT - colAssinatura) / 2, y + 5.5, { align: 'center' });
 
-    // Linhas verticais do cabeçalho
-    doc.setDrawColor(200, 220, 200);
-    doc.setLineWidth(0.5);
-    doc.line(colMatricula, tableStartY, colMatricula, tableStartY + 8);
-    doc.line(colPeriodo, tableStartY, colPeriodo, tableStartY + 8);
-    doc.line(colAssinatura, tableStartY, colAssinatura, tableStartY + 8);
+    y += headerRowH;
 
-    y = tableStartY + 8;
-
-    // Linhas de servidores
-    const ROW_HEIGHT = 14;
-    const totalRows = servidores.length;
+    // ============================
+    // LINHAS 10+: DADOS DOS SERVIDORES
+    // ============================
+    const DATA_ROW_H = 10;
+    // Garantir pelo menos 5 linhas (como a planilha)
+    const totalRows = Math.max(servidores.length, 5);
 
     for (let i = 0; i < totalRows; i++) {
         const servidor = servidores[i];
-        const isEven = i % 2 === 0;
 
-        // Background da linha
-        doc.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
-        doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, ROW_HEIGHT, 'F');
-
-        // Bordas
-        doc.setDrawColor(100, 100, 100);
-        doc.setLineWidth(0.4);
-        doc.line(MARGIN_LEFT, y + ROW_HEIGHT, MARGIN_RIGHT, y + ROW_HEIGHT);
-        doc.line(colMatricula, y, colMatricula, y + ROW_HEIGHT);
-        doc.line(colPeriodo, y, colPeriodo, y + ROW_HEIGHT);
-        doc.line(colAssinatura, y, colAssinatura, y + ROW_HEIGHT);
+        // Cada célula da linha
+        drawBorderedRect(doc, colServidor, y, colMatricula - colServidor, DATA_ROW_H, CELL_BG);
+        drawBorderedRect(doc, colMatricula, y, colPeriodo - colMatricula, DATA_ROW_H, CELL_BG);
+        drawBorderedRect(doc, colPeriodo, y, colAssinatura - colPeriodo, DATA_ROW_H, CELL_BG);
+        drawBorderedRect(doc, colAssinatura, y, MARGIN_RIGHT - colAssinatura, DATA_ROW_H, CELL_BG);
 
         if (servidor) {
-            // Nome / CPF
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7.5);
-            doc.setTextColor(15, 23, 42);
-            doc.text(`${servidor.nome.toUpperCase()} / ${servidor.cpf}`, colServidor + 2, y + 5.5, { maxWidth: colMatricula - colServidor - 4 });
-
-            // Matrícula
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.text(servidor.matricula, colMatricula + 2, y + 5.5);
-
-            // Período
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
-            doc.text(dataAtividade.toUpperCase(), colPeriodo + 2, y + 5.5, { maxWidth: colAssinatura - colPeriodo - 4 });
+            doc.setTextColor(0, 0, 0);
+
+            // Nome / CPF
+            const nomeText = `${servidor.nome.toUpperCase()} / ${servidor.cpf}`;
+            doc.text(nomeText, colServidor + 2, y + 6, { maxWidth: colMatricula - colServidor - 4 });
+
+            // Matrícula (centralizada)
+            doc.text(servidor.matricula, colMatricula + (colPeriodo - colMatricula) / 2, y + 6, { align: 'center' });
+
+            // Período da viagem (centralizado)
+            doc.text(dataAtividade.toUpperCase(), colPeriodo + (colAssinatura - colPeriodo) / 2, y + 6, { align: 'center', maxWidth: colAssinatura - colPeriodo - 4 });
 
             // Assinatura
             if (servidor.assinaturaBase64) {
@@ -238,7 +243,7 @@ export const generateDiariasPDF = async ({
                         colAssinatura + 2,
                         y + 1,
                         MARGIN_RIGHT - colAssinatura - 4,
-                        ROW_HEIGHT - 2,
+                        DATA_ROW_H - 2,
                         undefined,
                         'FAST'
                     );
@@ -248,133 +253,97 @@ export const generateDiariasPDF = async ({
             }
         }
 
-        y += ROW_HEIGHT;
+        y += DATA_ROW_H;
     }
 
-    // Borda externa da tabela
-    doc.setDrawColor(0, 60, 40);
-    doc.setLineWidth(1.0);
-    doc.rect(MARGIN_LEFT, tableStartY, CONTENT_WIDTH, y - tableStartY);
+    // ============================
+    // LINHA VAZIA (separador antes da justificativa)
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    y += ROW_H;
 
     // ============================
-    // JUSTIFICATIVA
+    // JUSTIFICATIVA (título centralizado em negrito)
     // ============================
-
-    // Título
-    doc.setFillColor(0, 100, 60);
-    doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 7, 'F');
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(0, 0, 0);
     doc.text('JUSTIFICATIVA', pageW / 2, y + 5, { align: 'center' });
-    y += 7;
+    y += ROW_H;
 
     // Conteúdo da justificativa
-    const justificativaHeight = Math.max(20, 8);
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.7);
-    doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, justificativaHeight, 'FD');
+    const justH = Math.max(14, 8);
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, justH, CELL_BG);
 
     if (justificativa) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
-        doc.setTextColor(30, 30, 30);
+        doc.setTextColor(0, 0, 0);
         const lines = doc.splitTextToSize(justificativa, CONTENT_WIDTH - 6);
         doc.text(lines, MARGIN_LEFT + 3, y + 5);
     }
-
-    y += justificativaHeight;
+    y += justH;
 
     // ============================
-    // NEXOS
+    // LINHA VAZIA (separador)
     // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    y += ROW_H;
 
-    // Verificar se precisa de nova página
-    if (y > 230) {
-        doc.addPage();
-        y = 20;
-    }
+    // ============================
+    // ANEXOS - Texto explicativo
+    // ============================
+    const anexoTexto = 'ANEXOS ( Apresentação de docs comprobatórios, são eles: Lista de presença, Cópia de Atas,Certificados, Declarações, Relatórios, fotos, Recibos, ou outros Docs que comprovam a atividade que motivou o deslocamento';
+    const anexoLines = doc.splitTextToSize(anexoTexto, CONTENT_WIDTH - 6);
+    const anexoTextH = Math.max(14, anexoLines.length * 4 + 4);
 
-    doc.setFillColor(0, 100, 60);
-    doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 7, 'F');
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, anexoTextH, CELL_BG);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(anexoLines, MARGIN_LEFT + 3, y + 5);
+    y += anexoTextH;
+
+    // ============================
+    // CHECKBOXES (FOTOS, RECIBOS, ATA)
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text('ANEXOS (NEXOS)', pageW / 2, y + 5, { align: 'center' });
-    y += 7;
-
-    // Texto explicativo
-    doc.setFillColor(245, 247, 250);
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.7);
-    doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 22, 'FD');
-
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    doc.setTextColor(80, 80, 80);
-    const nexoTexto = 'ANEXOS ( Apresentação de docs comprobatórios, são eles: Lista de presença, Cópia de Atas, Certificados, Declarações, Relatórios, fotos, Recibos, ou outros Docs que comprovam a atividade que motivou o deslocamento)';
-    const nexoLines = doc.splitTextToSize(nexoTexto, CONTENT_WIDTH - 6);
-    doc.text(nexoLines, MARGIN_LEFT + 3, y + 5);
-
-    y += 14;
-
-    // Checkboxes
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
+    doc.setTextColor(0, 0, 0);
 
     const fotosCheck = nexoFotos ? '(x)' : '( )';
     const recibosCheck = nexoRecibos ? '(x)' : '( )';
     const ataCheck = nexoAta ? '(x)' : '( )';
 
-    doc.text(`${fotosCheck} FOTOS    ${recibosCheck} RECIBOS    ${ataCheck} ATA`, pageW / 2, y + 4, { align: 'center' });
+    doc.text(`${fotosCheck} FOTOS    ${recibosCheck}RECIBOS    ${ataCheck} ATA`, pageW / 2, y + 5, { align: 'center' });
+    y += ROW_H;
 
-    y += 15;
+    // ============================
+    // LINHA VAZIA (separador)
+    // ============================
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    y += ROW_H;
 
     // ============================
     // ASSINATURA DO DEPUTADO/CHEFE
     // ============================
-
-    if (y > 250) {
-        doc.addPage();
-        y = 20;
-    }
-
-    doc.setFillColor(245, 247, 250);
-    doc.setDrawColor(0, 80, 50);
-    doc.setLineWidth(0.7);
-    doc.rect(MARGIN_LEFT, y, CONTENT_WIDTH, 30, 'FD');
+    const sigH = 18;
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, sigH, CELL_BG);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Deputado/Chefe Solicitante', MARGIN_LEFT + 5, y + 8);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Deputado/Chefe Solicitante', MARGIN_LEFT + 3, y + 6);
+    doc.text('CIENTE: ______________', MARGIN_LEFT + 3, y + 13);
 
-    doc.setDrawColor(100, 116, 139);
-    doc.setLineWidth(0.4);
-    doc.line(MARGIN_LEFT + 5, y + 22, MARGIN_LEFT + 80, y + 22);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('CIENTE: ______________', MARGIN_LEFT + 5, y + 27);
-
-    y += 35;
+    y += sigH;
 
     // ============================
-    // RODAPÉ
+    // LINHA VAZIA FINAL
     // ============================
-
-    const rodapeY = 278;
-    doc.setDrawColor(0, 100, 60);
-    doc.setLineWidth(0.5);
-    doc.line(MARGIN_LEFT, rodapeY, MARGIN_RIGHT, rodapeY);
-
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(6);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Assembleia Legislativa do Estado do Ceará — Diretoria Administração Financeira — DAF', pageW / 2, rodapeY + 4, { align: 'center' });
-    doc.text('Documento gerado pelo Sistema de Gestão CIADI/ALECE', pageW / 2, rodapeY + 8, { align: 'center' });
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
 
     // ============================
     // PÁGINAS DE ANEXOS
@@ -412,9 +381,12 @@ export const generateDiariasPDF = async ({
 
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(8);
-                    doc.setTextColor(0, 100, 60);
+                    doc.setTextColor(0, 0, 0);
                     doc.text('ANEXOS - COMPROVANTES', pageW / 2, 10, { align: 'center' });
-                    drawHorizontalLine(doc, 14, [0, 100, 60], 0.5);
+
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.5);
+                    doc.line(MARGIN_LEFT, 14, MARGIN_RIGHT, 14);
 
                     const gridStartY = 18;
                     const cellPadding = 4;
@@ -434,7 +406,7 @@ export const generateDiariasPDF = async ({
                         const anexo = grupo[i];
                         const pos = positions[i - startIdx];
 
-                        doc.setDrawColor(220, 220, 220);
+                        doc.setDrawColor(0, 0, 0);
                         doc.setLineWidth(0.3);
                         doc.rect(pos.x, pos.y, cellW, cellH + 6, 'S');
 
@@ -460,7 +432,7 @@ export const generateDiariasPDF = async ({
                         doc.text(labelText, pos.x + cellW / 2, pos.y + cellH + 3, { align: 'center' });
                     }
 
-                    doc.setDrawColor(0, 100, 60);
+                    doc.setDrawColor(0, 0, 0);
                     doc.setLineWidth(0.3);
                     doc.line(MARGIN_LEFT, 280, MARGIN_RIGHT, 280);
                     doc.setFont('helvetica', 'italic');
@@ -500,31 +472,14 @@ export const generateDiariasPDF = async ({
     const mergedPdf = await PDFDocument.load(jspdfBytes);
 
     // Encontrar páginas marcadoras e substituir por páginas reais do PDF
-    const totalPages = mergedPdf.getPageCount();
-    const pagesToRemove: number[] = [];
-    const insertions: { pageIndex: number; anexo: AnexoDiaria }[] = [];
-
-    // Identificar páginas placeholder
-    for (let i = 0; i < totalPages; i++) {
-        const page = mergedPdf.getPage(i);
-        // Checar se é uma página placeholder (muito pequena em conteúdo)
-        // Usamos a correspondência por ordem: cada PDF placeholder corresponde a um pdfAnexo
-    }
+    const totalPdfPages = mergedPdf.getPageCount();
 
     // Abordagem simples: remover placeholders e inserir PDFs reais na posição correta
-    // Primeiro, encontrar quais páginas são placeholders (1 por pdf anexado)
-    // As páginas placeholder são as últimas N páginas correspondentes a PDFs
-    // Mas como a ordem pode ser mista, precisamos rastrear
-
     // Reconstruir: criar novo PDF, copiar páginas do jsPDF e inserir PDFs reais
+
     const finalPdf = await PDFDocument.create();
-    let pdfAnexoIdx = 0;
 
     // Rastrear páginas do jsPDF que são placeholder
-    // Cada grupo 'pdf' gera 1 página placeholder por anexo
-    const placeholderPageIndices = new Set<number>();
-    let jspdfPageIdx = 0;
-
     // Recalcular: percorrer os grupos na mesma ordem e identificar
     const grupos2: AnexoDiaria[][] = [];
     let ga: AnexoDiaria[] = [];
@@ -538,9 +493,7 @@ export const generateDiariasPDF = async ({
     if (ga.length > 0) grupos2.push([...ga]);
 
     // Contar páginas: relatório principal (antes dos anexos)
-    // O relatório principal ocupa as primeiras páginas até os anexos começarem
-    // Vamos contar quantas páginas cada grupo ocupa no jsPDF
-    const mainReportPages = totalPages - anexos.reduce((acc, a) => {
+    const mainReportPages = totalPdfPages - anexos.reduce((acc, a) => {
         if (a.tipo === 'pdf') return acc + 1;
         return acc;
     }, 0) - (() => {

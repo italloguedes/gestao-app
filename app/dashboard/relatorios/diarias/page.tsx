@@ -54,8 +54,8 @@ export default function DiariasPage() {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        // Tenta carregar logo-alece-daf.png, fallback para alece.png
-        let res = await fetch('/logo-alece-daf.png');
+        // Tenta carregar alece_logo.png, fallback para alece.png
+        let res = await fetch('/alece_logo.png');
         if (!res.ok) {
           res = await fetch('/alece.png');
         }
