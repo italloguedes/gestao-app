@@ -353,87 +353,66 @@ export default function RelatoriosPorAtendentePage() {
         {atendenteStats.length > 0 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {atendenteStats.map((stats, index) => (
-                <div key={stats.nome} className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-emerald-100 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* Resumo Geral */}
+            <div className="flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 shadow-xl text-white border border-slate-700">
+              <div className="mb-6 md:mb-0 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-white">Resumo Geral</h2>
+                <p className="text-slate-400 mt-1 text-sm">Desempenho de toda a equipe no período selecionado</p>
+              </div>
+              <div className="flex items-center justify-center md:justify-end gap-8 w-full md:w-auto bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+                <div className="text-center">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Atendimentos</p>
+                  <p className="text-5xl font-black text-emerald-400 drop-shadow-md">{atendimentosData.length}</p>
+                </div>
+              </div>
+            </div>
 
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                        <FiUsers className="w-5 h-5" />
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {atendenteStats.map((stats, index) => (
+                <div key={stats.nome} className="group bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all duration-300 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors duration-300 border border-slate-100 group-hover:border-emerald-100">
+                        <FiUsers className="w-6 h-6" />
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-emerald-700 transition-colors">{stats.nome}</h3>
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Colaborador</span>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Atendente</span>
                       </div>
                     </div>
-                    <div className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold font-mono">
-                      #{index + 1}
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Total</p>
-                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</p>
-                      <p className="text-[10px] text-emerald-600/70 font-medium mt-1">Atendimentos</p>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
-                      <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-1 flex items-center gap-1">
-                        <MdFingerprint className="w-3.5 h-3.5" /> Coletas
-                      </p>
-                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.coletas}</p>
-                      <p className="text-[10px] text-purple-600/70 font-medium mt-1">Biometrias</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-slate-600">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        Concluídos
-                      </span>
-                      <span className="font-bold text-slate-700">{stats.concluidos}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-slate-600">
-                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                        Cancelados
-                      </span>
-                      <span className="font-bold text-slate-700">{stats.cancelados}</span>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-100 mt-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 uppercase">Taxa de Eficiência</span>
-                        <span className="text-sm font-bold text-emerald-600 font-mono">
-                          {stats.total > 0 ? Math.round((stats.concluidos / stats.total) * 100) : 0}%
-                        </span>
+                    <div className="mb-8">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-6xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
+                        <span className="text-sm font-bold text-slate-400 uppercase">atendimentos</span>
                       </div>
-                      {/* Mini progress bar */}
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
-                          style={{ width: `${stats.total > 0 ? (stats.concluidos / stats.total) * 100 : 0}%` }}
-                        ></div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                        <FiCheckCircle className="w-4 h-4 text-emerald-500" />
+                        <span>{stats.concluidos} Concluídos</span>
                       </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                        <FiXCircle className="w-4 h-4 text-red-400" />
+                        <span>{stats.cancelados} Cancelados</span>
+                      </div>
+                      {stats.coletas > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                          <MdFingerprint className="w-4 h-4 text-purple-500" />
+                          <span>{stats.coletas} Coletas</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {(stats.total > 0 || stats.coletas > 0) && (
                     <button
                       onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
-                      className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-emerald-600 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"
+                      className={`w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${atendenteExpandido === stats.nome ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100'}`}
                     >
-                      <span>{atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}</span>
-                      <svg
-                        className={`w-4 h-4 transition-transform duration-300 ${atendenteExpandido === stats.nome ? 'rotate-180' : ''}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <span>{atendenteExpandido === stats.nome ? 'Ocultar Tabela' : 'Filtrar na Tabela'}</span>
                     </button>
                   )}
                 </div>
