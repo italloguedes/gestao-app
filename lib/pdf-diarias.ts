@@ -38,7 +38,7 @@ export interface DiariasPdfParams {
 
 // Cores da planilha original
 const BORDER_COLOR: [number, number, number] = [0, 0, 0]; // Preto para bordas
-const HEADER_BG: [number, number, number] = [198, 170, 105]; // Dourado/tan do cabeçalho da tabela
+const HEADER_BG: [number, number, number] = [240, 242, 224]; // #F0F2E0 - cor institucional dos cabeçalhos
 const HEADER_TEXT: [number, number, number] = [0, 0, 0]; // Texto preto
 const CELL_BG: [number, number, number] = [255, 255, 255]; // Branco
 const TITLE_COLOR: [number, number, number] = [0, 0, 0]; // Preto
@@ -92,7 +92,7 @@ export const generateDiariasPDF = async ({
 
     // Célula do título (colunas B-H, linha 1)
     const titleCellW = CONTENT_WIDTH - logoColW;
-    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 8, titleCellW, 10, CELL_BG);
+    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 8, titleCellW, 10, HEADER_BG);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
@@ -100,7 +100,7 @@ export const generateDiariasPDF = async ({
     doc.text('DIRETORIA ADMINISTRAÇÃO FINANCEIRA - DAF', MARGIN_LEFT + logoColW + titleCellW / 2, 15, { align: 'center' });
 
     // Célula do subtítulo (colunas B-H, linha 2)
-    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 18, titleCellW, 10, CELL_BG);
+    drawBorderedRect(doc, MARGIN_LEFT + logoColW, 18, titleCellW, 10, HEADER_BG);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -207,8 +207,8 @@ export const generateDiariasPDF = async ({
     // LINHAS 10+: DADOS DOS SERVIDORES
     // ============================
     const DATA_ROW_H = 10;
-    // Garantir pelo menos 5 linhas (como a planilha)
-    const totalRows = Math.max(servidores.length, 5);
+    // Apenas a quantidade de servidores que tiver
+    const totalRows = servidores.length;
 
     for (let i = 0; i < totalRows; i++) {
         const servidor = servidores[i];
@@ -265,7 +265,7 @@ export const generateDiariasPDF = async ({
     // ============================
     // JUSTIFICATIVA (título centralizado em negrito)
     // ============================
-    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, CELL_BG);
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, ROW_H, HEADER_BG);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
@@ -298,7 +298,7 @@ export const generateDiariasPDF = async ({
     const anexoLines = doc.splitTextToSize(anexoTexto, CONTENT_WIDTH - 6);
     const anexoTextH = Math.max(14, anexoLines.length * 4 + 4);
 
-    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, anexoTextH, CELL_BG);
+    drawBorderedRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, anexoTextH, HEADER_BG);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(0, 0, 0);
