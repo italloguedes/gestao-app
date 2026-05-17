@@ -359,11 +359,21 @@ export default function RelatoriosPorAtendentePage() {
                 <h2 className="text-2xl font-bold text-white">Resumo Geral</h2>
                 <p className="text-slate-400 mt-1 text-sm">Desempenho de toda a equipe no período selecionado</p>
               </div>
-              <div className="flex items-center justify-center md:justify-end gap-8 w-full md:w-auto bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
-                <div className="text-center">
+              <div className="flex flex-wrap justify-center md:justify-end gap-4 w-full md:w-auto">
+                <div className="bg-slate-800/50 px-6 py-4 rounded-2xl border border-slate-700/50 text-center">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Atendimentos</p>
                   <p className="text-5xl font-black text-emerald-400 drop-shadow-md">{atendimentosData.length}</p>
                 </div>
+                {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0) > 0 && (
+                  <div className="bg-slate-800/50 px-6 py-4 rounded-2xl border border-slate-700/50 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                      <MdFingerprint className="w-3.5 h-3.5" /> Coletas
+                    </p>
+                    <p className="text-5xl font-black text-purple-400 drop-shadow-md">
+                      {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -378,30 +388,36 @@ export default function RelatoriosPorAtendentePage() {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-emerald-700 transition-colors">{stats.nome}</h3>
-                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Atendente</span>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Colaborador</span>
                       </div>
                     </div>
 
                     <div className="mb-8">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-6xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
-                        <span className="text-sm font-bold text-slate-400 uppercase">atendimentos</span>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col">
+                          <span className="text-5xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase mt-1">Atendimentos</span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-100 pl-4">
+                          <span className="text-5xl font-black text-purple-600 tracking-tighter">{stats.coletas}</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase mt-1 flex items-center gap-1">
+                            <MdFingerprint className="w-3.5 h-3.5" /> Coletas
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-6">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
-                        <FiCheckCircle className="w-4 h-4 text-emerald-500" />
-                        <span>{stats.concluidos} Concluídos</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
-                        <FiXCircle className="w-4 h-4 text-red-400" />
-                        <span>{stats.cancelados} Cancelados</span>
-                      </div>
-                      {stats.coletas > 0 && (
+                      {stats.concluidos > 0 && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
-                          <MdFingerprint className="w-4 h-4 text-purple-500" />
-                          <span>{stats.coletas} Coletas</span>
+                          <FiCheckCircle className="w-4 h-4 text-emerald-500" />
+                          <span>{stats.concluidos} Concluídos</span>
+                        </div>
+                      )}
+                      {stats.cancelados > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                          <FiXCircle className="w-4 h-4 text-red-400" />
+                          <span>{stats.cancelados} Cancelados</span>
                         </div>
                       )}
                     </div>
