@@ -50,6 +50,8 @@ interface Atendimento {
   cpf_recebedor?: string;
   vinculo?: string;
   assinatura_base64?: string;
+  coletor_nome?: string;
+  coletor_id?: string;
 }
 
 interface Props {
@@ -986,8 +988,12 @@ export default function AtendimentoDetalhes({ id }: Props) {
           </div>
         </div>
 
-        {/* Status e Atendente */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Status, Atendente e Coletor */}
+        <div className={`grid grid-cols-1 ${
+          atendimento.atendente_nome && atendimento.coletor_nome 
+            ? 'lg:grid-cols-3 md:grid-cols-2' 
+            : 'md:grid-cols-2'
+        } gap-6 mb-6`}>
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
               <div className={`w-10 h-10 bg-gradient-to-br ${statusConfig.color} rounded-xl flex items-center justify-center text-white`}>
@@ -1025,6 +1031,18 @@ export default function AtendimentoDetalhes({ id }: Props) {
                 Atendente Responsável
               </h3>
               <p className="text-2xl font-bold text-slate-800">{atendimento.atendente_nome}</p>
+            </div>
+          )}
+
+          {atendimento.coletor_nome && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl flex items-center justify-center text-white">
+                  <FiUser className="w-5 h-5" />
+                </div>
+                Coletor Responsável
+              </h3>
+              <p className="text-2xl font-bold text-slate-800">{atendimento.coletor_nome}</p>
             </div>
           )}
         </div>

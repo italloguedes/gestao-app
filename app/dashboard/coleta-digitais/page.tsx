@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
+import { registrarHistorico } from '@/lib/historico-utils';
 
 interface AtendimentoFila {
   id: number;
@@ -335,7 +336,7 @@ export default function ColetaDigitaisPage() {
       setProcessando(true);
 
       // Buscar nome do usuário atual se não estiver disponível
-      let coletorNome = user?.user_metadata?.name;
+      let coletorNome = user?.user_metadata?.name || user?.user_metadata?.full_name;
 
       if (!coletorNome) {
         const { data: userData } = await supabase
@@ -360,6 +361,14 @@ export default function ColetaDigitaisPage() {
       if (atendimentoError) {
         throw atendimentoError;
       }
+
+      // Registrar histórico de coleta
+      await registrarHistorico({
+        atendimento_id: chamadaAtual.atendimento_id,
+        acao: 'coleta_biometrica',
+        atendente_id: user?.id,
+        atendente_nome: coletorNome,
+      });
 
       // Fechar modal e recarregar
       setShowModal(false);

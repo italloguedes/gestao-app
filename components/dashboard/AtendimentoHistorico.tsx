@@ -52,6 +52,13 @@ const ACAO_CONFIG: Record<string, {
         bg: 'bg-amber-100',
         border: 'border-amber-300',
     },
+    coleta_biometrica: {
+        label: 'Coleta de biometria realizada',
+        icon: <FiCheckCircle className="w-4 h-4" />,
+        color: 'text-teal-700',
+        bg: 'bg-teal-100',
+        border: 'border-teal-300',
+    },
 };
 
 function formatDatetime(iso: string): string {
@@ -144,7 +151,7 @@ export default function AtendimentoHistorico({ atendimentoId }: Props) {
 
                                 {item.atendente_nome && (
                                     <p className="text-xs text-slate-500 mt-0.5">
-                                        Atendente: <span className="font-semibold text-slate-700">{item.atendente_nome}</span>
+                                        {item.acao === 'coleta_biometrica' ? 'Coletor' : 'Atendente'}: <span className="font-semibold text-slate-700">{item.atendente_nome}</span>
                                     </p>
                                 )}
 

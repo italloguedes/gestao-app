@@ -4,7 +4,8 @@ export type AcaoHistorico =
     | 'criacao'
     | 'atualizacao_cin'
     | 'entrega_cin'
-    | 'atualizacao_status';
+    | 'atualizacao_status'
+    | 'coleta_biometrica';
 
 interface RegistrarHistoricoParams {
     atendimento_id: number;

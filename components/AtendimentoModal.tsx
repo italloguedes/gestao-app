@@ -34,6 +34,8 @@ export interface Atendimento {
   data_entrega?: string;
   data_hora_entrega?: string;
   posto?: string;
+  coletor_nome?: string;
+  coletor_id?: string;
 }
 
 interface AtendimentoModalProps {
@@ -741,6 +743,24 @@ export default function AtendimentoModal({
                     </select>
                   </div>
                 </div>
+
+                {/* Atendente e Coletor Responsáveis */}
+                {(formData.atendente_nome || formData.coletor_nome) && (
+                  <div className={`grid ${formData.atendente_nome && formData.coletor_nome ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                    {formData.atendente_nome && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Atendente</label>
+                        <p className="text-sm font-bold text-slate-800 truncate">{formData.atendente_nome}</p>
+                      </div>
+                    )}
+                    {formData.coletor_nome && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Coletor</label>
+                        <p className="text-sm font-bold text-slate-800 truncate">{formData.coletor_nome}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Informações Pessoais */}
                 <fieldset className="border-2 border-slate-200 rounded-xl overflow-hidden">
