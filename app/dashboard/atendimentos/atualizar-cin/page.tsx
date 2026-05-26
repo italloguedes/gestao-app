@@ -246,8 +246,8 @@ function AtualizarCINForm() {
         </div>
       </div>
 
-      {/* Layout lado a lado */}
-      <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
+      {/* Layout 3 colunas */}
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
 
         {/* Coluna esquerda - Formulário */}
         <div className="flex-1 min-w-0">
