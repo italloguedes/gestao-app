@@ -14,7 +14,8 @@ import {
   FiRefreshCw,
   FiHash,
   FiSend,
-  FiUser
+  FiUser,
+  FiClock
 } from 'react-icons/fi';
 import { registrarHistorico } from '@/lib/historico-utils';
 function AtualizarCINForm() {
@@ -24,7 +25,9 @@ function AtualizarCINForm() {
   const [cpf, setCpf] = useState(searchParams?.get('cpf') || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<{ nome: string; cpf: string; solicitante: string; hora: string; type: 'success' | 'error' } | null>(null);
+  type HistoricoItem = { nome: string; cpf: string; solicitante: string; hora: string; type: 'success' | 'error' };
+  const [lastUpdated, setLastUpdated] = useState<HistoricoItem | null>(null);
+  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const cpfInputRef = useRef<HTMLInputElement>(null);
   const shouldFocusRef = useRef(false);
 
@@ -109,13 +112,15 @@ function AtualizarCINForm() {
 
       // Salvar dados do atendimento encontrado para exibição como confirmação
       const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setLastUpdated({
+      const novoItem: HistoricoItem = {
         nome: atendimento.nome,
         cpf: atendimento.cpf,
         solicitante: atendimento.solicitante || 'Não informado',
         hora: agora,
         type: 'error', // começa como erro; será atualizado para 'success' se tudo der certo
-      });
+      };
+      setLastUpdated(novoItem);
+      setHistorico(prev => [novoItem, ...prev].slice(0, 5));
 
       if (atendimento.status === 'Concluído' || atendimento.status === 'concluido') {
         setMessage({ text: 'Este atendimento já está concluído', type: 'error' });
@@ -186,6 +191,7 @@ function AtualizarCINForm() {
 
       // Atualizar tipo para sucesso (dados já foram salvos antes do update)
       setLastUpdated(prev => prev ? { ...prev, type: 'success' } : null);
+      setHistorico(prev => prev.map((item, i) => i === 0 ? { ...item, type: 'success' } : item));
 
       // Limpar formulário e refocar imediatamente para próxima digitação
       setCpf('');
@@ -480,6 +486,56 @@ function AtualizarCINForm() {
                 </div>
                 <p className="text-sm font-bold text-slate-400 mb-1">Nenhuma CIN atualizada</p>
                 <p className="text-xs text-slate-300 font-medium">Os dados do último atendimento aparecerão aqui após a primeira atualização</p>
+              </div>
+            </div>
+          )}
+
+          {/* Histórico de atendimentos da sessão */}
+          {historico.length > 0 && (
+            <div className="mt-4 bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-100 border-4 border-white overflow-hidden ring-1 ring-slate-100">
+              <div className="h-1.5 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"></div>
+              <div className="p-4">
+                <div className="flex items-center mb-3">
+                  <div className="p-2 bg-slate-100 rounded-xl mr-2.5">
+                    <FiClock className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Histórico da Sessão</p>
+                    <p className="text-xs text-slate-400 font-medium">{historico.length} de 5 registros</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {historico.map((item, index) => (
+                    <div
+                      key={`${item.cpf}-${item.hora}`}
+                      className={`rounded-xl p-3 border flex items-center gap-2.5 transition-all ${
+                        index === 0 ? 'opacity-100' : 'opacity-70'
+                      } ${
+                        item.type === 'success'
+                          ? 'bg-emerald-50 border-emerald-100'
+                          : 'bg-rose-50 border-rose-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                        item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
+                      }`}>
+                        {item.type === 'success'
+                          ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-black truncate ${
+                          item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                        }`}>{item.nome}</p>
+                        <p className="text-xs text-slate-400 font-mono tracking-wide">
+                          {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium flex-shrink-0">{item.hora}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
