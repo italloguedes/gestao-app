@@ -13,7 +13,8 @@ import {
   FiSearch,
   FiArrowLeft,
   FiClock,
-  FiActivity
+  FiActivity,
+  FiDatabase
 } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
 
@@ -67,7 +68,7 @@ export default function RelatoriosPorAtendentePage() {
     return timeString.substring(0, 5);
   };
 
-  const setDateRange = (range: 'hoje' | 'semana' | 'mes') => {
+  const setDateRange = (range: 'hoje' | 'semana' | 'mes' | 'completo') => {
     const hoje = new Date();
     const dataFimStr = hoje.toISOString().split('T')[0];
     let dataInicioStr = '';
@@ -82,6 +83,8 @@ export default function RelatoriosPorAtendentePage() {
       const mesPassado = new Date(hoje);
       mesPassado.setMonth(hoje.getMonth() - 1);
       dataInicioStr = mesPassado.toISOString().split('T')[0];
+    } else if (range === 'completo') {
+      dataInicioStr = '2020-01-01'; // data inicial do sistema
     }
 
     setDataInicio(dataInicioStr);
@@ -108,32 +111,46 @@ export default function RelatoriosPorAtendentePage() {
         return;
       }
 
-      let query = supabase
-        .from('atendimentos')
-        .select('*');
-
+      // Busca paginada para superar o limite de 1000 registros do Supabase
       const dataInicioAjustada = dataInicio + 'T00:00:00';
       const dataFimAjustada = dataFim + 'T23:59:59';
-      query = query
-        .gte('dia_atual', dataInicioAjustada)
-        .lte('dia_atual', dataFimAjustada);
 
-      // Se filtro por ação estiver ativado, usar ilike para buscar 'acao' no solicitante
-      if (filtroAcao) {
-        query = query.ilike('solicitante', '%acao%');
-      }
+      const fetchAllAtendimentos = async () => {
+        const BATCH = 1000;
+        let from = 0;
+        let allData: any[] = [];
+        let hasMore = true;
 
-      query = query.order('atendente_nome', { ascending: true })
-        .order('dia_atual', { ascending: true })
-        .order('horario', { ascending: true });
+        while (hasMore) {
+          let q = supabase
+            .from('atendimentos')
+            .select('*')
+            .gte('dia_atual', dataInicioAjustada)
+            .lte('dia_atual', dataFimAjustada)
+            .order('atendente_nome', { ascending: true })
+            .order('dia_atual', { ascending: true })
+            .order('horario', { ascending: true })
+            .range(from, from + BATCH - 1);
 
-      const { data: atendimentos, error } = await query;
+          if (filtroAcao) {
+            q = q.ilike('solicitante', '%acao%');
+          }
 
-      if (error) {
-        console.error('Erro ao buscar atendimentos:', error);
-        setMessage({ text: 'Erro ao buscar atendimentos: ' + error.message, type: 'error' });
-        return;
-      }
+          const { data, error } = await q;
+
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            hasMore = false;
+          } else {
+            allData = [...allData, ...data];
+            if (data.length < BATCH) hasMore = false;
+            else from += BATCH;
+          }
+        }
+        return allData;
+      };
+
+      const atendimentos = await fetchAllAtendimentos();
 
       if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Nenhum atendimento encontrado no período selecionado', type: 'error' });
@@ -146,10 +163,18 @@ export default function RelatoriosPorAtendentePage() {
       // Processar dados por atendente (unificando Atendente e Coletor)
       const pessoasMap = new Map<string, AtendenteStats>();
 
-      const getOrInitStats = (nome: string) => {
-        if (!pessoasMap.has(nome)) {
-          pessoasMap.set(nome, {
-            nome: nome,
+      // Normaliza para maiúsculo como chave (evita duplicatas por capitalização)
+      const normalizarChave = (nome: string) => nome.trim().toUpperCase();
+
+      // Formata o nome em Title Case para exibição
+      const formatarNome = (nome: string) =>
+        nome.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+      const getOrInitStats = (nomeOriginal: string) => {
+        const chave = normalizarChave(nomeOriginal);
+        if (!pessoasMap.has(chave)) {
+          pessoasMap.set(chave, {
+            nome: formatarNome(nomeOriginal),
             total: 0,
             concluidos: 0,
             cancelados: 0,
@@ -157,7 +182,7 @@ export default function RelatoriosPorAtendentePage() {
             atendimentos: []
           });
         }
-        return pessoasMap.get(nome)!;
+        return pessoasMap.get(chave)!;
       };
 
       atendimentos.forEach((atendimento: any) => {
@@ -174,11 +199,10 @@ export default function RelatoriosPorAtendentePage() {
         if (atendimento.coletor_nome && atendimento.fotos_coletadas) {
           const stats = getOrInitStats(atendimento.coletor_nome);
           stats.coletas++;
-          // Não adicionamos ao array de atendimentos aqui para não duplicar mas o filtro de tabela cuidará da exibição
         }
       });
 
-      const statsArray = Array.from(pessoasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+      const statsArray = Array.from(pessoasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
       setAtendenteStats(statsArray);
       setAtendimentosData(atendimentos);
 
@@ -270,6 +294,14 @@ export default function RelatoriosPorAtendentePage() {
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
               >
                 Último Mês
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange('completo')}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <FiDatabase className="w-3 h-3" />
+                Período Completo
               </button>
               <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
               <button
@@ -374,6 +406,15 @@ export default function RelatoriosPorAtendentePage() {
                     </p>
                   </div>
                 )}
+                {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0) > 0 && (
+                  <div className="bg-teal-900/40 px-6 py-4 rounded-2xl border border-teal-700/40 text-center">
+                    <p className="text-xs font-bold text-teal-300 uppercase tracking-widest mb-1">Total Geral</p>
+                    <p className="text-5xl font-black text-teal-300 drop-shadow-md">
+                      {atendimentosData.length + atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0)}
+                    </p>
+                    <p className="text-[10px] text-teal-500 font-semibold mt-1">atend. + coletas</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -393,16 +434,20 @@ export default function RelatoriosPorAtendentePage() {
                     </div>
 
                     <div className="mb-8">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-3">
                         <div className="flex flex-col">
-                          <span className="text-5xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
+                          <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
                           <span className="text-xs font-bold text-slate-400 uppercase mt-1">Atendimentos</span>
                         </div>
-                        <div className="flex flex-col border-l border-slate-100 pl-4">
-                          <span className="text-5xl font-black text-purple-600 tracking-tighter">{stats.coletas}</span>
+                        <div className="flex flex-col border-l border-slate-100 pl-3">
+                          <span className="text-4xl font-black text-purple-600 tracking-tighter">{stats.coletas}</span>
                           <span className="text-xs font-bold text-slate-400 uppercase mt-1 flex items-center gap-1">
                             <MdFingerprint className="w-3.5 h-3.5" /> Coletas
                           </span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-100 pl-3">
+                          <span className="text-4xl font-black text-teal-600 tracking-tighter">{stats.total + stats.coletas}</span>
+                          <span className="text-xs font-bold text-teal-400 uppercase mt-1">Total</span>
                         </div>
                       </div>
                     </div>
