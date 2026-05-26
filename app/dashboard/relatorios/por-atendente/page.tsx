@@ -14,9 +14,11 @@ import {
   FiArrowLeft,
   FiClock,
   FiActivity,
-  FiDatabase
+  FiDatabase,
+  FiDownload
 } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
+import jsPDF from 'jspdf';
 
 interface Atendimento {
   id: string;
@@ -56,6 +58,136 @@ export default function RelatoriosPorAtendentePage() {
   const [atendenteStats, setAtendenteStats] = useState<AtendenteStats[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [atendenteExpandido, setAtendenteExpandido] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+
+  const gerarPDFRelatorio = () => {
+    if (atendenteStats.length === 0) return;
+    setLoadingPdf(true);
+
+    try {
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      const periodoTexto = dataInicio && dataFim
+        ? `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`
+        : 'Período completo';
+
+      // --- Cabeçalho ---
+      doc.setFillColor(5, 95, 60);
+      doc.rect(0, 0, pageW, 28, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 10, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Relatório de Atendimentos por Colaborador', pageW / 2, 17, { align: 'center' });
+
+      doc.setFontSize(8);
+      doc.text(`Período: ${periodoTexto}  |  Emitido em: ${hoje}`, pageW / 2, 24, { align: 'center' });
+
+      // --- Totais Gerais ---
+      const totalAtend = atendimentosData.length;
+      const totalColetas = atendenteStats.reduce((acc, s) => acc + s.coletas, 0);
+      const totalGeral = totalAtend + totalColetas;
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(10, 32, pageW - 20, 14, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Total de Atendimentos: ${totalAtend}`, 15, 40);
+      doc.text(`Total de Coletas: ${totalColetas}`, 80, 40);
+      doc.text(`Total Geral: ${totalGeral}`, 155, 40);
+
+      // --- Cabeçalho da tabela ---
+      let y = 52;
+      doc.setFillColor(5, 95, 60);
+      doc.rect(10, y, pageW - 20, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text('COLABORADOR', 15, y + 5.5);
+      doc.text('ATEND.', 120, y + 5.5, { align: 'center' });
+      doc.text('COLETAS', 150, y + 5.5, { align: 'center' });
+      doc.text('TOTAL', 180, y + 5.5, { align: 'center' });
+      y += 8;
+
+      // --- Linhas da tabela ---
+      atendenteStats.forEach((stats, idx) => {
+        if (y > pageH - 20) {
+          doc.addPage();
+          y = 15;
+          // repetir cabeçalho
+          doc.setFillColor(5, 95, 60);
+          doc.rect(10, y, pageW - 20, 8, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(255, 255, 255);
+          doc.text('COLABORADOR', 15, y + 5.5);
+          doc.text('ATEND.', 120, y + 5.5, { align: 'center' });
+          doc.text('COLETAS', 150, y + 5.5, { align: 'center' });
+          doc.text('TOTAL', 180, y + 5.5, { align: 'center' });
+          y += 8;
+        }
+
+        const isEven = idx % 2 === 0;
+        doc.setFillColor(isEven ? 252 : 248, isEven ? 253 : 250, isEven ? 254 : 252);
+        doc.rect(10, y, pageW - 20, 8, 'F');
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
+        doc.text(stats.nome, 15, y + 5.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(5, 95, 60);
+        doc.text(String(stats.total), 120, y + 5.5, { align: 'center' });
+
+        doc.setTextColor(109, 40, 217);
+        doc.text(String(stats.coletas), 150, y + 5.5, { align: 'center' });
+
+        doc.setTextColor(13, 148, 136);
+        doc.text(String(stats.total + stats.coletas), 180, y + 5.5, { align: 'center' });
+
+        // linha divisora
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.1);
+        doc.line(10, y + 8, pageW - 10, y + 8);
+
+        y += 8;
+      });
+
+      // --- Linha de total final ---
+      doc.setFillColor(5, 95, 60);
+      doc.rect(10, y, pageW - 20, 9, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL GERAL', 15, y + 6);
+      doc.text(String(totalAtend), 120, y + 6, { align: 'center' });
+      doc.text(String(totalColetas), 150, y + 6, { align: 'center' });
+      doc.text(String(totalGeral), 180, y + 6, { align: 'center' });
+
+      // --- Rodapé ---
+      const rodY = pageH - 10;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        `Assembleia Legislativa do Estado do Ceará  |  Gerado em ${hoje}  |  ${atendenteStats.length} colaboradores`,
+        pageW / 2, rodY, { align: 'center' }
+      );
+
+      const fileName = `relatorio-colaboradores-${periodoTexto.replace(/\//g, '-').replace(/ /g, '')}.pdf`;
+      doc.save(fileName);
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
@@ -261,6 +393,23 @@ export default function RelatoriosPorAtendentePage() {
               Acompanhe o desempenho detalhado de atendimentos e coletas biométricas.
             </p>
           </div>
+          {atendenteStats.length > 0 && (
+            <button
+              onClick={gerarPDFRelatorio}
+              disabled={loadingPdf}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+            >
+              {loadingPdf ? (
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <FiDownload className="w-4 h-4" />
+              )}
+              Exportar PDF
+            </button>
+          )}
         </div>
 
         {/* Filtros Card */}
