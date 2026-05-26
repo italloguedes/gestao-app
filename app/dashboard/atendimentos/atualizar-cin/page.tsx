@@ -409,7 +409,7 @@ function AtualizarCINForm() {
                   {historico.map((item, index) => (
                     <div
                       key={`${item.cpf}-${item.hora}`}
-                      className={`rounded-xl p-3 border flex items-center gap-2.5 transition-all ${
+                      className={`rounded-xl p-3 border transition-all ${
                         index === 0 ? 'opacity-100' : 'opacity-65'
                       } ${
                         item.type === 'success'
@@ -417,22 +417,46 @@ function AtualizarCINForm() {
                           : 'bg-rose-50 border-rose-100'
                       }`}
                     >
-                      <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                        item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
-                      }`}>
-                        {item.type === 'success'
-                          ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
+                      {/* Cabeçalho do item */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                          item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
+                        }`}>
+                          {item.type === 'success'
+                            ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
+                        </div>
+                        <p className="text-xs text-slate-400 font-medium">{item.hora}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-black truncate ${
-                          item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
-                        }`}>{item.nome}</p>
-                        <p className="text-xs text-slate-400 font-mono tracking-wide">
-                          {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                        </p>
+                      {/* Dados */}
+                      <div className="space-y-1.5">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiUser className="w-2.5 h-2.5" /> Nome
+                          </p>
+                          <p className={`text-xs font-black leading-tight ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.nome}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiHash className="w-2.5 h-2.5" /> CPF
+                          </p>
+                          <p className={`text-xs font-black font-mono tracking-wide ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>
+                            {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiCreditCard className="w-2.5 h-2.5" /> Solicitante
+                          </p>
+                          <p className={`text-xs font-black leading-tight truncate ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.solicitante}</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-400 font-medium flex-shrink-0">{item.hora}</p>
                     </div>
                   ))}
                 </div>
