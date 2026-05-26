@@ -389,94 +389,7 @@ function AtualizarCINForm() {
           </div>
         </div>
 
-        {/* Coluna central - Histórico da sessão */}
-        <div className="w-full lg:w-72 flex-shrink-0">
-          {historico.length > 0 ? (
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-100 border-4 border-white overflow-hidden ring-1 ring-slate-100 animate-in fade-in slide-in-from-left-4 duration-500">
-              <div className="h-2 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"></div>
-              <div className="p-5">
-                <div className="flex items-center mb-4">
-                  <div className="p-2.5 bg-slate-100 rounded-xl mr-3">
-                    <FiClock className="w-4 h-4 text-slate-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Histórico da Sessão</p>
-                    <p className="text-xs text-slate-400 font-medium">{historico.length} de 5 registros</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {historico.map((item, index) => (
-                    <div
-                      key={`${item.cpf}-${item.hora}`}
-                      className={`rounded-xl p-3 border transition-all ${
-                        index === 0 ? 'opacity-100' : 'opacity-65'
-                      } ${
-                        item.type === 'success'
-                          ? 'bg-emerald-50 border-emerald-100'
-                          : 'bg-rose-50 border-rose-100'
-                      }`}
-                    >
-                      {/* Cabeçalho do item */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                          item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
-                        }`}>
-                          {item.type === 'success'
-                            ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
-                        </div>
-                        <p className="text-xs text-slate-400 font-medium">{item.hora}</p>
-                      </div>
-                      {/* Dados */}
-                      <div className="space-y-1.5">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiUser className="w-2.5 h-2.5" /> Nome
-                          </p>
-                          <p className={`text-xs font-black leading-tight ${
-                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
-                          }`}>{item.nome}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiHash className="w-2.5 h-2.5" /> CPF
-                          </p>
-                          <p className={`text-xs font-black font-mono tracking-wide ${
-                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
-                          }`}>
-                            {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiCreditCard className="w-2.5 h-2.5" /> Solicitante
-                          </p>
-                          <p className={`text-xs font-black leading-tight truncate ${
-                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
-                          }`}>{item.solicitante}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Placeholder histórico vazio */
-            <div className="bg-white/50 backdrop-blur-xl rounded-3xl border-4 border-dashed border-slate-200/60 overflow-hidden">
-              <div className="p-6 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-50 rounded-2xl mb-3">
-                  <FiClock className="w-6 h-6 text-slate-300" />
-                </div>
-                <p className="text-sm font-bold text-slate-300 mb-1">Sem histórico</p>
-                <p className="text-xs text-slate-300 font-medium">Atendimentos processados nesta sessão aparecerão aqui</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Coluna direita - Atualização atual */}
+        {/* Coluna central - Atualização atual */}
         <div className="w-full lg:w-80 flex-shrink-0">
           {lastUpdated ? (
             <div className={`bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border-4 border-white overflow-hidden ring-1 animate-in fade-in slide-in-from-right-4 duration-500 ${
@@ -573,6 +486,93 @@ function AtualizarCINForm() {
                 </div>
                 <p className="text-sm font-bold text-slate-400 mb-1">Nenhuma CIN atualizada</p>
                 <p className="text-xs text-slate-300 font-medium">Os dados do último atendimento aparecerão aqui após a primeira atualização</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Coluna direita - Histórico da sessão */}
+        <div className="w-full lg:w-72 flex-shrink-0">
+          {historico.length > 0 ? (
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-100 border-4 border-white overflow-hidden ring-1 ring-slate-100 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="h-2 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"></div>
+              <div className="p-5">
+                <div className="flex items-center mb-4">
+                  <div className="p-2.5 bg-slate-100 rounded-xl mr-3">
+                    <FiClock className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Histórico da Sessão</p>
+                    <p className="text-xs text-slate-400 font-medium">{historico.length} de 5 registros</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {historico.map((item, index) => (
+                    <div
+                      key={`${item.cpf}-${item.hora}`}
+                      className={`rounded-xl p-3 border transition-all ${
+                        index === 0 ? 'opacity-100' : 'opacity-65'
+                      } ${
+                        item.type === 'success'
+                          ? 'bg-emerald-50 border-emerald-100'
+                          : 'bg-rose-50 border-rose-100'
+                      }`}
+                    >
+                      {/* Cabeçalho do item */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                          item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
+                        }`}>
+                          {item.type === 'success'
+                            ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
+                        </div>
+                        <p className="text-xs text-slate-400 font-medium">{item.hora}</p>
+                      </div>
+                      {/* Dados */}
+                      <div className="space-y-1.5">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiUser className="w-2.5 h-2.5" /> Nome
+                          </p>
+                          <p className={`text-xs font-black leading-tight ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.nome}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiHash className="w-2.5 h-2.5" /> CPF
+                          </p>
+                          <p className={`text-xs font-black font-mono tracking-wide ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>
+                            {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiCreditCard className="w-2.5 h-2.5" /> Solicitante
+                          </p>
+                          <p className={`text-xs font-black leading-tight truncate ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.solicitante}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Placeholder histórico vazio */
+            <div className="bg-white/50 backdrop-blur-xl rounded-3xl border-4 border-dashed border-slate-200/60 overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-50 rounded-2xl mb-3">
+                  <FiClock className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-sm font-bold text-slate-300 mb-1">Sem histórico</p>
+                <p className="text-xs text-slate-300 font-medium">Atendimentos processados nesta sessão aparecerão aqui</p>
               </div>
             </div>
           )}
