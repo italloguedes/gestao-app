@@ -22,6 +22,38 @@ export default function RelatoriosPage() {
 
         {/* Grid de Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Relatório de Agendamentos */}
+          <button
+            onClick={() => router.push('/dashboard/relatorios/agendamentos')}
+            className="bg-white border border-gray-200 rounded-lg p-6 hover:border-teal-500 hover:shadow-md transition-all text-left group"
+          >
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center group-hover:bg-teal-200 transition-colors">
+                <svg
+                  className="w-6 h-6 text-teal-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-teal-700 transition-colors">
+                  Relatório de Agendamentos
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Gere relatórios dos agendamentos com nome, CPF, telefone e status por período
+                </p>
+              </div>
+            </div>
+          </button>
+
           {/* Relatório de Atendimentos */}
           <button
             onClick={() => router.push('/dashboard/relatorios/gerar')}
