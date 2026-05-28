@@ -172,10 +172,10 @@ export default function GerarRelatorioPage() {
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' }, // Nº
         1: { cellWidth: 18, halign: 'center' }, // Data
-        2: { cellWidth: 80, halign: 'left' },   // Nome
+        2: { cellWidth: 76, halign: 'left' },   // Nome
         3: { cellWidth: 25, halign: 'center' }, // CPF
-        4: { cellWidth: 42, halign: 'left' },   // Solicitante
-        5: { cellWidth: 15, halign: 'center' }  // Status
+        4: { cellWidth: 38, halign: 'left' },   // Solicitante
+        5: { cellWidth: 23, halign: 'center' }  // Status
       },
       alternateRowStyles: {
         fillColor: secondaryColor
