@@ -105,8 +105,9 @@ export default function RelatorioAgendamentosPage() {
     const primaryColor = [0, 135, 81] as [number, number, number];
     const secondaryColor = [248, 249, 250] as [number, number, number];
     const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
-    // --- CABEÇALHO COM LOGO ---
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, pageWidth, 42, 'F');
 
@@ -196,54 +197,68 @@ export default function RelatorioAgendamentosPage() {
       alternateRowStyles: {
         fillColor: secondaryColor
       },
-      margin: { left: 15, right: 15 },
+      margin: { top: 20, left: 15, right: 15, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage',
-      didDrawPage: () => {
-        const pageCount = (doc as any).getNumberOfPages();
-        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
-        const pageHeight = doc.internal.pageSize.height;
+    });
 
-        // Repetir header com logo em páginas subsequentes
-        if (currentPage > 1 && logoBase64) {
-          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-          doc.rect(0, 0, pageWidth, 20, 'F');
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
           try {
-            doc.addImage(logoBase64, 'PNG', 8, 2, 16, 16);
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
           } catch (e) { /* skip */ }
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
-          doc.text('RELATÓRIO DE AGENDAMENTOS', 28, 13);
         }
 
-        // Linha separadora do rodapé
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE AGENDAMENTOS', logoBase64 ? 24 : 15, 11);
 
+        // Período no canto direito do header
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(110, 110, 110);
-
-        // Data/hora (esquerda)
-        const now = new Date();
-        const dateStr = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-        doc.text(dateStr, 15, pageHeight - 12);
-
-        // Atendente (centro)
-        doc.setFont('helvetica', 'bold');
-        const atendenteText = `${atendenteNome}`;
-        const atendenteWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
-        doc.text(atendenteText, (pageWidth - atendenteWidth) / 2, pageHeight - 12);
-
-        // Página (direita)
-        doc.setFont('helvetica', 'normal');
-        const pageText = `Página ${currentPage} de ${pageCount}`;
-        const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-        doc.text(pageText, pageWidth - 15 - pageTextWidth, pageHeight - 12);
+        const headerPeriodo = dataInicio && dataFim && dataInicio !== dataFim
+          ? `${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+          : formatDate(dataInicio || dataFim);
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 15 - headerPeriodoWidth, 11);
       }
-    });
+
+      // Rodapé em todas as páginas
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+
+      // Data/hora (esquerda)
+      const now = new Date();
+      const dateStr = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      doc.text(dateStr, 15, pageHeight - 12);
+
+      // Atendente (centro)
+      doc.setFont('helvetica', 'bold');
+      const atendenteText = `${atendenteNome}`;
+      const atendenteWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+      doc.text(atendenteText, (pageWidth - atendenteWidth) / 2, pageHeight - 12);
+
+      // Página (direita)
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - 15 - pageTextWidth, pageHeight - 12);
+    }
 
     // Salvar
     const fileName = dataInicio && dataFim && dataInicio !== dataFim
@@ -265,6 +280,14 @@ export default function RelatorioAgendamentosPage() {
 
       if (!dataInicio && !dataFim) {
         setMessage({ text: 'É necessário selecionar pelo menos uma data', type: 'error' });
+        return;
+      }
+
+      // Renovar sessão para evitar erros CORS por token expirado
+      const { error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Erro ao renovar sessão:', sessionError);
+        setMessage({ text: 'Erro de autenticação. Tente recarregar a página.', type: 'error' });
         return;
       }
 
