@@ -176,7 +176,7 @@ export default function RelatorioAgendamentosPage() {
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
         textColor: [50, 50, 50],
-        overflow: 'linebreak',
+        overflow: 'ellipis',
         minCellHeight: 8,
       },
       headStyles: {

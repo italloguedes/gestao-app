@@ -204,7 +204,8 @@ export default function RelatoriosPorAtendentePage() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(15, 23, 42);
-        doc.text(stats.nome, 15, y + 5.5);
+        const nomeText = stats.nome.length > 35 ? stats.nome.substring(0, 32) + '...' : stats.nome;
+        doc.text(nomeText, 15, y + 5.5);
 
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
