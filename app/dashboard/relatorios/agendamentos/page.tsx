@@ -106,6 +106,9 @@ export default function RelatorioAgendamentosPage() {
     const secondaryColor = [248, 249, 250] as [number, number, number];
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
+    const marginX = 10;
+    const tableWidth = pageWidth - 2 * marginX; // 190
+    const marginLeft = marginX;
 
     // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -158,9 +161,10 @@ export default function RelatorioAgendamentosPage() {
     }
 
     // --- TABELA ---
-    const tableColumn = ['Nome', 'CPF', 'Telefone', 'Status'];
-    const tableRows = data.map(ag => [
-      ag.nome.length > 40 ? ag.nome.substring(0, 37) + '...' : ag.nome,
+    const tableColumn = ['Nº', 'Nome', 'CPF', 'Telefone', 'Status'];
+    const tableRows = data.map((ag, index) => [
+      (index + 1).toString(),
+      ag.nome,
       formatCPF(ag.cpf),
       formatPhone(ag.telefone),
       ag.status.charAt(0).toUpperCase() + ag.status.slice(1).toLowerCase()
@@ -171,7 +175,7 @@ export default function RelatorioAgendamentosPage() {
       body: tableRows,
       startY: 48,
       styles: {
-        fontSize: 8,
+        fontSize: 6.5,
         cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
@@ -182,22 +186,23 @@ export default function RelatorioAgendamentosPage() {
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 8,
+        fontSize: 7,
         fontStyle: 'bold',
         halign: 'center',
         valign: 'middle',
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       },
       columnStyles: {
-        0: { cellWidth: 'auto', halign: 'left' },    // Nome
-        1: { cellWidth: 35, halign: 'center' },       // CPF
-        2: { cellWidth: 35, halign: 'center' },       // Telefone
-        3: { cellWidth: 25, halign: 'center' },       // Status
+        0: { cellWidth: 10, halign: 'center' }, // Nº
+        1: { cellWidth: 90, halign: 'left' },   // Nome
+        2: { cellWidth: 30, halign: 'center' }, // CPF
+        3: { cellWidth: 35, halign: 'center' }, // Telefone
+        4: { cellWidth: 25, halign: 'center' }, // Status
       },
       alternateRowStyles: {
         fillColor: secondaryColor
       },
-      margin: { top: 20, left: 15, right: 15, bottom: 25 },
+      margin: { top: 20, left: marginLeft, right: marginLeft, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage',
     });
@@ -221,7 +226,7 @@ export default function RelatorioAgendamentosPage() {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('RELATÓRIO DE AGENDAMENTOS', logoBase64 ? 24 : 15, 11);
+        doc.text('RELATÓRIO DE AGENDAMENTOS', logoBase64 ? 24 : 10, 11);
 
         // Período no canto direito do header
         doc.setFontSize(7);
@@ -230,13 +235,13 @@ export default function RelatorioAgendamentosPage() {
           ? `${formatDate(dataInicio)} a ${formatDate(dataFim)}`
           : formatDate(dataInicio || dataFim);
         const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
-        doc.text(headerPeriodo, pageWidth - 15 - headerPeriodoWidth, 11);
+        doc.text(headerPeriodo, pageWidth - 10 - headerPeriodoWidth, 11);
       }
 
       // Rodapé em todas as páginas
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.5);
-      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+      doc.line(10, pageHeight - 18, pageWidth - 10, pageHeight - 18);
 
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
@@ -245,7 +250,7 @@ export default function RelatorioAgendamentosPage() {
       // Data/hora (esquerda)
       const now = new Date();
       const dateStr = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-      doc.text(dateStr, 15, pageHeight - 12);
+      doc.text(dateStr, 10, pageHeight - 12);
 
       // Atendente (centro)
       doc.setFont('helvetica', 'bold');
@@ -257,7 +262,7 @@ export default function RelatorioAgendamentosPage() {
       doc.setFont('helvetica', 'normal');
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-      doc.text(pageText, pageWidth - 15 - pageTextWidth, pageHeight - 12);
+      doc.text(pageText, pageWidth - 10 - pageTextWidth, pageHeight - 12);
     }
 
     // Salvar

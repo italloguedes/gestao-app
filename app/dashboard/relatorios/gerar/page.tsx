@@ -91,8 +91,9 @@ export default function GerarRelatorioPage() {
     const pageHeight = doc.internal.pageSize.height;
 
     // Calcula a largura total da tabela
-    const tableWidth = 150; // Soma das larguras das colunas
-    const marginLeft = (pageWidth - tableWidth) / 2;
+    const marginX = 10;
+    const tableWidth = pageWidth - 2 * marginX; // 190
+    const marginLeft = marginX;
 
     // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -136,12 +137,13 @@ export default function GerarRelatorioPage() {
     doc.text(infoText, infoX, 32);
 
     // Configuração da tabela otimizada
-    const tableColumn = ['Data', 'Nome', 'CPF', 'Solicitante', 'Status'];
-    const tableRows = atendimentos.map(atendimento => [
+    const tableColumn = ['Nº', 'Data', 'Nome', 'CPF', 'Solicitante', 'Status'];
+    const tableRows = atendimentos.map((atendimento, index) => [
+      (index + 1).toString(),
       formatDate(atendimento.dia_atual),
-      atendimento.nome.length > 35 ? atendimento.nome.substring(0, 32) + '...' : atendimento.nome,
+      atendimento.nome,
       atendimento.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
-      atendimento.solicitante.length > 25 ? atendimento.solicitante.substring(0, 22) + '...' : atendimento.solicitante,
+      atendimento.solicitante,
       atendimento.status.charAt(0).toUpperCase() + atendimento.status.slice(1).toLowerCase()
     ]);
 
@@ -150,7 +152,7 @@ export default function GerarRelatorioPage() {
       body: tableRows,
       startY: 48,
       styles: {
-        fontSize: 8,
+        fontSize: 6.5,
         cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
@@ -161,18 +163,19 @@ export default function GerarRelatorioPage() {
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 8,
+        fontSize: 7,
         fontStyle: 'bold',
         halign: 'center',
         valign: 'middle',
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       },
       columnStyles: {
-        0: { cellWidth: 20, halign: 'center' }, // Data
-        1: { cellWidth: 52, halign: 'left' },   // Nome
-        2: { cellWidth: 30, halign: 'center' }, // CPF
-        3: { cellWidth: 35, halign: 'left' },   // Solicitante
-        4: { cellWidth: 20, halign: 'center' }  // Status
+        0: { cellWidth: 10, halign: 'center' }, // Nº
+        1: { cellWidth: 18, halign: 'center' }, // Data
+        2: { cellWidth: 80, halign: 'left' },   // Nome
+        3: { cellWidth: 25, halign: 'center' }, // CPF
+        4: { cellWidth: 42, halign: 'left' },   // Solicitante
+        5: { cellWidth: 15, halign: 'center' }  // Status
       },
       alternateRowStyles: {
         fillColor: secondaryColor
@@ -189,8 +192,8 @@ export default function GerarRelatorioPage() {
 
     // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
     const pageCount = (doc as any).getNumberOfPages();
-    const lineStartX = (pageWidth - 170) / 2;
-    const lineWidth = 170;
+    const lineStartX = marginX;
+    const lineWidth = pageWidth - 2 * marginX;
 
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -299,7 +302,7 @@ export default function GerarRelatorioPage() {
 
     // Box de informações do período
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.roundedRect(15, 48, pageWidth - 30, 12, 2, 2, 'F');
+    doc.roundedRect(10, 48, pageWidth - 20, 12, 2, 2, 'F');
 
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(9);
@@ -316,7 +319,7 @@ export default function GerarRelatorioPage() {
     doc.setTextColor(80, 80, 80);
     const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
     const totalWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
-    doc.text(totalText, pageWidth - 20 - totalWidth, 55);
+    doc.text(totalText, pageWidth - 10 - totalWidth, 55);
 
     // Tabela otimizada com AutoTable
     const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
@@ -332,7 +335,7 @@ export default function GerarRelatorioPage() {
       body: tableRows,
       startY: 65,
       styles: {
-        fontSize: 9,
+        fontSize: 6.5,
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
         lineColor: borderColor,
         lineWidth: 0.1,
@@ -344,7 +347,7 @@ export default function GerarRelatorioPage() {
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 9,
+        fontSize: 7,
         fontStyle: 'bold',
         halign: 'center',
         valign: 'middle',
@@ -352,15 +355,15 @@ export default function GerarRelatorioPage() {
         lineWidth: 0
       },
       columnStyles: {
-        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] }, // Nº
-        1: { cellWidth: 85, halign: 'left', overflow: 'ellipsize' }, // Nome Completo
-        2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' }, // CPF
-        3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] } // Assinatura
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] }, // Nº
+        1: { cellWidth: 95, halign: 'left', overflow: 'ellipsize' }, // Nome Completo
+        2: { cellWidth: 30, halign: 'center', fontStyle: 'normal', font: 'courier' }, // CPF
+        3: { cellWidth: 55, halign: 'center', fillColor: [250, 250, 250] } // Assinatura
       },
       alternateRowStyles: {
         fillColor: [252, 252, 252]
       },
-      margin: { top: 20, left: 15, right: 15, bottom: 25 },
+      margin: { top: 20, left: 10, right: 10, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage'
     });
@@ -384,7 +387,7 @@ export default function GerarRelatorioPage() {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 15, 11);
+        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 10, 11);
 
         // Período no canto direito do header
         doc.setFontSize(7);
@@ -393,13 +396,13 @@ export default function GerarRelatorioPage() {
           ? `${formatDate(dataInicio)} a ${formatDate(dataFim)}`
           : formatDate(dataInicio || dataFim);
         const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
-        doc.text(headerPeriodo, pageWidth - 15 - headerPeriodoWidth, 11);
+        doc.text(headerPeriodo, pageWidth - 10 - headerPeriodoWidth, 11);
       }
 
       // Rodapé
       doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
       doc.setLineWidth(0.5);
-      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+      doc.line(10, pageHeight - 18, pageWidth - 10, pageHeight - 18);
 
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
@@ -408,7 +411,7 @@ export default function GerarRelatorioPage() {
       // Data e hora de geração (esquerda)
       const now = new Date();
       const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-      doc.text(dataHoraGeracao, 15, pageHeight - 12);
+      doc.text(dataHoraGeracao, 10, pageHeight - 12);
 
       // Nome do atendente (centro)
       doc.setFont('helvetica', 'bold');
@@ -420,7 +423,7 @@ export default function GerarRelatorioPage() {
       doc.setFont('helvetica', 'normal');
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-      doc.text(pageText, pageWidth - pageTextWidth - 15, pageHeight - 12);
+      doc.text(pageText, pageWidth - pageTextWidth - 10, pageHeight - 12);
     }
 
     // Salvar o PDF

@@ -842,8 +842,9 @@ export default function AcoesItinerantesPage() {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const tableWidth = 150;
-    const marginLeft = (pageWidth - tableWidth) / 2;
+    const marginX = 10;
+    const tableWidth = pageWidth - 2 * marginX; // 190
+    const marginLeft = marginX;
 
     // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -897,10 +898,11 @@ export default function AcoesItinerantesPage() {
     doc.text(infoText, infoX, 35);
 
     // Table
-    const tableColumn = ['Data', 'Nome', 'CPF', 'Status'];
-    const tableRows = atendimentos.map((at: any) => [
+    const tableColumn = ['Nº', 'Data', 'Nome', 'CPF', 'Status'];
+    const tableRows = atendimentos.map((at: any, index: number) => [
+      (index + 1).toString(),
       formatDateFull(at.dia_atual),
-      at.nome && at.nome.length > 40 ? at.nome.substring(0, 37) + '...' : (at.nome || '—'),
+      at.nome || '—',
       at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—',
       at.status ? at.status.charAt(0).toUpperCase() + at.status.slice(1).toLowerCase() : '—'
     ]);
@@ -910,7 +912,7 @@ export default function AcoesItinerantesPage() {
       body: tableRows,
       startY: 48,
       styles: {
-        fontSize: 8,
+        fontSize: 6.5,
         cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
@@ -921,17 +923,18 @@ export default function AcoesItinerantesPage() {
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 8,
+        fontSize: 7,
         fontStyle: 'bold',
         halign: 'center',
         valign: 'middle',
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       },
       columnStyles: {
-        0: { cellWidth: 22, halign: 'center' },
-        1: { cellWidth: 65, halign: 'left' },
-        2: { cellWidth: 32, halign: 'center' },
-        3: { cellWidth: 22, halign: 'center' }
+        0: { cellWidth: 10, halign: 'center' }, // Nº
+        1: { cellWidth: 18, halign: 'center' }, // Data
+        2: { cellWidth: 97, halign: 'left' },   // Nome
+        3: { cellWidth: 35, halign: 'center' }, // CPF
+        4: { cellWidth: 30, halign: 'center' }  // Status
       },
       alternateRowStyles: {
         fillColor: secondaryColor
@@ -943,8 +946,8 @@ export default function AcoesItinerantesPage() {
 
     // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
     const pageCount = (doc as any).internal.getNumberOfPages();
-    const lineStartX = (pageWidth - 170) / 2;
-    const lineWidth = 170;
+    const lineStartX = marginX;
+    const lineWidth = pageWidth - 2 * marginX;
 
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -1052,7 +1055,7 @@ export default function AcoesItinerantesPage() {
 
     // Box de informações do período
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.roundedRect(15, 48, pageWidth - 30, 12, 2, 2, 'F');
+    doc.roundedRect(10, 48, pageWidth - 20, 12, 2, 2, 'F');
 
     const crono = chronologicalData.find(c => c.acao === nomeAcao);
     const periodoAcao = crono
@@ -1073,7 +1076,7 @@ export default function AcoesItinerantesPage() {
     doc.setTextColor(80, 80, 80);
     const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
     const totalTextWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
-    doc.text(totalText, pageWidth - 20 - totalTextWidth, 55);
+    doc.text(totalText, pageWidth - 10 - totalTextWidth, 55);
 
     // Table
     const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
@@ -1089,7 +1092,7 @@ export default function AcoesItinerantesPage() {
       body: tableRows,
       startY: 65,
       styles: {
-        fontSize: 9,
+        fontSize: 6.5,
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
         lineColor: borderColor,
         lineWidth: 0.1,
@@ -1101,7 +1104,7 @@ export default function AcoesItinerantesPage() {
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 9,
+        fontSize: 7,
         fontStyle: 'bold',
         halign: 'center',
         valign: 'middle',
@@ -1109,13 +1112,13 @@ export default function AcoesItinerantesPage() {
         lineWidth: 0
       },
       columnStyles: {
-        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] },
-        1: { cellWidth: 85, halign: 'left', overflow: 'ellipsize' },
-        2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' },
-        3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] }
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] },
+        1: { cellWidth: 95, halign: 'left', overflow: 'ellipsize' },
+        2: { cellWidth: 30, halign: 'center', fontStyle: 'normal', font: 'courier' },
+        3: { cellWidth: 55, halign: 'center', fillColor: [250, 250, 250] }
       },
       alternateRowStyles: { fillColor: [252, 252, 252] },
-      margin: { top: 20, left: 15, right: 15, bottom: 25 },
+      margin: { top: 20, left: 10, right: 10, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage'
     });
@@ -1141,26 +1144,26 @@ export default function AcoesItinerantesPage() {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 15, 11);
+        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 10, 11);
 
         // Período no canto direito
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         const headerPeriodoWidth = doc.getStringUnitWidth(periodoAcao) * 7 / doc.internal.scaleFactor;
-        doc.text(periodoAcao, pageWidth - 15 - headerPeriodoWidth, 11);
+        doc.text(periodoAcao, pageWidth - 10 - headerPeriodoWidth, 11);
       }
 
       // Rodapé
       doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
       doc.setLineWidth(0.5);
-      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+      doc.line(10, pageHeight - 18, pageWidth - 10, pageHeight - 18);
 
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(110, 110, 110);
 
       const now = new Date();
-      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 15, pageHeight - 12);
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 10, pageHeight - 12);
 
       doc.setFont('helvetica', 'bold');
       const atendenteTextW = doc.getStringUnitWidth(userName) * 7 / doc.internal.scaleFactor;
@@ -1169,7 +1172,7 @@ export default function AcoesItinerantesPage() {
       doc.setFont('helvetica', 'normal');
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextW = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-      doc.text(pageText, pageWidth - pageTextW - 15, pageHeight - 12);
+      doc.text(pageText, pageWidth - pageTextW - 10, pageHeight - 12);
     }
 
     const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
