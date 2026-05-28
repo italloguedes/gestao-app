@@ -131,6 +131,26 @@ export default function AcoesItinerantesPage() {
   const [expandedEmAndamento, setExpandedEmAndamento] = useState<string | null>(null);
   const [expandedCancelados, setExpandedCancelados] = useState<string | null>(null);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/alece_logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
+
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on outside click
@@ -550,16 +570,48 @@ export default function AcoesItinerantesPage() {
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const aleceGreen: [number, number, number] = [5, 150, 105]; // emerald-600
+    const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(20);
-    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
-    doc.text('Relatório de Ações Itinerantes ALECE', 14, 20);
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`, 14, 30);
-    doc.text(`Total de Atendimentos: ${totalAtendimentos}`, 14, 38);
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'RELATÓRIO DE AÇÕES ITINERANTES';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
+
+    // Período e Total
+    doc.setFontSize(9);
+    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const totalText = `Total Atendimentos: ${totalAtendimentos}`;
+    const infoText = `${periodoText}  |  ${totalText}`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(infoText, infoX, 32);
 
     const tableData = acoes.map(acao => {
       const crono = chronologicalData.find(c => c.acao === acao.nome);
@@ -581,30 +633,64 @@ export default function AcoesItinerantesPage() {
     });
 
     autoTable(doc, {
-      startY: 45,
+      startY: 48,
       head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Cancelados', '% Conclusão']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: aleceGreen },
-      styles: { fontSize: 7 }
+      headStyles: { fillColor: primaryColor },
+      styles: { fontSize: 7 },
+      margin: { top: 20, left: 14, right: 14, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
     });
 
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    doc.setFontSize(10);
-    doc.setTextColor(100);
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.text(
-        `Página ${i} de ${pageCount}`,
-        doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
-      );
-      doc.text(
-        `Gerado em ${new Date().toLocaleString('pt-BR')}`,
-        14,
-        doc.internal.pageSize.getHeight() - 10
-      );
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE AÇÕES ITINERANTES', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 12);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+      const userText = `Gerado por: ${userName}`;
+      const userTextWidth = doc.getStringUnitWidth(userText) * 7 / doc.internal.scaleFactor;
+      doc.text(userText, (pageWidth - userTextWidth) / 2, pageHeight - 12);
+
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
     doc.save(`acoes-itinerantes-${dataInicio}-${dataFim}.pdf`);
@@ -612,19 +698,46 @@ export default function AcoesItinerantesPage() {
 
   const generateChronologicalPDF = () => {
     const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
     const pageWidth = doc.internal.pageSize.getWidth();
-    const aleceGreen: [number, number, number] = [5, 150, 105];
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(18);
-    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
-    doc.text('Cronograma de Ações Itinerantes', pageWidth / 2, 20, { align: 'center' });
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(
-      `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`,
-      pageWidth / 2, 28, { align: 'center' }
-    );
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'CRONOGRAMA DE AÇÕES ITINERANTES';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
+
+    // Período
+    doc.setFontSize(9);
+    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const infoWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(periodoText, infoX, 32);
 
     const formattedData = chronologicalData.map(item => {
       const dataInicioFormatted = formatDateFull(item.dataInicio);
@@ -637,27 +750,70 @@ export default function AcoesItinerantesPage() {
     });
 
     autoTable(doc, {
-      startY: 35,
+      startY: 48,
       head: [['Ação', 'Período', 'Quantidade']],
       body: formattedData,
       theme: 'grid',
-      headStyles: { fillColor: aleceGreen, halign: 'center' },
+      headStyles: { fillColor: primaryColor, halign: 'center' },
       columnStyles: {
         0: { halign: 'left' },
         1: { halign: 'center', cellWidth: 50 },
         2: { halign: 'center', cellWidth: 25 }
       },
       styles: { fontSize: 10, cellPadding: 3 },
-      didDrawPage: () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
-        doc.text(`Gerado por: ${userName}`, 14, doc.internal.pageSize.getHeight() - 15);
-        doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, doc.internal.pageSize.getHeight() - 10);
-        doc.text(`Página ${pageCount}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
-      }
+      margin: { top: 20, left: 14, right: 14, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
     });
+
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CRONOGRAMA DE AÇÕES ITINERANTES', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 12);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+      const userText = `Gerado por: ${userName}`;
+      const userTextWidth = doc.getStringUnitWidth(userText) * 7 / doc.internal.scaleFactor;
+      doc.text(userText, (pageWidth - userTextWidth) / 2, pageHeight - 12);
+
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
+    }
 
     doc.save(`acoes-itinerantes-cronologica-${dataInicio}-${dataFim}.pdf`);
   };
@@ -684,21 +840,42 @@ export default function AcoesItinerantesPage() {
     const primaryColor: [number, number, number] = [0, 135, 81];
     const secondaryColor: [number, number, number] = [248, 249, 250];
 
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const tableWidth = 150;
-    const marginLeft = (doc.internal.pageSize.getWidth() - tableWidth) / 2;
+    const marginLeft = (pageWidth - tableWidth) / 2;
 
-    // Header
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 25, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    const title = 'Relatório de Atendimentos - Ação Itinerante';
-    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
-    doc.text(title, (doc.internal.pageSize.getWidth() - titleWidth) / 2, 16);
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
-    // Period info
-    doc.setTextColor(90, 90, 90);
-    doc.setFontSize(9);
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    const title = 'RELATÓRIO DE ATENDIMENTOS';
+    const titleWidth = doc.getStringUnitWidth(title) * 14 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 12);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 19);
+
+    // Box de informações da ação e período
     const crono = chronologicalData.find(c => c.acao === nomeAcao);
     const periodoAcao = crono
       ? (crono.dataInicio === crono.dataFim
@@ -706,21 +883,18 @@ export default function AcoesItinerantesPage() {
         : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
       : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
 
-    const periodoText = `Ação: ${nomeAcao}`;
-    const totalText = `Período: ${periodoAcao}  |  Total: ${atendimentos.length}`;
-    const periodoTextWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
-    const totalTextWidth = doc.getStringUnitWidth(totalText) * 9 / doc.internal.scaleFactor;
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(periodoText, (doc.internal.pageSize.getWidth() - periodoTextWidth) / 2, 30);
-    doc.setFont('helvetica', 'normal');
-    doc.text(totalText, (doc.internal.pageSize.getWidth() - totalTextWidth) / 2, 36);
+    const actionText = `Ação: ${nomeAcao}`;
+    const actionWidth = doc.getStringUnitWidth(actionText) * 9 / doc.internal.scaleFactor;
+    const actionX = logoBase64 ? 52 + (pageWidth - 52 - actionWidth) / 2 : (pageWidth - actionWidth) / 2;
+    doc.text(actionText, actionX, 27);
 
-    // Decorative line
-    const lineWidth = 170;
-    const lineStartX = (doc.internal.pageSize.getWidth() - lineWidth) / 2;
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.3);
-    doc.line(lineStartX, 39, lineStartX + lineWidth, 39);
+    doc.setFont('helvetica', 'normal');
+    const infoText = `Período: ${periodoAcao}  |  Total: ${atendimentos.length}`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(infoText, infoX, 35);
 
     // Table
     const tableColumn = ['Data', 'Nome', 'CPF', 'Status'];
@@ -734,25 +908,24 @@ export default function AcoesItinerantesPage() {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 44,
+      startY: 48,
       styles: {
         fontSize: 8,
-        cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
+        cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
         lineColor: [230, 230, 230],
-        lineWidth: 0.05,
-        minCellHeight: 6,
-        cellWidth: 'wrap',
-        overflow: 'hidden',
-        textColor: [50, 50, 50]
+        lineWidth: 0.1,
+        textColor: [50, 50, 50],
+        overflow: 'linebreak',
+        minCellHeight: 8,
       },
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 7.5,
+        fontSize: 8,
         fontStyle: 'bold',
         halign: 'center',
-        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
-        minCellHeight: 8
+        valign: 'middle',
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       },
       columnStyles: {
         0: { cellWidth: 22, halign: 'center' },
@@ -763,29 +936,60 @@ export default function AcoesItinerantesPage() {
       alternateRowStyles: {
         fillColor: secondaryColor
       },
-      margin: { left: marginLeft },
+      margin: { top: 20, left: marginLeft, right: marginLeft, bottom: 25 },
       rowPageBreak: 'avoid',
-      showFoot: 'lastPage'
+      showHead: 'everyPage'
     });
 
-    // Footer
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
     const pageCount = (doc as any).internal.getNumberOfPages();
-    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+    const lineStartX = (pageWidth - 170) / 2;
+    const lineWidth = 170;
+
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE ATENDIMENTOS', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodoWidth = doc.getStringUnitWidth(periodoAcao) * 7 / doc.internal.scaleFactor;
+        doc.text(periodoAcao, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
       doc.setFontSize(7);
       doc.setTextColor(128, 128, 128);
       doc.setDrawColor(230, 230, 230);
       doc.setLineWidth(0.3);
-      doc.line(lineStartX, doc.internal.pageSize.getHeight() - 15, lineStartX + lineWidth, doc.internal.pageSize.getHeight() - 15);
+      doc.line(lineStartX, pageHeight - 15, lineStartX + lineWidth, pageHeight - 15);
+
       const now = new Date();
-      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`, marginLeft, doc.internal.pageSize.getHeight() - 8);
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`, marginLeft, pageHeight - 8);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
       const atendenteText = `Gerado por: ${userName}`;
       const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
-      doc.text(atendenteText, (doc.internal.pageSize.getWidth() - atendenteTextWidth) / 2, doc.internal.pageSize.getHeight() - 8);
+      doc.text(atendenteText, (pageWidth - atendenteTextWidth) / 2, pageHeight - 8);
+
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, doc.internal.pageSize.getHeight() - 8);
+      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, pageHeight - 8);
     }
 
     const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
@@ -807,27 +1011,48 @@ export default function AcoesItinerantesPage() {
     const accentColor: [number, number, number] = [232, 245, 233];
     const borderColor: [number, number, number] = [200, 230, 201];
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Header
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     const title = 'LISTA DE ENTREGA';
     const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
-    doc.text(title, (pageWidth - titleWidth) / 2, 14);
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
 
-    doc.setFontSize(11);
+    // Subtítulo
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    const subtitle = nomeAcao;
-    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
-    doc.text(subtitle, (pageWidth - subtitleWidth) / 2, 22);
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
 
-    // Period info box
+    // Subtítulo 2 (Ação)
+    doc.setFontSize(8);
+    const actionText = `Ação: ${nomeAcao}`;
+    const actionWidth = doc.getStringUnitWidth(actionText) * 8 / doc.internal.scaleFactor;
+    const actionX = logoBase64 ? 52 + (pageWidth - 52 - actionWidth) / 2 : (pageWidth - actionWidth) / 2;
+    doc.text(actionText, actionX, 32);
+
+    // Box de informações do período
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.roundedRect(15, 40, pageWidth - 30, 12, 2, 2, 'F');
+    doc.roundedRect(15, 48, pageWidth - 30, 12, 2, 2, 'F');
 
     const crono = chronologicalData.find(c => c.acao === nomeAcao);
     const periodoAcao = crono
@@ -841,14 +1066,14 @@ export default function AcoesItinerantesPage() {
     doc.setFont('helvetica', 'bold');
     const periodoLabel = `PERÍODO: ${periodoAcao}`;
     const periodoLabelWidth = doc.getStringUnitWidth(periodoLabel) * 9 / doc.internal.scaleFactor;
-    doc.text(periodoLabel, (pageWidth - periodoLabelWidth) / 2, 47);
+    doc.text(periodoLabel, (pageWidth - periodoLabelWidth) / 2, 55);
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
     const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
     const totalTextWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
-    doc.text(totalText, pageWidth - 20 - totalTextWidth, 47);
+    doc.text(totalText, pageWidth - 20 - totalTextWidth, 55);
 
     // Table
     const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
@@ -859,12 +1084,10 @@ export default function AcoesItinerantesPage() {
       ''
     ]);
 
-    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
-
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 57,
+      startY: 65,
       styles: {
         fontSize: 9,
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
@@ -892,34 +1115,62 @@ export default function AcoesItinerantesPage() {
         3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] }
       },
       alternateRowStyles: { fillColor: [252, 252, 252] },
-      margin: { left: 15, right: 15 },
+      margin: { top: 20, left: 15, right: 15, bottom: 25 },
       rowPageBreak: 'avoid',
-      showHead: 'everyPage',
-      didDrawPage: () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+      showHead: 'everyPage'
+    });
 
-        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-        doc.setLineWidth(0.5);
-        doc.line(15, doc.internal.pageSize.getHeight() - 18, pageWidth - 15, doc.internal.pageSize.getHeight() - 18);
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
 
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(110, 110, 110);
-
-        const now = new Date();
-        doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 15, doc.internal.pageSize.getHeight() - 12);
-
-        doc.setFont('helvetica', 'bold');
-        const atendenteTextW = doc.getStringUnitWidth(userName) * 7 / doc.internal.scaleFactor;
-        doc.text(userName, (pageWidth - atendenteTextW) / 2, doc.internal.pageSize.getHeight() - 12);
-
-        doc.setFont('helvetica', 'normal');
-        const pageText = `Página ${currentPage} de ${pageCount}`;
-        const pageTextW = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-        doc.text(pageText, pageWidth - pageTextW - 15, doc.internal.pageSize.getHeight() - 12);
+        const headerPeriodoWidth = doc.getStringUnitWidth(periodoAcao) * 7 / doc.internal.scaleFactor;
+        doc.text(periodoAcao, pageWidth - 15 - headerPeriodoWidth, 11);
       }
-    });
+
+      // Rodapé
+      doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+
+      const now = new Date();
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 15, pageHeight - 12);
+
+      doc.setFont('helvetica', 'bold');
+      const atendenteTextW = doc.getStringUnitWidth(userName) * 7 / doc.internal.scaleFactor;
+      doc.text(userName, (pageWidth - atendenteTextW) / 2, pageHeight - 12);
+
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextW = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - pageTextW - 15, pageHeight - 12);
+    }
 
     const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
     doc.save(`lista_entrega_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);

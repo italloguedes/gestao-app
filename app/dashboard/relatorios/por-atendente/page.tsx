@@ -59,6 +59,25 @@ export default function RelatoriosPorAtendentePage() {
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [atendenteExpandido, setAtendenteExpandido] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/alece_logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const gerarPDFRelatorio = () => {
     if (atendenteStats.length === 0) return;
@@ -73,21 +92,44 @@ export default function RelatoriosPorAtendentePage() {
         ? `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`
         : 'Período completo';
 
+      const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+
       // --- Cabeçalho ---
-      doc.setFillColor(5, 95, 60);
-      doc.rect(0, 0, pageW, 28, 'F');
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, pageW, 42, 'F');
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      // Logo à esquerda
+      if (logoBase64) {
+        try {
+          doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+        } catch (e) {
+          console.error('Erro ao adicionar logo ao PDF:', e);
+        }
+      }
+
+      // Título principal
       doc.setTextColor(255, 255, 255);
-      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 10, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      const title = 'ATENDIMENTOS POR COLABORADOR';
+      const titleWidth = doc.getStringUnitWidth(title) * 14 / doc.internal.scaleFactor;
+      const titleX = logoBase64 ? 52 + (pageW - 52 - titleWidth) / 2 : (pageW - titleWidth) / 2;
+      doc.text(title, titleX, 16);
 
-      doc.setFont('helvetica', 'normal');
+      // Subtítulo
       doc.setFontSize(10);
-      doc.text('Relatório de Atendimentos por Colaborador', pageW / 2, 17, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+      const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+      const subtitleX = logoBase64 ? 52 + (pageW - 52 - subtitleWidth) / 2 : (pageW - subtitleWidth) / 2;
+      doc.text(subtitle, subtitleX, 24);
 
-      doc.setFontSize(8);
-      doc.text(`Período: ${periodoTexto}  |  Emitido em: ${hoje}`, pageW / 2, 24, { align: 'center' });
+      // Período
+      doc.setFontSize(9);
+      const infoText = `Período: ${periodoTexto}  |  Emitido em: ${hoje}`;
+      const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+      const infoX = logoBase64 ? 52 + (pageW - 52 - infoWidth) / 2 : (pageW - infoWidth) / 2;
+      doc.text(infoText, infoX, 32);
 
       // --- Totais Gerais ---
       const totalAtend = atendimentosData.length;
@@ -95,17 +137,17 @@ export default function RelatoriosPorAtendentePage() {
       const totalGeral = totalAtend + totalColetas;
 
       doc.setFillColor(241, 245, 249);
-      doc.rect(10, 32, pageW - 20, 14, 'F');
+      doc.rect(10, 48, pageW - 20, 14, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
-      doc.text(`Total de Atendimentos: ${totalAtend}`, 15, 40);
-      doc.text(`Total de Coletas: ${totalColetas}`, 80, 40);
-      doc.text(`Total Geral: ${totalGeral}`, 155, 40);
+      doc.text(`Total de Atendimentos: ${totalAtend}`, 15, 56);
+      doc.text(`Total de Coletas: ${totalColetas}`, 80, 56);
+      doc.text(`Total Geral: ${totalGeral}`, 155, 56);
 
       // --- Cabeçalho da tabela ---
-      let y = 52;
-      doc.setFillColor(5, 95, 60);
+      let y = 68;
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(10, y, pageW - 20, 8, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
@@ -120,9 +162,30 @@ export default function RelatoriosPorAtendentePage() {
       atendenteStats.forEach((stats, idx) => {
         if (y > pageH - 20) {
           doc.addPage();
-          y = 15;
-          // repetir cabeçalho
-          doc.setFillColor(5, 95, 60);
+          // Draw compact header for subsequent pages
+          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.rect(0, 0, pageW, 16, 'F');
+
+          if (logoBase64) {
+            try {
+              doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+            } catch (e) { /* skip */ }
+          }
+
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('ATENDIMENTOS POR COLABORADOR', logoBase64 ? 24 : 15, 11);
+
+          // Período no canto direito
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          const headerPeriodoWidth = doc.getStringUnitWidth(periodoTexto) * 7 / doc.internal.scaleFactor;
+          doc.text(periodoTexto, pageW - 15 - headerPeriodoWidth, 11);
+
+          y = 22;
+          // repetir cabeçalho da tabela
+          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
           doc.rect(10, y, pageW - 20, 8, 'F');
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
@@ -144,7 +207,7 @@ export default function RelatoriosPorAtendentePage() {
         doc.text(stats.nome, 15, y + 5.5);
 
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(5, 95, 60);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.text(String(stats.total), 120, y + 5.5, { align: 'center' });
 
         doc.setTextColor(109, 40, 217);
@@ -162,7 +225,11 @@ export default function RelatoriosPorAtendentePage() {
       });
 
       // --- Linha de total final ---
-      doc.setFillColor(5, 95, 60);
+      if (y > pageH - 20) {
+        doc.addPage();
+        y = 22;
+      }
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(10, y, pageW - 20, 9, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
@@ -172,15 +239,19 @@ export default function RelatoriosPorAtendentePage() {
       doc.text(String(totalColetas), 150, y + 6, { align: 'center' });
       doc.text(String(totalGeral), 180, y + 6, { align: 'center' });
 
-      // --- Rodapé ---
-      const rodY = pageH - 10;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.text(
-        `Assembleia Legislativa do Estado do Ceará  |  Gerado em ${hoje}  |  ${atendenteStats.length} colaboradores`,
-        pageW / 2, rodY, { align: 'center' }
-      );
+      // --- Rodapé em todas as páginas via pós-processamento ---
+      const pageCount = (doc as any).getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const rodY = pageH - 10;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          `Assembleia Legislativa do Estado do Ceará  |  Gerado em ${hoje}  |  Página ${i} de ${pageCount}`,
+          pageW / 2, rodY, { align: 'center' }
+        );
+      }
 
       const fileName = `relatorio-colaboradores-${periodoTexto.replace(/\//g, '-').replace(/ /g, '')}.pdf`;
       doc.save(fileName);

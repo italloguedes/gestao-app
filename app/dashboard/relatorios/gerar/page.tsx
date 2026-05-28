@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +45,25 @@ export default function GerarRelatorioPage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [atendimentosFiltrados, setAtendimentosFiltrados] = useState<Atendimento[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/alece_logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
@@ -65,47 +84,56 @@ export default function GerarRelatorioPage() {
     }
 
     const doc = new jsPDF();
-
-    // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
-    const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro para melhor legibilidade
+    const secondaryColor = [248, 249, 250] as [number, number, number]; // Cinza mais claro
+
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
     // Calcula a largura total da tabela
     const tableWidth = 150; // Soma das larguras das colunas
-    const marginLeft = (doc.internal.pageSize.width - tableWidth) / 2;
+    const marginLeft = (pageWidth - tableWidth) / 2;
 
-    // Cabeçalho mais compacto e centralizado
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
     doc.setTextColor(255, 255, 255);
-    const titleFontSize = 16;
-    doc.setFontSize(titleFontSize);
-    const title = 'Relatório de Atendimentos - Sala Sensorial / ALECE';
-    const titleWidth = doc.getStringUnitWidth(title) * titleFontSize / doc.internal.scaleFactor;
-    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 16);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'RELATÓRIO DE ATENDIMENTOS';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
 
-    // Informações do período mais compactas e centralizadas
-    doc.setTextColor(90, 90, 90);
-    const infoFontSize = 9;
-    doc.setFontSize(infoFontSize);
-    const periodo = `Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`;
-    const total = `Total de Atendimentos: ${atendimentos.length}`;
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
 
-    // Centraliza as informações do período
-    const periodoWidth = doc.getStringUnitWidth(periodo) * infoFontSize / doc.internal.scaleFactor;
-    const totalWidth = doc.getStringUnitWidth(total) * infoFontSize / doc.internal.scaleFactor;
-    const infosWidth = periodoWidth + 20 + totalWidth; // 20 é o espaço entre os textos
-    const infosStartX = (doc.internal.pageSize.width - infosWidth) / 2;
-
-    doc.text(periodo, infosStartX, 30);
-    doc.text(total, infosStartX + periodoWidth + 20, 30);
-
-    // Adiciona linha decorativa centralizada
-    const lineWidth = 170;
-    const lineStartX = (doc.internal.pageSize.width - lineWidth) / 2;
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.3);
-    doc.line(lineStartX, 33, lineStartX + lineWidth, 33);
+    // Período e Total
+    doc.setFontSize(9);
+    const periodoText = dataInicio && dataFim && dataInicio !== dataFim
+      ? `Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+      : `Data: ${formatDate(dataInicio || dataFim)}`;
+    const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
+    const infoText = `${periodoText}  |  ${totalText}`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(infoText, infoX, 32);
 
     // Configuração da tabela otimizada
     const tableColumn = ['Data', 'Nome', 'CPF', 'Solicitante', 'Status'];
@@ -120,25 +148,24 @@ export default function GerarRelatorioPage() {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 38,
+      startY: 48,
       styles: {
         fontSize: 8,
-        cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
+        cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
         lineColor: [230, 230, 230],
-        lineWidth: 0.05,
-        minCellHeight: 6,
-        cellWidth: 'wrap',
-        overflow: 'hidden',
-        textColor: [50, 50, 50]
+        lineWidth: 0.1,
+        textColor: [50, 50, 50],
+        overflow: 'linebreak',
+        minCellHeight: 8,
       },
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
-        fontSize: 7.5,
+        fontSize: 8,
         fontStyle: 'bold',
         halign: 'center',
-        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
-        minCellHeight: 8
+        valign: 'middle',
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       },
       columnStyles: {
         0: { cellWidth: 20, halign: 'center' }, // Data
@@ -150,9 +177,9 @@ export default function GerarRelatorioPage() {
       alternateRowStyles: {
         fillColor: secondaryColor
       },
-      margin: { left: marginLeft },
+      margin: { top: 20, left: marginLeft, right: marginLeft, bottom: 25 },
       rowPageBreak: 'avoid',
-      showFoot: 'lastPage',
+      showHead: 'everyPage',
       didDrawCell: (data) => {
         if (data.cell.text) {
           data.cell.styles.cellWidth = 'auto';
@@ -160,10 +187,41 @@ export default function GerarRelatorioPage() {
       }
     });
 
-    // Rodapé modernizado e centralizado
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
     const pageCount = (doc as any).getNumberOfPages();
+    const lineStartX = (pageWidth - 170) / 2;
+    const lineWidth = 170;
+
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE ATENDIMENTOS', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito do header
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodo = dataInicio && dataFim && dataInicio !== dataFim
+          ? `${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+          : formatDate(dataInicio || dataFim);
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 15 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé em todas as páginas
       const footerFontSize = 7;
       doc.setFontSize(footerFontSize);
       doc.setTextColor(128, 128, 128);
@@ -171,22 +229,22 @@ export default function GerarRelatorioPage() {
       // Linha separadora do rodapé centralizada
       doc.setDrawColor(230, 230, 230);
       doc.setLineWidth(0.3);
-      doc.line(lineStartX, doc.internal.pageSize.height - 15, lineStartX + lineWidth, doc.internal.pageSize.height - 15);
+      doc.line(lineStartX, pageHeight - 15, lineStartX + lineWidth, pageHeight - 15);
 
       // Data e hora de geração
       const now = new Date();
       const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
-      doc.text(dataHoraGeracao, marginLeft, doc.internal.pageSize.height - 8);
+      doc.text(dataHoraGeracao, marginLeft, pageHeight - 8);
 
       // Nome do atendente (centralizado)
       const atendenteText = `Atendente: ${atendenteNome}`;
       const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * footerFontSize / doc.internal.scaleFactor;
-      doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 8);
+      doc.text(atendenteText, (pageWidth - atendenteTextWidth) / 2, pageHeight - 8);
 
       // Número da página
       const pageText = `Página ${i} de ${pageCount}`;
       const pageTextWidth = doc.getStringUnitWidth(pageText) * footerFontSize / doc.internal.scaleFactor;
-      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, doc.internal.pageSize.height - 8);
+      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, pageHeight - 8);
     }
 
     // Salvar o PDF
@@ -202,15 +260,25 @@ export default function GerarRelatorioPage() {
     }
 
     const doc = new jsPDF();
-
-    // Configurações de estilo
     const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
     const accentColor = [232, 245, 233] as [number, number, number]; // Verde claro
     const borderColor = [200, 230, 201] as [number, number, number]; // Borda verde suave
 
-    // Cabeçalho moderno com gradiente visual
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
 
     // Título principal
     doc.setTextColor(255, 255, 255);
@@ -218,18 +286,20 @@ export default function GerarRelatorioPage() {
     doc.setFont('helvetica', 'bold');
     const title = 'LISTA DE ENTREGA';
     const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
-    doc.text(title, (doc.internal.pageSize.width - titleWidth) / 2, 14);
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
 
     // Subtítulo
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    const subtitle = 'Sala Sensorial / ALECE';
-    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 11 / doc.internal.scaleFactor;
-    doc.text(subtitle, (doc.internal.pageSize.width - subtitleWidth) / 2, 22);
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
 
     // Box de informações do período
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.roundedRect(15, 40, doc.internal.pageSize.width - 30, 12, 2, 2, 'F');
+    doc.roundedRect(15, 48, pageWidth - 30, 12, 2, 2, 'F');
 
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(9);
@@ -238,7 +308,7 @@ export default function GerarRelatorioPage() {
       ? `PERÍODO: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`
       : `DATA: ${formatDate(dataInicio || dataFim)}`;
     const periodoWidth = doc.getStringUnitWidth(periodo) * 9 / doc.internal.scaleFactor;
-    doc.text(periodo, (doc.internal.pageSize.width - periodoWidth) / 2, 47);
+    doc.text(periodo, (pageWidth - periodoWidth) / 2, 55);
 
     // Total de atendimentos
     doc.setFontSize(8);
@@ -246,7 +316,7 @@ export default function GerarRelatorioPage() {
     doc.setTextColor(80, 80, 80);
     const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
     const totalWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
-    doc.text(totalText, doc.internal.pageSize.width - 20 - totalWidth, 47);
+    doc.text(totalText, pageWidth - 20 - totalWidth, 55);
 
     // Tabela otimizada com AutoTable
     const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
@@ -260,7 +330,7 @@ export default function GerarRelatorioPage() {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 57,
+      startY: 65,
       styles: {
         fontSize: 9,
         cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
@@ -282,67 +352,76 @@ export default function GerarRelatorioPage() {
         lineWidth: 0
       },
       columnStyles: {
-        0: {
-          cellWidth: 12,
-          halign: 'center',
-          fontStyle: 'bold',
-          textColor: [0, 135, 81]
-        }, // Nº
-        1: {
-          cellWidth: 85,
-          halign: 'left',
-          overflow: 'linebreak' // Permite quebra de linha para nomes longos
-        }, // Nome Completo
-        2: {
-          cellWidth: 35,
-          halign: 'center',
-          fontStyle: 'normal',
-          font: 'courier'
-        }, // CPF
-        3: {
-          cellWidth: 48,
-          halign: 'center',
-          fillColor: [250, 250, 250]
-        } // Assinatura
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] }, // Nº
+        1: { cellWidth: 85, halign: 'left', overflow: 'linebreak' }, // Nome Completo
+        2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' }, // CPF
+        3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] } // Assinatura
       },
       alternateRowStyles: {
         fillColor: [252, 252, 252]
       },
-      margin: { left: 15, right: 15 },
+      margin: { top: 20, left: 15, right: 15, bottom: 25 },
       rowPageBreak: 'avoid',
-      showHead: 'everyPage',
-      didDrawPage: (data) => {
-        // Adicionar rodapé em cada página dentro do autoTable
-        const pageCount = (doc as any).getNumberOfPages();
-        const currentPage = (doc as any).getCurrentPageInfo().pageNumber;
+      showHead: 'everyPage'
+    });
 
-        // Linha separadora do rodapé
-        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-        doc.setLineWidth(0.5);
-        doc.line(15, doc.internal.pageSize.height - 18, doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 18);
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
 
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito do header
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(110, 110, 110);
-
-        // Data e hora de geração (esquerda)
-        const now = new Date();
-        const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-        doc.text(dataHoraGeracao, 15, doc.internal.pageSize.height - 12);
-
-        // Nome do atendente (centro)
-        doc.setFont('helvetica', 'bold');
-        const atendenteText = `${atendenteNome}`;
-        const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
-        doc.text(atendenteText, (doc.internal.pageSize.width - atendenteTextWidth) / 2, doc.internal.pageSize.height - 12);
-
-        // Número da página (direita)
-        doc.setFont('helvetica', 'normal');
-        const pageText = `Página ${currentPage} de ${pageCount}`;
-        const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
-        doc.text(pageText, doc.internal.pageSize.width - pageTextWidth - 15, doc.internal.pageSize.height - 12);
+        const headerPeriodo = dataInicio && dataFim && dataInicio !== dataFim
+          ? `${formatDate(dataInicio)} a ${formatDate(dataFim)}`
+          : formatDate(dataInicio || dataFim);
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 15 - headerPeriodoWidth, 11);
       }
-    });
+
+      // Rodapé
+      doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(15, pageHeight - 18, pageWidth - 15, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+
+      // Data e hora de geração (esquerda)
+      const now = new Date();
+      const dataHoraGeracao = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      doc.text(dataHoraGeracao, 15, pageHeight - 12);
+
+      // Nome do atendente (centro)
+      doc.setFont('helvetica', 'bold');
+      const atendenteText = `${atendenteNome}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+      doc.text(atendenteText, (pageWidth - atendenteTextWidth) / 2, pageHeight - 12);
+
+      // Número da página (direita)
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - pageTextWidth - 15, pageHeight - 12);
+    }
 
     // Salvar o PDF
     const fileName = dataInicio && dataFim && dataInicio !== dataFim
