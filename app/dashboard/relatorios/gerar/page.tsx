@@ -155,7 +155,7 @@ export default function GerarRelatorioPage() {
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
         textColor: [50, 50, 50],
-        overflow: 'ellipis',
+        overflow: 'ellipsize',
         minCellHeight: 8,
       },
       headStyles: {
@@ -338,7 +338,7 @@ export default function GerarRelatorioPage() {
         lineWidth: 0.1,
         minCellHeight: 12,
         textColor: [40, 40, 40],
-        overflow: 'ellipis',
+        overflow: 'ellipsize',
         cellWidth: 'wrap'
       },
       headStyles: {
@@ -353,7 +353,7 @@ export default function GerarRelatorioPage() {
       },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] }, // Nº
-        1: { cellWidth: 85, halign: 'left', overflow: 'ellipis' }, // Nome Completo
+        1: { cellWidth: 85, halign: 'left', overflow: 'ellipsize' }, // Nome Completo
         2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' }, // CPF
         3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] } // Assinatura
       },

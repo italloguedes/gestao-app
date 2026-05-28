@@ -638,7 +638,7 @@ export default function AcoesItinerantesPage() {
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: primaryColor },
-      styles: { fontSize: 7, overflow: 'ellipis' },
+      styles: { fontSize: 7, overflow: 'ellipsize' },
       margin: { top: 20, left: 14, right: 14, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage'
@@ -760,7 +760,7 @@ export default function AcoesItinerantesPage() {
         1: { halign: 'center', cellWidth: 50 },
         2: { halign: 'center', cellWidth: 25 }
       },
-      styles: { fontSize: 10, cellPadding: 3, overflow: 'ellipis' },
+      styles: { fontSize: 10, cellPadding: 3, overflow: 'ellipsize' },
       margin: { top: 20, left: 14, right: 14, bottom: 25 },
       rowPageBreak: 'avoid',
       showHead: 'everyPage'
@@ -915,7 +915,7 @@ export default function AcoesItinerantesPage() {
         lineColor: [230, 230, 230],
         lineWidth: 0.1,
         textColor: [50, 50, 50],
-        overflow: 'ellipis',
+        overflow: 'ellipsize',
         minCellHeight: 8,
       },
       headStyles: {
@@ -1095,7 +1095,7 @@ export default function AcoesItinerantesPage() {
         lineWidth: 0.1,
         minCellHeight: 12,
         textColor: [40, 40, 40],
-        overflow: 'ellipis',
+        overflow: 'ellipsize',
         cellWidth: 'wrap'
       },
       headStyles: {
@@ -1110,7 +1110,7 @@ export default function AcoesItinerantesPage() {
       },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] },
-        1: { cellWidth: 85, halign: 'left', overflow: 'ellipis' },
+        1: { cellWidth: 85, halign: 'left', overflow: 'ellipsize' },
         2: { cellWidth: 35, halign: 'center', fontStyle: 'normal', font: 'courier' },
         3: { cellWidth: 48, halign: 'center', fillColor: [250, 250, 250] }
       },
