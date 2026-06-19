@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,13 @@ import {
   FiCheckCircle,
   FiClock,
   FiAlertCircle,
-  FiRefreshCw
+  FiRefreshCw,
+  FiFileText,
+  FiList,
+  FiX,
+  FiUser,
+  FiCopy,
+  FiCheck
 } from 'react-icons/fi';
 import {
   BarChart,
@@ -121,6 +127,49 @@ export default function AcoesItinerantesPage() {
   const [totalAtendimentos, setTotalAtendimentos] = useState(0);
   const [selectedAcao, setSelectedAcao] = useState<string | null>(null);
   const [chronologicalData, setChronologicalData] = useState<ChronologicalItem[]>([]);
+  const [rawAtendimentosAcoes, setRawAtendimentosAcoes] = useState<any[]>([]);
+  const [expandedEmAndamento, setExpandedEmAndamento] = useState<string | null>(null);
+  const [expandedCancelados, setExpandedCancelados] = useState<string | null>(null);
+  const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/alece_logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
+
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  const popoverCanceladosRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setExpandedEmAndamento(null);
+      }
+      if (popoverCanceladosRef.current && !popoverCanceladosRef.current.contains(event.target as Node)) {
+        setExpandedCancelados(null);
+      }
+    };
+    if (expandedEmAndamento || expandedCancelados) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [expandedEmAndamento, expandedCancelados]);
 
   useEffect(() => {
     const hoje = new Date();
@@ -221,6 +270,7 @@ export default function AcoesItinerantesPage() {
       console.log('==========================');
 
       setTotalAtendimentos(atendimentosAcoes.length);
+      setRawAtendimentosAcoes(atendimentosAcoes);
 
       // Chronological processing
       const cronoMap = new Map<string, { dataInicio: string; dataFim: string; total: number }>();
@@ -400,7 +450,7 @@ export default function AcoesItinerantesPage() {
           ...acao,
           percentualConclusao: acao.total > 0 ? (acao.concluidos / acao.total) * 100 : 0
         };
-      }).sort((a, b) => b.total - a.total);
+      }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
       setAcoes(acoesArray);
 
@@ -520,16 +570,48 @@ export default function AcoesItinerantesPage() {
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const aleceGreen: [number, number, number] = [5, 150, 105]; // emerald-600
+    const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(20);
-    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
-    doc.text('Relatório de Ações Itinerantes ALECE', 14, 20);
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`, 14, 30);
-    doc.text(`Total de Atendimentos: ${totalAtendimentos}`, 14, 38);
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'RELATÓRIO DE AÇÕES ITINERANTES';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
+
+    // Período e Total
+    doc.setFontSize(9);
+    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const totalText = `Total Atendimentos: ${totalAtendimentos}`;
+    const infoText = `${periodoText}  |  ${totalText}`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(infoText, infoX, 32);
 
     const tableData = acoes.map(acao => {
       const crono = chronologicalData.find(c => c.acao === acao.nome);
@@ -545,38 +627,70 @@ export default function AcoesItinerantesPage() {
         acao.total.toString(),
         acao.concluidos.toString(),
         acao.emAndamento.toString(),
-        acao.correcao.toString(),
-        acao.bloqueados.toString(),
         acao.outros.toString(),
         `${acao.percentualConclusao.toFixed(1)}%`
       ];
     });
 
     autoTable(doc, {
-      startY: 45,
-      head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Correção', 'Bloqueados', 'Outros', '% Conclusão']],
+      startY: 48,
+      head: [['Ação', 'Período', 'Total', 'Concluídos', 'Em Andamento', 'Cancelados', '% Conclusão']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: aleceGreen },
-      styles: { fontSize: 7 }
+      headStyles: { fillColor: primaryColor },
+      styles: { fontSize: 7, overflow: 'ellipsize' },
+      margin: { top: 20, left: 14, right: 14, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
     });
 
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    doc.setFontSize(10);
-    doc.setTextColor(100);
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.text(
-        `Página ${i} de ${pageCount}`,
-        doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
-      );
-      doc.text(
-        `Gerado em ${new Date().toLocaleString('pt-BR')}`,
-        14,
-        doc.internal.pageSize.getHeight() - 10
-      );
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE AÇÕES ITINERANTES', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 12);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+      const userText = `Gerado por: ${userName}`;
+      const userTextWidth = doc.getStringUnitWidth(userText) * 7 / doc.internal.scaleFactor;
+      doc.text(userText, (pageWidth - userTextWidth) / 2, pageHeight - 12);
+
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
     doc.save(`acoes-itinerantes-${dataInicio}-${dataFim}.pdf`);
@@ -584,19 +698,46 @@ export default function AcoesItinerantesPage() {
 
   const generateChronologicalPDF = () => {
     const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
     const pageWidth = doc.internal.pageSize.getWidth();
-    const aleceGreen: [number, number, number] = [5, 150, 105];
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(18);
-    doc.setTextColor(aleceGreen[0], aleceGreen[1], aleceGreen[2]);
-    doc.text('Cronograma de Ações Itinerantes', pageWidth / 2, 20, { align: 'center' });
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
 
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(
-      `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`,
-      pageWidth / 2, 28, { align: 'center' }
-    );
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'CRONOGRAMA DE AÇÕES ITINERANTES';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
+
+    // Período
+    doc.setFontSize(9);
+    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const infoWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(periodoText, infoX, 32);
 
     const formattedData = chronologicalData.map(item => {
       const dataInicioFormatted = formatDateFull(item.dataInicio);
@@ -609,29 +750,433 @@ export default function AcoesItinerantesPage() {
     });
 
     autoTable(doc, {
-      startY: 35,
+      startY: 48,
       head: [['Ação', 'Período', 'Quantidade']],
       body: formattedData,
       theme: 'grid',
-      headStyles: { fillColor: aleceGreen, halign: 'center' },
+      headStyles: { fillColor: primaryColor, halign: 'center' },
       columnStyles: {
         0: { halign: 'left' },
         1: { halign: 'center', cellWidth: 50 },
         2: { halign: 'center', cellWidth: 25 }
       },
-      styles: { fontSize: 10, cellPadding: 3 },
-      didDrawPage: () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
-        doc.text(`Gerado por: ${userName}`, 14, doc.internal.pageSize.getHeight() - 15);
-        doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, doc.internal.pageSize.getHeight() - 10);
-        doc.text(`Página ${pageCount}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
-      }
+      styles: { fontSize: 10, cellPadding: 3, overflow: 'ellipsize' },
+      margin: { top: 20, left: 14, right: 14, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
     });
 
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CRONOGRAMA DE AÇÕES ITINERANTES', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
+        doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 12);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+      const userText = `Gerado por: ${userName}`;
+      const userTextWidth = doc.getStringUnitWidth(userText) * 7 / doc.internal.scaleFactor;
+      doc.text(userText, (pageWidth - userTextWidth) / 2, pageHeight - 12);
+
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
+    }
+
     doc.save(`acoes-itinerantes-cronologica-${dataInicio}-${dataFim}.pdf`);
+  };
+
+  // =============================================
+  // PER-ACTION PDF GENERATORS
+  // =============================================
+
+  const generateActionDetailPDF = (nomeAcao: string) => {
+    const atendimentos = rawAtendimentosAcoes
+      .filter((a: any) => a.solicitante === nomeAcao)
+      .sort((a: any, b: any) => {
+        const dateCompare = (a.dia_atual || '').localeCompare(b.dia_atual || '');
+        if (dateCompare !== 0) return dateCompare;
+        return (a.horario || '').localeCompare(b.horario || '');
+      });
+
+    if (atendimentos.length === 0) {
+      alert('Nenhum atendimento encontrado para esta ação.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81];
+    const secondaryColor: [number, number, number] = [248, 249, 250];
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 10;
+    const tableWidth = pageWidth - 2 * marginX; // 190
+    const marginLeft = marginX;
+
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    const title = 'RELATÓRIO DE ATENDIMENTOS';
+    const titleWidth = doc.getStringUnitWidth(title) * 14 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 12);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 19);
+
+    // Box de informações da ação e período
+    const crono = chronologicalData.find(c => c.acao === nomeAcao);
+    const periodoAcao = crono
+      ? (crono.dataInicio === crono.dataFim
+        ? formatDateFull(crono.dataInicio)
+        : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
+      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const actionText = `Ação: ${nomeAcao}`;
+    const actionWidth = doc.getStringUnitWidth(actionText) * 9 / doc.internal.scaleFactor;
+    const actionX = logoBase64 ? 52 + (pageWidth - 52 - actionWidth) / 2 : (pageWidth - actionWidth) / 2;
+    doc.text(actionText, actionX, 27);
+
+    doc.setFont('helvetica', 'normal');
+    const infoText = `Período: ${periodoAcao}  |  Total: ${atendimentos.length}`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
+    doc.text(infoText, infoX, 35);
+
+    // Table
+    const tableColumn = ['Nº', 'Data', 'Nome', 'CPF', 'Status'];
+    const tableRows = atendimentos.map((at: any, index: number) => [
+      (index + 1).toString(),
+      formatDateFull(at.dia_atual),
+      at.nome || '—',
+      at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—',
+      at.status ? at.status.charAt(0).toUpperCase() + at.status.slice(1).toLowerCase() : '—'
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 48,
+      styles: {
+        fontSize: 6.5,
+        cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+        lineColor: [230, 230, 230],
+        lineWidth: 0.1,
+        textColor: [50, 50, 50],
+        overflow: 'ellipsize',
+        minCellHeight: 8,
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 7,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' }, // Nº
+        1: { cellWidth: 18, halign: 'center' }, // Data
+        2: { cellWidth: 97, halign: 'left' },   // Nome
+        3: { cellWidth: 35, halign: 'center' }, // CPF
+        4: { cellWidth: 30, halign: 'center' }  // Status
+      },
+      alternateRowStyles: {
+        fillColor: secondaryColor
+      },
+      margin: { top: 20, left: marginLeft, right: marginLeft, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
+    });
+
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const lineStartX = marginX;
+    const lineWidth = pageWidth - 2 * marginX;
+
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE ATENDIMENTOS', logoBase64 ? 24 : 15, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodoWidth = doc.getStringUnitWidth(periodoAcao) * 7 / doc.internal.scaleFactor;
+        doc.text(periodoAcao, pageWidth - 14 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setFontSize(7);
+      doc.setTextColor(128, 128, 128);
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.3);
+      doc.line(lineStartX, pageHeight - 15, lineStartX + lineWidth, pageHeight - 15);
+
+      const now = new Date();
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`, marginLeft, pageHeight - 8);
+
+      const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+      const atendenteText = `Gerado por: ${userName}`;
+      const atendenteTextWidth = doc.getStringUnitWidth(atendenteText) * 7 / doc.internal.scaleFactor;
+      doc.text(atendenteText, (pageWidth - atendenteTextWidth) / 2, pageHeight - 8);
+
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, marginLeft + tableWidth - pageTextWidth, pageHeight - 8);
+    }
+
+    const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    doc.save(`relatorio_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
+  };
+
+  const generateActionDeliveryPDF = (nomeAcao: string) => {
+    const atendimentos = rawAtendimentosAcoes
+      .filter((a: any) => a.solicitante === nomeAcao)
+      .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''));
+
+    if (atendimentos.length === 0) {
+      alert('Nenhum atendimento encontrado para esta ação.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const primaryColor: [number, number, number] = [0, 135, 81];
+    const accentColor: [number, number, number] = [232, 245, 233];
+    const borderColor: [number, number, number] = [200, 230, 201];
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // --- CABEÇALHO PÁGINA 1 COM LOGO ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    // Logo à esquerda
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+      } catch (e) {
+        console.error('Erro ao adicionar logo ao PDF:', e);
+      }
+    }
+
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = 'LISTA DE ENTREGA';
+    const titleWidth = doc.getStringUnitWidth(title) * 16 / doc.internal.scaleFactor;
+    const titleX = logoBase64 ? 52 + (pageWidth - 52 - titleWidth) / 2 : (pageWidth - titleWidth) / 2;
+    doc.text(title, titleX, 16);
+
+    // Subtítulo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+    const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+    const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, 24);
+
+    // Subtítulo 2 (Ação)
+    doc.setFontSize(8);
+    const actionText = `Ação: ${nomeAcao}`;
+    const actionWidth = doc.getStringUnitWidth(actionText) * 8 / doc.internal.scaleFactor;
+    const actionX = logoBase64 ? 52 + (pageWidth - 52 - actionWidth) / 2 : (pageWidth - actionWidth) / 2;
+    doc.text(actionText, actionX, 32);
+
+    // Box de informações do período
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.roundedRect(10, 48, pageWidth - 20, 12, 2, 2, 'F');
+
+    const crono = chronologicalData.find(c => c.acao === nomeAcao);
+    const periodoAcao = crono
+      ? (crono.dataInicio === crono.dataFim
+        ? formatDateFull(crono.dataInicio)
+        : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
+      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const periodoLabel = `PERÍODO: ${periodoAcao}`;
+    const periodoLabelWidth = doc.getStringUnitWidth(periodoLabel) * 9 / doc.internal.scaleFactor;
+    doc.text(periodoLabel, (pageWidth - periodoLabelWidth) / 2, 55);
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const totalText = `Total: ${atendimentos.length} ${atendimentos.length === 1 ? 'atendimento' : 'atendimentos'}`;
+    const totalTextWidth = doc.getStringUnitWidth(totalText) * 8 / doc.internal.scaleFactor;
+    doc.text(totalText, pageWidth - 10 - totalTextWidth, 55);
+
+    // Table
+    const tableColumn = ['Nº', 'Nome Completo', 'CPF', 'Assinatura'];
+    const tableRows = atendimentos.map((at: any, index: number) => [
+      (index + 1).toString(),
+      at.nome || '—',
+      at.cpf ? at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—',
+      ''
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 65,
+      styles: {
+        fontSize: 6.5,
+        cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+        lineColor: borderColor,
+        lineWidth: 0.1,
+        minCellHeight: 12,
+        textColor: [40, 40, 40],
+        overflow: 'ellipsize',
+        cellWidth: 'wrap'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 7,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+        lineWidth: 0
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold', textColor: [0, 135, 81] },
+        1: { cellWidth: 95, halign: 'left', overflow: 'ellipsize' },
+        2: { cellWidth: 30, halign: 'center', fontStyle: 'normal', font: 'courier' },
+        3: { cellWidth: 55, halign: 'center', fillColor: [250, 250, 250] }
+      },
+      alternateRowStyles: { fillColor: [252, 252, 252] },
+      margin: { top: 20, left: 10, right: 10, bottom: 25 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage'
+    });
+
+    // --- PÓS-PROCESSAMENTO: RODAPÉ E HEADER PÁGINAS 2+ ---
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuário';
+
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Header compacto nas páginas 2+
+      if (i > 1) {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 16, 'F');
+
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+          } catch (e) { /* skip */ }
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LISTA DE ENTREGA', logoBase64 ? 24 : 10, 11);
+
+        // Período no canto direito
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const headerPeriodoWidth = doc.getStringUnitWidth(periodoAcao) * 7 / doc.internal.scaleFactor;
+        doc.text(periodoAcao, pageWidth - 10 - headerPeriodoWidth, 11);
+      }
+
+      // Rodapé
+      doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(10, pageHeight - 18, pageWidth - 10, pageHeight - 18);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(110, 110, 110);
+
+      const now = new Date();
+      doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 10, pageHeight - 12);
+
+      doc.setFont('helvetica', 'bold');
+      const atendenteTextW = doc.getStringUnitWidth(userName) * 7 / doc.internal.scaleFactor;
+      doc.text(userName, (pageWidth - atendenteTextW) / 2, pageHeight - 12);
+
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextW = doc.getStringUnitWidth(pageText) * 7 / doc.internal.scaleFactor;
+      doc.text(pageText, pageWidth - pageTextW - 10, pageHeight - 12);
+    }
+
+    const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    doc.save(`lista_entrega_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
   };
 
   // =============================================
@@ -905,10 +1450,9 @@ export default function AcoesItinerantesPage() {
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Total</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Concluídos</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Em Andamento</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Correção</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Bloqueados</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Outros</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Cancelados</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% Conclusão</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Relatórios</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -934,25 +1478,251 @@ export default function AcoesItinerantesPage() {
                         {acao.concluidos}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                        {acao.emAndamento}
-                      </span>
+                    <td className="px-4 py-3 text-center relative">
+                      {acao.emAndamento > 0 ? (
+                        <>
+                          <button
+                            onClick={() => setExpandedEmAndamento(expandedEmAndamento === acao.nome ? null : acao.nome)}
+                            className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                              expandedEmAndamento === acao.nome
+                                ? 'bg-teal-600 text-white border-teal-700 shadow-md shadow-teal-200'
+                                : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 hover:shadow-sm'
+                            }`}
+                            title="Clique para ver os atendimentos em andamento"
+                          >
+                            {acao.emAndamento}
+                          </button>
+
+                          {expandedEmAndamento === acao.nome && (
+                            <div
+                              ref={popoverRef}
+                              className="absolute z-50 top-full mt-1 right-0 w-[380px] bg-white rounded-xl border border-gray-200 shadow-2xl shadow-gray-300/40 animate-in fade-in slide-in-from-top-2 duration-200"
+                              style={{ maxHeight: '320px' }}
+                            >
+                              {/* Popover Header */}
+                              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-t-xl">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
+                                    <FiClock className="h-3 w-3 text-teal-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">Em Andamento</p>
+                                    <p className="text-[10px] text-gray-500 truncate max-w-[200px]">{acao.nome}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setExpandedEmAndamento(null)}
+                                  className="h-6 w-6 rounded-md hover:bg-gray-200/60 flex items-center justify-center transition-colors"
+                                >
+                                  <FiX className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+
+                              {/* Popover Content */}
+                              <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase() === 'em_andamento' ||
+                                    a.status?.toLowerCase() === 'em andamento' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('em_andamento') ||
+                                    a.status?.toLowerCase().includes('em andamento')
+                                  ))
+                                  .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''))
+                                  .map((at: any, i: number) => (
+                                    <div
+                                      key={at.id || i}
+                                      className={`flex items-center gap-3 px-4 py-2.5 text-xs ${
+                                        i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
+                                      } hover:bg-teal-50/40 transition-colors`}
+                                    >
+                                      <div className="h-7 w-7 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                                        <FiUser className="h-3 w-3 text-teal-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-800 truncate">{at.nome || '—'}</p>
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1 flex-wrap">
+                                          <span>CPF:</span>
+                                          {at.cpf ? (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const cpfFormatado = at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                                                navigator.clipboard.writeText(cpfFormatado);
+                                                setCopiedCpf(at.cpf);
+                                                setTimeout(() => setCopiedCpf(null), 1500);
+                                              }}
+                                              title="Clique para copiar o CPF"
+                                              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded transition-all cursor-pointer ${
+                                                copiedCpf === at.cpf
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'hover:bg-gray-200/60 text-gray-500 hover:text-gray-700'
+                                              }`}
+                                            >
+                                              <span className="font-mono">{at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>
+                                              {copiedCpf === at.cpf ? (
+                                                <FiCheck className="w-2.5 h-2.5 text-green-600" />
+                                              ) : (
+                                                <FiCopy className="w-2.5 h-2.5 opacity-50" />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <span>—</span>
+                                          )}
+                                          {at.dia_atual && <span>• {formatDateFull(at.dia_atual)}</span>}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))
+                                }
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase() === 'em_andamento' ||
+                                    a.status?.toLowerCase() === 'em andamento' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('em_andamento') ||
+                                    a.status?.toLowerCase().includes('em andamento')
+                                  )).length === 0 && (
+                                  <div className="px-4 py-6 text-center text-xs text-gray-400">
+                                    Nenhum atendimento em andamento encontrado
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                          {acao.emAndamento}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        {acao.correcao}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
-                        {acao.bloqueados}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
-                        {acao.outros}
-                      </span>
+                    <td className="px-4 py-3 text-center relative">
+                      {acao.outros > 0 ? (
+                        <>
+                          <button
+                            onClick={() => setExpandedCancelados(expandedCancelados === acao.nome ? null : acao.nome)}
+                            className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                              expandedCancelados === acao.nome
+                                ? 'bg-gray-600 text-white border-gray-700 shadow-md shadow-gray-200'
+                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                            title="Clique para ver os atendimentos cancelados"
+                          >
+                            {acao.outros}
+                          </button>
+
+                          {expandedCancelados === acao.nome && (
+                            <div
+                              ref={popoverCanceladosRef}
+                              className="absolute z-50 top-full mt-1 right-0 w-[380px] bg-white rounded-xl border border-gray-200 shadow-2xl shadow-gray-300/40 animate-in fade-in slide-in-from-top-2 duration-200"
+                              style={{ maxHeight: '320px' }}
+                            >
+                              {/* Popover Header */}
+                              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-slate-50 rounded-t-xl">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-6 w-6 rounded-md bg-gray-200 flex items-center justify-center">
+                                    <FiAlertCircle className="h-3 w-3 text-gray-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">Cancelados</p>
+                                    <p className="text-[10px] text-gray-500 truncate max-w-[200px]">{acao.nome}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setExpandedCancelados(null)}
+                                  className="h-6 w-6 rounded-md hover:bg-gray-200/60 flex items-center justify-center transition-colors"
+                                >
+                                  <FiX className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+
+                              {/* Popover Content */}
+                              <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('cancelado') ||
+                                    a.status?.toLowerCase() === 'cancelado' ||
+                                    a.status === 'Cancelado' ||
+                                    a.status === 'CANCELADO' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('correcao') ||
+                                    a.status?.toLowerCase().includes('correção') ||
+                                    a.status?.toLowerCase() === 'correcao' ||
+                                    a.status?.toLowerCase() === 'correção' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('bloqueado') ||
+                                    a.status?.toLowerCase() === 'bloqueado'
+                                  ))
+                                  .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''))
+                                  .map((at: any, i: number) => (
+                                    <div
+                                      key={at.id || i}
+                                      className={`flex items-center gap-3 px-4 py-2.5 text-xs ${
+                                        i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
+                                      } hover:bg-gray-50/80 transition-colors`}
+                                    >
+                                      <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                        <FiUser className="h-3 w-3 text-gray-500" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-800 truncate">{at.nome || '—'}</p>
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1 flex-wrap">
+                                          <span>CPF:</span>
+                                          {at.cpf ? (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const cpfFormatado = at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                                                navigator.clipboard.writeText(cpfFormatado);
+                                                setCopiedCpf(at.cpf);
+                                                setTimeout(() => setCopiedCpf(null), 1500);
+                                              }}
+                                              title="Clique para copiar o CPF"
+                                              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded transition-all cursor-pointer ${
+                                                copiedCpf === at.cpf
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'hover:bg-gray-200/60 text-gray-500 hover:text-gray-700'
+                                              }`}
+                                            >
+                                              <span className="font-mono">{at.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>
+                                              {copiedCpf === at.cpf ? (
+                                                <FiCheck className="w-2.5 h-2.5 text-green-600" />
+                                              ) : (
+                                                <FiCopy className="w-2.5 h-2.5 opacity-50" />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <span>—</span>
+                                          )}
+                                          {at.dia_atual && <span>• {formatDateFull(at.dia_atual)}</span>}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))
+                                }
+                                {rawAtendimentosAcoes
+                                  .filter((a: any) => a.solicitante === acao.nome && (
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('cancelado') ||
+                                    a.status?.toLowerCase() === 'cancelado' ||
+                                    a.status === 'Cancelado' ||
+                                    a.status === 'CANCELADO' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('correcao') ||
+                                    a.status?.toLowerCase().includes('correção') ||
+                                    a.status?.toLowerCase() === 'correcao' ||
+                                    a.status?.toLowerCase() === 'correção' ||
+                                    a.status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('bloqueado') ||
+                                    a.status?.toLowerCase() === 'bloqueado'
+                                  )).length === 0 && (
+                                  <div className="px-4 py-6 text-center text-xs text-gray-400">
+                                    Nenhum atendimento cancelado encontrado
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
+                          {acao.outros}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
@@ -965,6 +1735,26 @@ export default function AcoesItinerantesPage() {
                         <span className="text-xs font-bold text-gray-700 tabular-nums w-12 text-right">
                           {acao.percentualConclusao.toFixed(1)}%
                         </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => generateActionDetailPDF(acao.nome)}
+                          title="Relatório detalhado de atendimentos"
+                          className="group/btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all"
+                        >
+                          <FiFileText className="w-3 h-3" />
+                          <span className="hidden xl:inline">Detalhado</span>
+                        </button>
+                        <button
+                          onClick={() => generateActionDeliveryPDF(acao.nome)}
+                          title="Lista de entrega por ordem alfabética"
+                          className="group/btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all"
+                        >
+                          <FiList className="w-3 h-3" />
+                          <span className="hidden xl:inline">Entrega</span>
+                        </button>
                       </div>
                     </td>
                   </tr>

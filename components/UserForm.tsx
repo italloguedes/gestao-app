@@ -22,6 +22,7 @@ type UserFormData = {
   password?: string;
   funcao?: string;
   matricula?: string;
+  cpf?: string;
   assinatura_url?: string;
 };
 
@@ -35,6 +36,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     password: '',
     funcao: user?.funcao || '',
     matricula: user?.matricula || '',
+    cpf: user?.cpf || '',
     assinatura_url: user?.assinatura_url || ''
   });
 
@@ -45,22 +47,31 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingSignature(true);
+      setError(null);
       if (!event.target.files || event.target.files.length === 0) return;
-      
+
       const file = event.target.files[0];
       if (file.size > 2 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 2MB');
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `signature-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setFormData(prev => ({ ...prev, assinatura_url: data.publicUrl }));
+
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) throw new Error('Use PNG, JPG ou WebP');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const form = new FormData();
+      form.append('file', file);
+
+      const response = await fetch('/api/upload-assinatura', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: form,
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro no upload');
+
+      setFormData(prev => ({ ...prev, assinatura_url: result.publicUrl }));
     } catch (err: any) {
       setError(err.message || 'Erro no upload da assinatura');
     } finally {
@@ -100,6 +111,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           status: formData.status,
           funcao: formData.funcao,
           matricula: formData.matricula,
+          cpf: formData.cpf,
           assinatura_url: formData.assinatura_url
         };
         if (formData.phone) updateData.phone = formData.phone;
@@ -128,6 +140,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           password: formData.password,
           funcao: formData.funcao,
           matricula: formData.matricula,
+          cpf: formData.cpf,
           assinatura_url: formData.assinatura_url
         };
 
@@ -292,6 +305,18 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   value={formData.matricula || ''}
                   onChange={handleChange}
                   placeholder="Ex: 12345"
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <FiHash className="text-gray-400 h-3.5 w-3.5" /> CPF
+                </label>
+                <Input
+                  name="cpf"
+                  value={formData.cpf || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: 00000000000"
                   className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
                 />
               </div>

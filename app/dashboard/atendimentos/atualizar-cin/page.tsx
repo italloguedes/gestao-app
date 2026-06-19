@@ -14,10 +14,10 @@ import {
   FiRefreshCw,
   FiHash,
   FiSend,
-  FiUser
+  FiUser,
+  FiClock
 } from 'react-icons/fi';
-import Image from 'next/image';
-
+import { registrarHistorico } from '@/lib/historico-utils';
 function AtualizarCINForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -25,6 +25,9 @@ function AtualizarCINForm() {
   const [cpf, setCpf] = useState(searchParams?.get('cpf') || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  type HistoricoItem = { nome: string; cpf: string; solicitante: string; hora: string; type: 'success' | 'error' };
+  const [lastUpdated, setLastUpdated] = useState<HistoricoItem | null>(null);
+  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const cpfInputRef = useRef<HTMLInputElement>(null);
   const shouldFocusRef = useRef(false);
 
@@ -107,6 +110,18 @@ function AtualizarCINForm() {
 
       const atendimento = atendimentos[0];
 
+      // Salvar dados do atendimento encontrado para exibição como confirmação
+      const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const novoItem: HistoricoItem = {
+        nome: atendimento.nome,
+        cpf: atendimento.cpf,
+        solicitante: atendimento.solicitante || 'Não informado',
+        hora: agora,
+        type: 'error', // começa como erro; será atualizado para 'success' se tudo der certo
+      };
+      setLastUpdated(novoItem);
+      setHistorico(prev => [novoItem, ...prev].slice(0, 5));
+
       if (atendimento.status === 'Concluído' || atendimento.status === 'concluido') {
         setMessage({ text: 'Este atendimento já está concluído', type: 'error' });
         shouldFocusRef.current = true;
@@ -125,10 +140,20 @@ function AtualizarCINForm() {
       if (updateError) {
         console.error('Erro ao atualizar status:', updateError);
         setMessage({ text: 'Erro ao atualizar status do atendimento: ' + updateError.message, type: 'error' });
+        // lastUpdated já foi definido com type: 'error' acima
         shouldFocusRef.current = true;
         setLoading(false);
         return;
       }
+
+      // Registrar histórico
+      const atendenteNome = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Não identificado';
+      await registrarHistorico({
+        atendimento_id: atendimento.id,
+        acao: 'atualizacao_cin',
+        atendente_id: user?.id,
+        atendente_nome: atendenteNome,
+      });
 
       console.log('Status atualizado, enviando email...');
 
@@ -164,6 +189,10 @@ function AtualizarCINForm() {
         type: 'success'
       });
 
+      // Atualizar tipo para sucesso (dados já foram salvos antes do update)
+      setLastUpdated(prev => prev ? { ...prev, type: 'success' } : null);
+      setHistorico(prev => prev.map((item, i) => i === 0 ? { ...item, type: 'success' } : item));
+
       // Limpar formulário e refocar imediatamente para próxima digitação
       setCpf('');
       shouldFocusRef.current = true;
@@ -186,189 +215,172 @@ function AtualizarCINForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 py-12 px-4 sm:px-6 lg:px-8">
-      {/* Header com Logo */}
-      <div className="max-w-3xl mx-auto mb-8">
-        <div className="flex items-center justify-center mb-6">
-          <div className="relative">
-            <div className="absolute -inset-2 bg-gradient-to-r from-emerald-400 via-teal-400 to-green-400 rounded-full blur-lg opacity-30 animate-pulse"></div>
-            <Image
-              src="/logoautismo.png"
-              alt="Logo ALECE"
-              width={90}
-              height={90}
-              className="object-contain relative z-10"
-              priority
-            />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 py-8 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto mb-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center text-emerald-700 hover:text-emerald-900 transition-all duration-200 bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-100/50 shadow-sm hover:shadow"
+          >
+            <FiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
+            <span className="font-medium">Voltar</span>
+          </button>
 
-        <button
-          onClick={() => router.back()}
-          className="group flex items-center text-emerald-700 hover:text-emerald-900 transition-all duration-200 mb-6 bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-emerald-100/50 shadow-sm hover:shadow"
-        >
-          <FiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
-          <span className="font-medium">Voltar</span>
-        </button>
-
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center p-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg shadow-emerald-200">
-            <FiCreditCard className="w-8 h-8 text-white" />
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <h1 className="text-2xl font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 bg-clip-text text-transparent">
+                Atualizar Status da CIN
+              </h1>
+              <p className="text-sm text-emerald-700/70 font-medium">
+                Informe o CPF para atualizar e notificar
+              </p>
+            </div>
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-green-400 rounded-full blur-md opacity-30 animate-pulse"></div>
+              <div className="inline-flex items-center justify-center p-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-200 relative z-10">
+                <FiCreditCard className="w-7 h-7 text-white" />
+              </div>
+            </div>
           </div>
-          <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 bg-clip-text text-transparent mb-3">
-            Atualizar Status da CIN
-          </h1>
-          <p className="text-lg text-emerald-700/80 max-w-2xl mx-auto font-medium">
-            Informe o CPF do cidadão para atualizar o status do documento e enviar notificação
-          </p>
         </div>
       </div>
 
-      {/* Card Principal */}
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-100 border-4 border-white overflow-hidden ring-1 ring-emerald-100">
-          {/* Barra colorida do topo */}
-          <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500"></div>
+      {/* Layout 3 colunas */}
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
 
-          <div className="p-8 sm:p-12">
-            {/* Mensagem de Feedback */}
-            {message && (
-              <div className={`mb-6 rounded-2xl border-2 p-5 flex items-start animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'success'
-                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 shadow-sm'
-                  : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-200 shadow-sm'
+        {/* Coluna esquerda - Formulário */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-100 border-4 border-white overflow-hidden ring-1 ring-emerald-100">
+            <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500"></div>
+            <div className="p-6 sm:p-8">
+
+              {/* Mensagem de Feedback */}
+              {message && (
+                <div className={`mb-5 rounded-2xl border-2 p-4 flex items-start animate-in fade-in slide-in-from-top-2 duration-300 ${
+                  message.type === 'success'
+                    ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 shadow-sm'
+                    : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-200 shadow-sm'
                 }`}>
-                <div className={`p-2 rounded-xl ${message.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                  <div className={`p-2 rounded-xl flex-shrink-0 ${
+                    message.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
                   }`}>
-                  {message.type === 'success' ? (
-                    <FiCheckCircle className="w-6 h-6" />
-                  ) : (
-                    <FiAlertCircle className="w-6 h-6" />
-                  )}
-                </div>
-                <div className="ml-4 flex-1">
-                  <p className={`font-bold text-base ${message.type === 'success' ? 'text-emerald-800' : 'text-rose-800'
+                    {message.type === 'success'
+                      ? <FiCheckCircle className="w-5 h-5" />
+                      : <FiAlertCircle className="w-5 h-5" />}
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className={`font-bold text-sm ${
+                      message.type === 'success' ? 'text-emerald-800' : 'text-rose-800'
                     }`}>
-                    {message.type === 'success' ? 'Sucesso!' : 'Erro!'}
-                  </p>
-                  <p className={`text-sm mt-1 font-medium ${message.type === 'success' ? 'text-emerald-700' : 'text-rose-700'
+                      {message.type === 'success' ? 'Sucesso!' : 'Erro!'}
+                    </p>
+                    <p className={`text-xs mt-0.5 font-medium ${
+                      message.type === 'success' ? 'text-emerald-700' : 'text-rose-700'
                     }`}>
-                    {message.text}
-                  </p>
+                      {message.text}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Formulário */}
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Campo CPF */}
-              <div>
-                <label htmlFor="cpf" className="block text-sm font-bold text-slate-700 mb-3 px-1">
-                  <div className="flex items-center">
-                    <div className="p-1.5 bg-emerald-100 rounded-lg mr-2">
-                      <FiHash className="w-4 h-4 text-emerald-600" />
+              {/* Formulário */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Campo CPF */}
+                <div>
+                  <label htmlFor="cpf" className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                    <div className="flex items-center">
+                      <div className="p-1.5 bg-emerald-100 rounded-lg mr-2">
+                        <FiHash className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      CPF do Atendimento
                     </div>
-                    CPF do Atendimento
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                      <FiUser className="h-5 w-5 text-emerald-300 group-focus-within:text-emerald-500 transition-colors duration-200" />
+                    </div>
+                    <input
+                      ref={cpfInputRef}
+                      type="text"
+                      id="cpf"
+                      value={cpf}
+                      onChange={handleCPFChange}
+                      className="block w-full pl-12 pr-4 py-4 text-xl font-medium tracking-wide border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 transition-all duration-200 bg-slate-50 focus:bg-white placeholder:text-slate-300"
+                      placeholder="000.000.000-00"
+                      required
+                      autoFocus
+                      maxLength={14}
+                      disabled={loading}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 transform scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300 rounded-b-2xl opacity-50"></div>
                   </div>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
-                    <FiUser className="h-6 w-6 text-emerald-300 group-focus-within:text-emerald-500 transition-colors duration-200" />
+                  <p className="mt-2 text-xs text-slate-500 flex items-center px-1 font-medium">
+                    <FiAlertCircle className="w-3 h-3 mr-1.5 text-emerald-500" />
+                    Com ou sem pontuação
+                  </p>
+                </div>
+
+                {/* Informações */}
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-5 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <FiCreditCard className="w-16 h-16 text-emerald-600 transform rotate-12" />
                   </div>
-                  <input
-                    ref={cpfInputRef}
-                    type="text"
-                    id="cpf"
-                    value={cpf}
-                    onChange={handleCPFChange}
-                    className="block w-full pl-14 pr-4 py-5 text-xl font-medium tracking-wide border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 transition-all duration-200 bg-slate-50 focus:bg-white placeholder:text-slate-300"
-                    placeholder="000.000.000-00"
-                    required
-                    autoFocus
-                    maxLength={14}
+                  <div className="flex items-start relative z-10">
+                    <div className="p-2.5 bg-white rounded-xl shadow-sm border border-emerald-100 mr-3 flex-shrink-0">
+                      <FiMail className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-emerald-900 mb-2">O que acontece ao atualizar?</h3>
+                      <ul className="space-y-1.5">
+                        {[
+                          'Status atualizado para "Concluído"',
+                          'Email de notificação enviado ao cidadão',
+                          'Documento liberado para retirada',
+                        ].map((item) => (
+                          <li key={item} className="flex items-center text-xs text-emerald-800/80 font-medium bg-white/50 p-2 rounded-lg">
+                            <FiCheckCircle className="w-3.5 h-3.5 mr-2 text-emerald-600 flex-shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botões */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="flex-1 flex items-center justify-center px-5 py-3.5 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border-2 border-transparent hover:border-emerald-200 transition-all duration-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed group"
                     disabled={loading}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 transform scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300 rounded-b-2xl opacity-50"></div>
+                  >
+                    <FiRefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                    Limpar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-[2] group flex items-center justify-center px-6 py-3.5 text-white bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:via-emerald-500 hover:to-teal-500 rounded-xl shadow-lg hover:shadow-xl hover:shadow-emerald-200 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden transform hover:-translate-y-0.5"
+                    disabled={loading}
+                  >
+                    {!loading && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    )}
+                    {loading ? (
+                      <><FiLoader className="w-4 h-4 mr-2 animate-spin" />Processando...</>
+                    ) : (
+                      <><FiSend className="w-4 h-4 mr-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />Atualizar e Notificar</>
+                    )}
+                  </button>
                 </div>
-                <p className="mt-3 text-xs text-slate-500 flex items-center px-1 font-medium">
-                  <FiAlertCircle className="w-3 h-3 mr-1.5 text-emerald-500" />
-                  Digite o CPF do titular do atendimento (com ou sem pontuação)
-                </p>
-              </div>
+              </form>
 
-              {/* Informações */}
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-6 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <FiCreditCard className="w-24 h-24 text-emerald-600 transform rotate-12" />
-                </div>
-                <div className="flex items-start relative z-10">
-                  <div className="p-3 bg-white rounded-xl shadow-sm border border-emerald-100 mr-4">
-                    <FiMail className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-emerald-900 mb-2">
-                      O que acontece ao atualizar?
-                    </h3>
-                    <ul className="space-y-2">
-                      <li className="flex items-center text-sm text-emerald-800/80 font-medium bg-white/50 p-2 rounded-lg">
-                        <FiCheckCircle className="w-4 h-4 mr-2 text-emerald-600 flex-shrink-0" />
-                        Status atualizado para "Concluído"
-                      </li>
-                      <li className="flex items-center text-sm text-emerald-800/80 font-medium bg-white/50 p-2 rounded-lg">
-                        <FiCheckCircle className="w-4 h-4 mr-2 text-emerald-600 flex-shrink-0" />
-                        Email de notificação enviado ao cidadão
-                      </li>
-                      <li className="flex items-center text-sm text-emerald-800/80 font-medium bg-white/50 p-2 rounded-lg">
-                        <FiCheckCircle className="w-4 h-4 mr-2 text-emerald-600 flex-shrink-0" />
-                        Documento liberado para retirada
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botões */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="flex-1 flex items-center justify-center px-6 py-4 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border-2 border-transparent hover:border-emerald-200 transition-all duration-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed group"
-                  disabled={loading}
-                >
-                  <FiRefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-500" />
-                  Limpar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-[2] group flex items-center justify-center px-8 py-4 text-white bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:via-emerald-500 hover:to-teal-500 rounded-xl shadow-lg hover:shadow-xl hover:shadow-emerald-200 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden transform hover:-translate-y-1"
-                  disabled={loading}
-                >
-                  {!loading && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  )}
-                  {loading ? (
-                    <>
-                      <FiLoader className="w-5 h-5 mr-2 animate-spin" />
-                      Processando Solicitação...
-                    </>
-                  ) : (
-                    <>
-                      <FiSend className="w-5 h-5 mr-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
-                      Atualizar Status e Notificar
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Rodapé informativo */}
-            <div className="mt-10 pt-6 border-t border-slate-100">
-              <div className="text-center text-xs text-slate-500">
-                <p className="font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Central de Atendimento
-                </p>
+              {/* Rodapé */}
+              <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
                 <p className="flex items-center justify-center gap-2 text-slate-600 font-medium">
-                  Em caso de dúvidas, entre em contato:
-                  <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-bold border border-emerald-100">
+                  Dúvidas?
+                  <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100">
                     (85) 2180-6587
                   </span>
                 </p>
@@ -376,6 +388,196 @@ function AtualizarCINForm() {
             </div>
           </div>
         </div>
+
+        {/* Coluna central - Atualização atual */}
+        <div className="w-full lg:w-80 flex-shrink-0">
+          {lastUpdated ? (
+            <div className={`bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border-4 border-white overflow-hidden ring-1 animate-in fade-in slide-in-from-right-4 duration-500 ${
+              lastUpdated.type === 'success'
+                ? 'shadow-emerald-100 ring-emerald-100'
+                : 'shadow-rose-100 ring-rose-100'
+            }`}>
+              <div className={`h-2 bg-gradient-to-r ${
+                lastUpdated.type === 'success'
+                  ? 'from-emerald-400 via-teal-400 to-green-400'
+                  : 'from-rose-400 via-red-400 to-orange-400'
+              }`}></div>
+              <div className="p-6">
+                <div className="flex items-center mb-5">
+                  <div className={`p-2.5 rounded-xl mr-3 ${
+                    lastUpdated.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
+                  }`}>
+                    {lastUpdated.type === 'success'
+                      ? <FiCheckCircle className="w-5 h-5 text-emerald-600" />
+                      : <FiAlertCircle className="w-5 h-5 text-rose-600" />}
+                  </div>
+                  <div>
+                    <p className={`text-xs font-black uppercase tracking-widest ${
+                      lastUpdated.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
+                    }`}>
+                      {lastUpdated.type === 'success' ? 'Último Atualizado' : 'Tentativa de Atualização'}
+                    </p>
+                    <p className="text-xs text-slate-400 font-medium">{lastUpdated.hora}</p>
+                  </div>
+                </div>
+
+                {lastUpdated.type === 'error' && (
+                  <div className="mb-3 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                    <p className="text-xs font-bold text-rose-700 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                      CPF encontrado — verifique o erro acima
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {/* Nome */}
+                  <div className={`rounded-2xl p-4 border ${
+                    lastUpdated.type === 'success'
+                      ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100'
+                      : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-100'
+                  }`}>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
+                      <FiUser className="w-3 h-3 mr-1.5" /> Nome
+                    </p>
+                    <p className={`text-base font-black leading-tight ${
+                      lastUpdated.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                    }`}>{lastUpdated.nome}</p>
+                  </div>
+
+                  {/* CPF */}
+                  <div className={`rounded-2xl p-4 border ${
+                    lastUpdated.type === 'success'
+                      ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100'
+                      : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-100'
+                  }`}>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
+                      <FiHash className="w-3 h-3 mr-1.5" /> CPF
+                    </p>
+                    <p className={`text-base font-black tracking-widest font-mono ${
+                      lastUpdated.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                    }`}>
+                      {lastUpdated.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                    </p>
+                  </div>
+
+                  {/* Solicitante */}
+                  <div className={`rounded-2xl p-4 border ${
+                    lastUpdated.type === 'success'
+                      ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100'
+                      : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-100'
+                  }`}>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
+                      <FiCreditCard className="w-3 h-3 mr-1.5" /> Solicitante
+                    </p>
+                    <p className={`text-base font-black leading-tight ${
+                      lastUpdated.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                    }`}>{lastUpdated.solicitante}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Placeholder quando vazio */
+            <div className="bg-white/60 backdrop-blur-xl rounded-3xl border-4 border-dashed border-emerald-200/60 overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-50 rounded-2xl mb-4">
+                  <FiCreditCard className="w-7 h-7 text-emerald-300" />
+                </div>
+                <p className="text-sm font-bold text-slate-400 mb-1">Nenhuma CIN atualizada</p>
+                <p className="text-xs text-slate-300 font-medium">Os dados do último atendimento aparecerão aqui após a primeira atualização</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Coluna direita - Histórico da sessão */}
+        <div className="w-full lg:w-72 flex-shrink-0">
+          {historico.length > 0 ? (
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-100 border-4 border-white overflow-hidden ring-1 ring-slate-100 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="h-2 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"></div>
+              <div className="p-5">
+                <div className="flex items-center mb-4">
+                  <div className="p-2.5 bg-slate-100 rounded-xl mr-3">
+                    <FiClock className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Histórico da Sessão</p>
+                    <p className="text-xs text-slate-400 font-medium">{historico.length} de 5 registros</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {historico.map((item, index) => (
+                    <div
+                      key={`${item.cpf}-${item.hora}`}
+                      className={`rounded-xl p-3 border transition-all ${
+                        index === 0 ? 'opacity-100' : 'opacity-65'
+                      } ${
+                        item.type === 'success'
+                          ? 'bg-emerald-50 border-emerald-100'
+                          : 'bg-rose-50 border-rose-100'
+                      }`}
+                    >
+                      {/* Cabeçalho do item */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                          item.type === 'success' ? 'bg-emerald-100' : 'bg-rose-100'
+                        }`}>
+                          {item.type === 'success'
+                            ? <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            : <FiAlertCircle className="w-3.5 h-3.5 text-rose-500" />}
+                        </div>
+                        <p className="text-xs text-slate-400 font-medium">{item.hora}</p>
+                      </div>
+                      {/* Dados */}
+                      <div className="space-y-1.5">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiUser className="w-2.5 h-2.5" /> Nome
+                          </p>
+                          <p className={`text-xs font-black leading-tight ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.nome}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiHash className="w-2.5 h-2.5" /> CPF
+                          </p>
+                          <p className={`text-xs font-black font-mono tracking-wide ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>
+                            {item.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <FiCreditCard className="w-2.5 h-2.5" /> Solicitante
+                          </p>
+                          <p className={`text-xs font-black leading-tight truncate ${
+                            item.type === 'success' ? 'text-emerald-900' : 'text-rose-900'
+                          }`}>{item.solicitante}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Placeholder histórico vazio */
+            <div className="bg-white/50 backdrop-blur-xl rounded-3xl border-4 border-dashed border-slate-200/60 overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-50 rounded-2xl mb-3">
+                  <FiClock className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-sm font-bold text-slate-300 mb-1">Sem histórico</p>
+                <p className="text-xs text-slate-300 font-medium">Atendimentos processados nesta sessão aparecerão aqui</p>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

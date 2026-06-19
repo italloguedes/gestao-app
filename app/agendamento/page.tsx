@@ -351,7 +351,7 @@ function AgendamentosModal({ open, onClose, user }: { open: boolean, onClose: ()
 
           <div class="footer">
             <p>Emitido em: ${new Date().toLocaleString('pt-BR')}</p>
-            <p>Centro Inclusivo para Atendimento e Desenvolvimento Infantil</p>
+            <p>Centro Inclusivo para Atendimento e Desenvolvimento Infantil - CIADI</p>
           </div>
         </body>
       </html>

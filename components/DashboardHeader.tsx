@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import Link from 'next/link';
-import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiLogOut, FiBarChart2, FiSettings, FiFileText } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiUser, FiMenu, FiX, FiLogOut, FiBarChart2, FiSettings, FiFileText, FiActivity } from 'react-icons/fi';
+import { MdFingerprint } from 'react-icons/md';
 import UserProfileModal from './UserProfileModal';
 import UserSettingsModal from './UserSettingsModal';
+import { registrarLog } from '@/lib/activity-log';
 
 // Memoized navigation items to prevent re-renders - Modern Design
-const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname?: string }) => (
+const DesktopNavItems = ({ onClose, pathname, role }: { onClose?: () => void, pathname?: string, role?: string }) => (
   <>
     <Link
       href="/dashboard"
@@ -18,6 +20,15 @@ const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname
     >
       <FiHome className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Início</span>
+    </Link>
+
+    <Link
+      href="/dashboard/coleta-digitais"
+      className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname?.includes('/dashboard/coleta-digitais') ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md' : 'text-gray-700 hover:bg-amber-50 hover:text-amber-700'} transition-all duration-300 hover:scale-105`}
+      onClick={onClose}
+    >
+      <MdFingerprint className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
+      <span>Coleta de Digitais</span>
     </Link>
 
     <Link
@@ -55,12 +66,24 @@ const DesktopNavItems = ({ onClose, pathname }: { onClose?: () => void, pathname
       <FiSettings className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
       <span>Gestão</span>
     </Link>
+
+    {role && ['superadmin', 'admin'].includes(role) && (
+      <Link
+        href="/dashboard/logs"
+        className={`group flex items-center px-4 py-2.5 text-sm font-semibold rounded-xl ${pathname?.includes('/dashboard/logs') ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'} transition-all duration-300 hover:scale-105`}
+        onClick={onClose}
+      >
+        <FiActivity className="mr-2.5 h-4 w-4 group-hover:scale-125 transition-transform duration-200" />
+        <span>Logs</span>
+      </Link>
+    )}
   </>
 );
 
 export default function DashboardHeader() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -72,6 +95,16 @@ export default function DashboardHeader() {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('auth_id', user.id)
+          .single();
+        if (userData) {
+          setRole(userData.role);
+        }
+      }
     };
     checkUser();
 
@@ -100,6 +133,16 @@ export default function DashboardHeader() {
 
   const handleLogout = async () => {
     try {
+      if (user) {
+        await registrarLog({
+          action: 'logout',
+          entity_type: 'session',
+          description: 'Usuário realizou logout',
+          user_id: user.id,
+          user_email: user.email,
+          user_role: role || undefined
+        });
+      }
       await supabase.auth.signOut();
       router.push('/');
     } catch (error) {
@@ -136,7 +179,7 @@ export default function DashboardHeader() {
 
             {/* Navegação Desktop */}
             <nav className="hidden md:flex ml-8 space-x-2">
-              <DesktopNavItems pathname={pathname} />
+              <DesktopNavItems pathname={pathname} role={role} />
             </nav>
           </div>
 
@@ -266,7 +309,7 @@ export default function DashboardHeader() {
                 </div>
               </div>
 
-              <DesktopNavItems onClose={() => setIsMobileMenuOpen(false)} />
+              <DesktopNavItems onClose={() => setIsMobileMenuOpen(false)} pathname={pathname} role={role} />
 
               <button
                 onClick={handleLogout}

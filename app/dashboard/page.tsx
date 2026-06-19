@@ -12,10 +12,12 @@ import RecentAtendimentos from '@/components/dashboard/RecentAtendimentos';
 import QuickAction from '@/components/dashboard/QuickAction';
 import EntregarCinModal from '@/components/dashboard/EntregarCinModal';
 import PdfModal from '@/components/dashboard/PdfModal';
-import { generateComprovantePDF } from '@/lib/pdf-utils';
+import { generateComprovantePDF, generateLotePDF } from '@/lib/pdf-utils';
+import type { ItemLoteExport } from '@/components/dashboard/EntregarCinModal';
+import { registrarHistorico } from '@/lib/historico-utils';
 import {
   FiPlus, FiRefreshCw, FiAlertTriangle, FiCheckCircle,
-  FiSearch, FiActivity
+  FiSearch, FiActivity, FiPackage
 } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
 import { Input } from '@/components/ui/input';
@@ -88,6 +90,7 @@ export default function DashboardPage() {
   const [buscando, setBuscando] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
+  const [gerandoLote, setGerandoLote] = useState(false);
   const [vinculo, setVinculo] = useState('');
   const [outroVinculo, setOutroVinculo] = useState('');
 
@@ -261,6 +264,19 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
+      // Registrar histórico de entrega individual
+      await registrarHistorico({
+        atendimento_id: selectedAtendimento.id,
+        acao: 'entrega_cin',
+        atendente_id: user.id,
+        atendente_nome: atendenteNome,
+        detalhes: {
+          recebedor_nome: nomeRecebedor,
+          recebedor_cpf: cpfRecebedor,
+          vinculo: vinculo === 'outros' ? outroVinculo : vinculo,
+        },
+      });
+
       const logoUrl = '/logoautismo.png';
       const getBase64FromUrl = async (url: string) => {
         const res = await fetch(url);
@@ -287,6 +303,12 @@ export default function DashboardPage() {
         signatureDataUrl
       });
 
+      setShowEntregarCinModal(false);
+      setSelectedAtendimento(null);
+      setNomeRecebedor('');
+      setCpfRecebedor('');
+      setVinculo('');
+      setOutroVinculo('');
       setPdfUrl(url);
       fetchDashboardData();
     } catch (err) {
@@ -294,6 +316,76 @@ export default function DashboardPage() {
       alert('Erro ao gerar comprovante. Tente novamente.');
     } finally {
       setGerandoComprovante(false);
+    }
+  };
+
+  const handleGerarLote = async (items: ItemLoteExport[]) => {
+    if (!user) return;
+    setGerandoLote(true);
+    try {
+      const atendenteNome = user.user_metadata?.name || user.user_metadata?.full_name || 'Não identificado';
+      const now = new Date();
+      const dataEntrega = now.toISOString().split('T')[0];
+      const dataHoraEntrega = now.toISOString();
+
+      await Promise.all(items.map(({ atendimento, nomeRecebedor, cpfRecebedor, vinculo, outroVinculo }) =>
+        supabase.from('atendimentos').update({
+          nome_recebedor: nomeRecebedor,
+          cpf_recebedor: cpfRecebedor,
+          vinculo: vinculo === 'Outros' ? outroVinculo : vinculo,
+          data_entrega: dataEntrega,
+          status: 'entregue',
+          data_hora_entrega: dataHoraEntrega,
+        }).eq('id', atendimento.id)
+      ));
+
+      // Registrar histórico para cada item do lote
+      await Promise.all(items.map(({ atendimento, nomeRecebedor, cpfRecebedor, vinculo, outroVinculo }) =>
+        registrarHistorico({
+          atendimento_id: atendimento.id,
+          acao: 'entrega_cin',
+          atendente_id: user.id,
+          atendente_nome: atendenteNome,
+          detalhes: {
+            recebedor_nome: nomeRecebedor,
+            recebedor_cpf: cpfRecebedor,
+            vinculo: vinculo === 'Outros' ? outroVinculo : vinculo,
+          },
+        })
+      ));
+
+      const getBase64 = async (url: string) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+      const logoBase64 = await getBase64('/logoautismo.png');
+
+      const loteItems = items.map(({ atendimento, nomeRecebedor, cpfRecebedor, vinculo, outroVinculo }) => ({
+        atendimento: { protocolo: atendimento.protocolo, nome: atendimento.nome, cpf: atendimento.cpf, dia_atual: atendimento.dia_atual },
+        recebedor: { nome: nomeRecebedor, cpf: cpfRecebedor, vinculo: vinculo === 'Outros' ? outroVinculo : vinculo },
+      }));
+
+      const url = await generateLotePDF({ items: loteItems, atendenteNome, dataEntrega, logoBase64 });
+
+      setShowEntregarCinModal(false);
+      setSelectedAtendimento(null);
+      setNomeRecebedor('');
+      setCpfRecebedor('');
+      setVinculo('');
+      setOutroVinculo('');
+      setPdfUrl(url);
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Erro ao gerar lote:', err);
+      alert('Erro ao gerar comprovantes em lote. Tente novamente.');
+    } finally {
+      setGerandoLote(false);
     }
   };
 
@@ -332,6 +424,8 @@ export default function DashboardPage() {
         setOutroVinculo={setOutroVinculo}
         gerandoComprovante={gerandoComprovante}
         onGerarComprovante={handleGerarComprovante}
+        gerandoLote={gerandoLote}
+        onGerarLote={handleGerarLote}
       />
 
       {pdfUrl && <PdfModal url={pdfUrl} onClose={() => setPdfUrl(null)} />}
@@ -459,6 +553,10 @@ export default function DashboardPage() {
                 </div>
                 <span className="font-bold text-xs">Entregar CIN</span>
               </Button>
+
+              <QuickAction href="/dashboard/entrega-lote" color="border-indigo-200 text-indigo-800 bg-indigo-50 hover:bg-indigo-100" icon={<FiPackage className="h-4 w-4" />}>
+                Entrega em Lote
+              </QuickAction>
             </div>
 
             {/* Mini Help */}

@@ -10,8 +10,9 @@ import {
   FiX, FiUser, FiMail, FiCalendar, FiClock, FiFileText,
   FiAlertCircle, FiSave, FiTrash2, FiMessageSquare, FiSend,
   FiCheckCircle, FiXCircle, FiLock, FiDownload, FiEye,
-  FiEdit3, FiHash, FiPhone
+  FiEdit3, FiHash, FiPhone, FiList
 } from 'react-icons/fi';
+import AtendimentoHistorico from '@/components/dashboard/AtendimentoHistorico';
 
 export interface Atendimento {
   id: number;
@@ -32,6 +33,9 @@ export interface Atendimento {
   vinculo?: string;
   data_entrega?: string;
   data_hora_entrega?: string;
+  posto?: string;
+  coletor_nome?: string;
+  coletor_id?: string;
 }
 
 interface AtendimentoModalProps {
@@ -42,7 +46,29 @@ interface AtendimentoModalProps {
   onDelete?: (id: number) => void;
 }
 
-type TabKey = 'dados' | 'observacoes';
+type TabKey = 'dados' | 'observacoes' | 'historico';
+
+function InputField({ label, icon, value, onChange, type = 'text', error, mono, placeholder }: {
+  label: string; icon: React.ReactElement; value: string; onChange: (v: string) => void;
+  type?: string; error?: string; mono?: boolean; placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50/80 border-2 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium ${mono ? 'font-mono' : ''} ${error ? 'border-red-300 bg-red-50/50 ring-2 ring-red-100' : 'border-slate-200'}`}
+        />
+      </div>
+      {error && <p className="text-red-500 text-[11px] mt-0.5 font-bold">{error}</p>}
+    </div>
+  );
+}
 
 export default function AtendimentoModal({
   atendimento,
@@ -69,6 +95,20 @@ export default function AtendimentoModal({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [gerandoComprovante, setGerandoComprovante] = useState(false);
 
+  // Estados para declaração
+  const [showDeclaracaoMenu, setShowDeclaracaoMenu] = useState(false);
+  const [gerandoDeclaracao, setGerandoDeclaracao] = useState(false);
+  const [enviandoEmailDecl, setEnviandoEmailDecl] = useState(false);
+  const [declEmail, setDeclEmail] = useState('');
+  const [declModel, setDeclModel] = useState<'sensorial' | 'itinerante'>('sensorial');
+
+  const openDeclaracaoMenu = () => {
+    setDeclEmail(formData.email || atendimento.email || '');
+    const postoAtual = formData.posto || atendimento.posto || '';
+    setDeclModel(postoAtual.toLowerCase().includes('itinerante') ? 'itinerante' : 'sensorial');
+    setShowDeclaracaoMenu(true);
+  };
+
   const canDelete = isAdmin || isSuperAdmin;
 
   useEffect(() => {
@@ -82,17 +122,17 @@ export default function AtendimentoModal({
   }, [isOpen, atendimento]);
 
   const fetchCurrentUserName = async () => {
-    if (!user) return;
+    // Sempre buscar dados frescos do auth - nunca da tabela public.users
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('name, email')
-        .eq('auth_id', user.id)
-        .single();
-      if (!error && data) {
-        setCurrentUserName(data.name);
-        setCurrentUserEmail(data.email);
-      }
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      if (!freshUser) return;
+      setCurrentUserName(
+        freshUser.user_metadata?.full_name ||
+        freshUser.user_metadata?.name ||
+        freshUser.email?.split('@')[0] ||
+        'Usuário'
+      );
+      setCurrentUserEmail(freshUser.email || '');
     } catch (err) {
       console.error('Erro ao buscar nome do usuário:', err);
     }
@@ -272,10 +312,10 @@ export default function AtendimentoModal({
         });
       };
       const logoBase64 = await getBase64FromUrl(logoUrl);
-      const doc = new jsPDF();
+      const doc = new jsPDF({ compress: true });
       doc.setFillColor(16, 185, 129); doc.rect(0, 0, 210, 35, 'F');
       doc.setFillColor(255, 255, 255); doc.circle(30, 18, 12, 'F');
-      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20);
+      doc.addImage(logoBase64, 'PNG', 20, 8, 20, 20, undefined, 'FAST');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(255, 255, 255);
       doc.text('COMPROVANTE DE ENTREGA', 105, 18, { align: 'center' });
       doc.setFontSize(14); doc.setFont('helvetica', 'normal');
@@ -326,7 +366,7 @@ export default function AtendimentoModal({
       doc.setFontSize(12); doc.setTextColor(16, 185, 129); doc.setFont('helvetica', 'bold');
       doc.text('ASSINATURA DO RECEBEDOR', 105, assinaturaY + 8, { align: 'center' });
       if (atendimento.assinatura_base64) {
-        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 10, 90, 20);
+        doc.addImage(atendimento.assinatura_base64, 'PNG', 60, assinaturaY + 10, 90, 20, undefined, 'FAST');
       }
       doc.setFontSize(9); doc.setTextColor(120, 120, 120); doc.setFont('helvetica', 'normal');
       doc.text(`${atendimento.nome_recebedor || 'N/A'} - CPF: ${atendimento.cpf_recebedor || 'N/A'}`, 105, assinaturaY + 35, { align: 'center' });
@@ -352,11 +392,20 @@ export default function AtendimentoModal({
     }
   };
 
-  const handleGerarDeclaracao = async () => {
+  const handleGerarDeclaracao = async (modo: 'download' | 'email') => {
+    if (modo === 'download') setGerandoDeclaracao(true);
+    if (modo === 'email') setEnviandoEmailDecl(true);
+    setShowDeclaracaoMenu(false);
     try {
-      const logoUrl = '/alece.png';
-      const getBase64FromUrl = async (url: string) => {
-        const res = await fetch(url);
+      // ── helpers ──────────────────────────────────────────────
+      const getBase64FromUrl = async (url: string, useToken?: string) => {
+        // URLs públicas do Storage não precisam (e rejeitam) o header de Auth
+        const isPrivate = url.includes('/object/authenticated/');
+        const headers: Record<string, string> = (isPrivate && useToken)
+          ? { Authorization: `Bearer ${useToken}` }
+          : {};
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status} - ${url}`);
         const blob = await res.blob();
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -365,98 +414,222 @@ export default function AtendimentoModal({
           reader.readAsDataURL(blob);
         });
       };
-      const logoBase64 = await getBase64FromUrl(logoUrl);
 
-      const doc = new jsPDF();
-      const now = new Date();
-      const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
+      const formatDateDecl = (dateString: string) =>
+        new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Fortaleza' });
 
-      const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      const formatDateExtenso = (dateString: string) =>
+        new Date(dateString + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Fortaleza' });
 
-      const formatDateDecl = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Fortaleza' });
-      };
+      // ── user / assinatura ─────────────────────────────────────
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const token = session?.access_token;
 
-      // LOGO ALECE (imagem já contém brasão + texto)
-      doc.addImage(logoBase64, 'PNG', 55, 8, 100, 28);
+      // Combina metadata do freshUser + do user do contexto
+      const meta = { ...(user?.user_metadata ?? {}), ...(freshUser?.user_metadata ?? {}) };
+      console.log('[declaração] user_metadata:', meta, '| currentUserName:', currentUserName);
 
-      // TÍTULO
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
-      doc.setTextColor(15, 23, 42);
-      doc.text('DECLARAÇÃO', 105, 55, { align: 'center' });
-      doc.setDrawColor(30, 41, 59);
-      doc.setLineWidth(0.5);
-      doc.line(75, 58, 135, 58);
+      // currentUserName já foi buscado pelo fetchCurrentUserName ao abrir o modal
+      const servidorNome = (
+        currentUserName ||
+        meta.full_name || meta.name || meta.nome || meta.display_name ||
+        freshUser?.email?.split('@')[0] ||
+        user?.email?.split('@')[0] ||
+        'SERVIDOR'
+      ).toUpperCase();
+      const funcao = meta.funcao || meta.cargo || 'Atendente';
+      const matricula = meta.matricula || '';
 
-      // CORPO
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59);
-
-      const dataAtendimento = formatDateDecl(atendimento.dia_atual);
-      const textoDeclaracao = `Declaro, para fins comprobatórios, que o(a) requerente, "${atendimento.nome}", inscrito(a) no CPF nº ${cpfFormatado}, compareceu nesta data, "${dataAtendimento}", às "${horaGeracao}", para emissão da Carteira de Identidade Nacional - CIN, realizada pela equipe da Sala Sensorial da Assembleia Legislativa do Estado do Ceará - ALECE.`;
-
-      const marginLeft = 25;
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const maxWidth = pageWidth - marginLeft - 25;
-
-      doc.text(textoDeclaracao, marginLeft, 80, {
-        maxWidth: maxWidth,
-        align: 'justify',
-        lineHeightFactor: 1.8
-      });
-
-      // ASSINATURA IMAGEM
-      const assinaturaUrl = user?.user_metadata?.assinatura_url;
-      
+      let assinaturaBase64: string | null = null;
+      const assinaturaUrl: string | undefined = meta.assinatura_url;
       if (assinaturaUrl) {
-         try {
-           const assinaturaBase64 = await getBase64FromUrl(assinaturaUrl);
-           // Inserir assinatura logo acima da linha (Y = 180)
-           doc.addImage(assinaturaBase64, 'PNG', 75, 155, 60, 24); 
-         } catch (e) {
-           console.error('Assinatura não encontrada ou erro no carregamento:', e);
-         }
+        try {
+          assinaturaBase64 = await getBase64FromUrl(assinaturaUrl, token);
+        } catch (e) {
+          console.warn('[declaração] Assinatura não carregada:', e);
+        }
       }
 
-      // ASSINATURA LINHA
-      const assinaturaY = 180;
-      doc.setDrawColor(30, 41, 59);
-      doc.setLineWidth(0.4);
-      doc.line(55, assinaturaY, 155, assinaturaY);
+      // ── logos ─────────────────────────────────────────────────
+      const [aleceBase64, salaBase64] = await Promise.all([
+        getBase64FromUrl('/alece.png'),
+        getBase64FromUrl('/logoautismo.png'),
+      ]);
 
-      const servidorNome = currentUserName || user?.user_metadata?.name || user?.user_metadata?.full_name || 'SERVIDOR';
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(15, 23, 42);
-      doc.text(servidorNome.toUpperCase(), 105, assinaturaY + 7, { align: 'center' });
+      // ── dados do atendimento ──────────────────────────────────
+      const doc = new jsPDF({ compress: true });
+      const now = new Date();
+      const horaGeracao = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' });
+      const dataGeracao = now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+      const horarioAtendimento = atendimento.horario ? atendimento.horario.substring(0, 5) : horaGeracao;
+      const cpfFormatado = atendimento.cpf.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      const dataExtenso = formatDateExtenso(atendimento.dia_atual);
+      const pageW = doc.internal.pageSize.getWidth();
 
-      const funcao = user?.user_metadata?.funcao || 'SERVIDOR';
-      const matricula = user?.user_metadata?.matricula || 'NÃO INFORMADA';
+      const isAleceItinerante = declModel === 'itinerante';
+      const postoNome = isAleceItinerante ? 'Alece Itinerante' : 'Sala Sensorial';
+      const headerSubtitle = isAleceItinerante ? `${postoNome} | Identidade Nacional` : 'Sala Sensorial — Atendimento Especializado | Identidade Nacional';
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`${funcao.toUpperCase()} - MATRÍCULA: ${matricula}`, 105, assinaturaY + 13, { align: 'center' });
+      // ── CABEÇALHO ─────────────────────────────────────────────
+      doc.setFillColor(5, 95, 60);
+      doc.rect(0, 0, pageW, 38, 'F');
+      doc.addImage(aleceBase64, 'PNG', 8, 3, 32, 32, undefined, 'FAST');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
+      doc.text('ASSEMBLEIA LEGISLATIVA DO ESTADO DO CEARÁ', pageW / 2, 13, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 240, 220);
+      doc.text(headerSubtitle, pageW / 2, 23, { align: 'center' });
+      doc.addImage(salaBase64, 'PNG', pageW - 40, 3, 32, 32, undefined, 'FAST');
 
-      // RODAPÉ
-      const rodapeY = 270;
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.line(15, rodapeY, 195, rodapeY);
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Documento gerado pelo Sistema de Gestão - Assembleia Legislativa do Estado do Ceará', 105, rodapeY + 5, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Emitido em: ${now.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' })} às ${horaGeracao}`, 105, rodapeY + 9, { align: 'center' });
+      // faixa endereço
+      doc.setFillColor(241, 245, 249); doc.rect(0, 38, pageW, 8, 'F');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(71, 85, 105);
+      doc.text('CNPJ: 07.954.481/0001-04  |  Av. Desembargador Moreira, 2807 — Dionísio Torres — Fortaleza/CE — CEP 60.170-900', pageW / 2, 43, { align: 'center' });
 
-      doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      // ── TÍTULO ────────────────────────────────────────────────
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(5, 95, 60);
+      doc.text('D E C L A R A Ç Ã O', pageW / 2, 62, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      doc.text('de Comparecimento para Emissão de CIN', pageW / 2, 69, { align: 'center' });
+      doc.setDrawColor(5, 95, 60); doc.setLineWidth(1); doc.line(40, 73, pageW - 40, 73);
+      doc.setLineWidth(0.3); doc.line(40, 75, pageW - 40, 75);
+
+      // ── PROTOCOLO / DATA ──────────────────────────────────────
+      doc.setDrawColor(203, 213, 225); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+      doc.rect(15, 80, 80, 14, 'FD'); doc.rect(110, 80, 80, 14, 'FD');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+      doc.text('PROTOCOLO', 18, 85); doc.text('DATA DO ATENDIMENTO', 113, 85);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(atendimento.protocolo || 'N/A', 18, 91);
+      doc.text(`${formatDateDecl(atendimento.dia_atual)} — ${horarioAtendimento}h`, 113, 91);
+
+      // ── SEÇÃO I — IDENTIFICAÇÃO ───────────────────────────────
+      const s1Y = 103;
+      doc.setFillColor(5, 95, 60); doc.rect(15, s1Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('I.  IDENTIFICAÇÃO DO(A) CIDADÃO(Ã)', 18, s1Y + 5);
+      doc.setDrawColor(203, 213, 225); doc.setFillColor(252, 253, 254);
+      doc.rect(15, s1Y + 7, pageW - 30, 26, 'FD');
+      
+      const acaoNome = formData.solicitante || atendimento.solicitante || 'Ação Itinerante';
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+      doc.text('Nome Completo:', 18, s1Y + 14); 
+      doc.text('CPF:', 18, s1Y + 24);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(atendimento.nome, 18, s1Y + 20);
+      doc.text(cpfFormatado, 18, s1Y + 30);
+
+      // ── SEÇÃO II — DECLARAÇÃO ─────────────────────────────────
+      const s2Y = s1Y + 40;
+      doc.setFillColor(5, 95, 60); doc.rect(15, s2Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('II.  DECLARAÇÃO', 18, s2Y + 5);
+
+      const localInstituicao = isAleceItinerante 
+        ? `ação ${acaoNome} da Assembleia Legislativa do Estado do Ceará — ALECE` 
+        : `Sala Sensorial da Assembleia Legislativa do Estado do Ceará — ALECE, vinculada ao CIADI (Centro Inclusivo para Atendimento e Desenvolvimento Infantil)`;
+
+      const textoDecl =
+        `Declaramos que o(a) cidadão(ã) ${atendimento.nome}, portador(a) do CPF nº ${cpfFormatado}, ` +
+        `compareceu à ${localInstituicao}, ` +
+        `no dia ${dataExtenso}, às ${horarioAtendimento}h, para fins de atendimento referente ` +
+        `à emissão da Carteira de Identidade Nacional — CIN.`;
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+      doc.text(textoDecl, 18, s2Y + 18, { maxWidth: pageW - 36, align: 'justify', lineHeightFactor: 1.8 });
+
+      const dataLocalY = s2Y + 68;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
+      doc.text(`Fortaleza/CE, ${dataExtenso}.`, pageW / 2, dataLocalY, { align: 'center' });
+
+      // ── SEÇÃO III — ASSINATURA ────────────────────────────────
+      const s3Y = dataLocalY + 14;
+      doc.setFillColor(5, 95, 60); doc.rect(15, s3Y, pageW - 30, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+      doc.text('III.  IDENTIFICAÇÃO E ASSINATURA DO SERVIDOR RESPONSÁVEL', 18, s3Y + 5);
+
+      // Assinatura (imagem)
+      if (assinaturaBase64) {
+        doc.addImage(assinaturaBase64, 'PNG', 65, s3Y + 9, 80, 22, undefined, 'FAST');
+      }
+
+      // Linha de assinatura
+      const linhaY = s3Y + 33;
+      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.4);
+      doc.line(50, linhaY, pageW - 50, linhaY);
+
+      // Nome e função do servidor
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(servidorNome, pageW / 2, linhaY + 7, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+      const subText = matricula ? `${funcao} — Matrícula: ${matricula}` : funcao;
+      doc.text(subText, pageW / 2, linhaY + 13, { align: 'center' });
+      doc.text(`${postoNome} | ALECE`, pageW / 2, linhaY + 19, { align: 'center' });
+
+      // ── RODAPÉ ────────────────────────────────────────────────
+      const rodapeY = 272;
+      doc.setFillColor(5, 95, 60); doc.rect(0, rodapeY, pageW, 0.8, 'F');
+      doc.setFillColor(241, 245, 249); doc.rect(0, rodapeY + 0.8, pageW, 25, 'F');
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+      doc.text(`Declaração emitida pel${isAleceItinerante ? 'o' : 'a'} ${postoNome} da ALECE para fins de comprovação de comparecimento.`, pageW / 2, rodapeY + 7, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+      doc.text(`Emitido em: ${dataGeracao} às ${horaGeracao}  |  Protocolo: ${atendimento.protocolo || 'N/A'}  |  Página 1 de 1`, pageW / 2, rodapeY + 15, { align: 'center' });
+
+      if (modo === 'download') {
+        doc.save(`declaracao-${atendimento.nome.replace(/\s+/g, '-').toLowerCase()}-${atendimento.protocolo}.pdf`);
+      } else {
+        // Enviar por email
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const emailDest = declEmail;
+        if (!emailDest) {
+          alert('Por favor, informe um e-mail para envio na tela de declaração.');
+          return;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          alert('Sessão expirada. Faça login novamente.');
+          return;
+        }
+        const response = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: emailDest,
+            subject: `Declaração de Comparecimento - ${atendimento.nome} - Protocolo ${atendimento.protocolo}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #047857;">Declaração de Comparecimento</h2>
+                <p>Olá,</p>
+                <p>Segue em anexo a Declaração de Comparecimento referente ao atendimento realizado na Sala Sensorial da ALECE.</p>
+                <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Nome:</strong> ${atendimento.nome}</p>
+                  <p><strong>Protocolo:</strong> ${atendimento.protocolo}</p>
+                </div>
+                <p>Atenciosamente,<br>Equipe Sala Sensorial ALECE</p>
+              </div>
+            `,
+            attachments: [{
+              filename: `declaracao-${atendimento.protocolo}.pdf`,
+              content: pdfBase64,
+              contentType: 'application/pdf',
+            }],
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Erro ao enviar email');
+        }
+        alert(`Declaração enviada com sucesso para ${emailDest}`);
+      }
     } catch (err) {
       console.error('Erro ao gerar declaração:', err);
-      alert('Erro ao gerar declaração. Tente novamente.');
+      alert(modo === 'email' ? 'Erro ao enviar declaração por email. Tente novamente.' : 'Erro ao gerar declaração. Tente novamente.');
+    } finally {
+      setGerandoDeclaracao(false);
+      setEnviandoEmailDecl(false);
     }
   };
 
@@ -465,27 +638,8 @@ export default function AtendimentoModal({
   const TABS: { key: TabKey; label: string; icon: React.ReactElement; badge?: number }[] = [
     { key: 'dados', label: 'Dados', icon: <FiEdit3 className="w-4 h-4" /> },
     { key: 'observacoes', label: 'Notas', icon: <FiMessageSquare className="w-4 h-4" />, badge: historicoObservacoes.length },
+    { key: 'historico', label: 'Histórico', icon: <FiList className="w-4 h-4" /> },
   ];
-
-  const InputField = ({ label, icon, value, onChange, type = 'text', error, mono, placeholder }: {
-    label: string; icon: React.ReactElement; value: string; onChange: (v: string) => void;
-    type?: string; error?: string; mono?: boolean; placeholder?: string;
-  }) => (
-    <div>
-      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50/80 border-2 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium ${mono ? 'font-mono' : ''} ${error ? 'border-red-300 bg-red-50/50 ring-2 ring-red-100' : 'border-slate-200'}`}
-        />
-      </div>
-      {error && <p className="text-red-500 text-[11px] mt-0.5 font-bold">{error}</p>}
-    </div>
-  );
 
   return (
     <>
@@ -590,6 +744,24 @@ export default function AtendimentoModal({
                   </div>
                 </div>
 
+                {/* Atendente e Coletor Responsáveis */}
+                {(formData.atendente_nome || formData.coletor_nome) && (
+                  <div className={`grid ${formData.atendente_nome && formData.coletor_nome ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                    {formData.atendente_nome && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Atendente</label>
+                        <p className="text-sm font-bold text-slate-800 truncate">{formData.atendente_nome}</p>
+                      </div>
+                    )}
+                    {formData.coletor_nome && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Coletor</label>
+                        <p className="text-sm font-bold text-slate-800 truncate">{formData.coletor_nome}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Informações Pessoais */}
                 <fieldset className="border-2 border-slate-200 rounded-xl overflow-hidden">
                   <legend className="ml-3 px-2 text-xs font-bold text-emerald-700 flex items-center gap-1.5">
@@ -632,13 +804,75 @@ export default function AtendimentoModal({
                 </fieldset>
 
                 {/* Gerar Declaração */}
-                <button
-                  onClick={handleGerarDeclaracao}
-                  className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200"
-                >
-                  <FiFileText className="w-4 h-4" />
-                  Gerar Declaração
-                </button>
+                {!showDeclaracaoMenu ? (
+                  <button
+                    onClick={openDeclaracaoMenu}
+                    disabled={gerandoDeclaracao || enviandoEmailDecl}
+                    className="w-full py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border-2 border-indigo-200 disabled:opacity-50"
+                  >
+                    {gerandoDeclaracao ? (
+                      <><div className="w-4 h-4 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" /> Gerando...</>
+                    ) : enviandoEmailDecl ? (
+                      <><div className="w-4 h-4 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" /> Enviando...</>
+                    ) : (
+                      <><FiFileText className="w-4 h-4" /> Gerar Declaração</>
+                    )}
+                  </button>
+                ) : (
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 space-y-4">
+                    <p className="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-2">
+                      <FiFileText className="w-4 h-4" /> Configurar Declaração
+                    </p>
+                    
+                    <div className="space-y-3 bg-white p-3 rounded-lg border border-indigo-100">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Modelo de Declaração</label>
+                        <select 
+                          value={declModel} 
+                          onChange={(e) => setDeclModel(e.target.value as 'sensorial' | 'itinerante')}
+                          className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                        >
+                          <option value="sensorial">Sala Sensorial</option>
+                          <option value="itinerante">Alece Itinerante</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-widest">E-mail para envio</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><FiMail className="w-4 h-4"/></span>
+                          <input 
+                            type="email" 
+                            value={declEmail} 
+                            onChange={(e) => setDeclEmail(e.target.value)}
+                            placeholder="exemplo@email.com"
+                            className="w-full pl-9 pr-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleGerarDeclaracao('download')}
+                        className="flex-1 py-2.5 bg-white text-indigo-700 hover:bg-indigo-100 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm border border-indigo-200"
+                      >
+                        <FiDownload className="w-4 h-4" /> Baixar PDF
+                      </button>
+                      <button
+                        onClick={() => handleGerarDeclaracao('email')}
+                        disabled={!declEmail}
+                        className="flex-1 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <FiSend className="w-4 h-4" /> Enviar Email
+                      </button>
+                    </div>
+                    
+                    <button onClick={() => setShowDeclaracaoMenu(false)} className="w-full text-xs text-gray-500 hover:text-gray-700 py-1 transition-colors font-semibold">
+                      Cancelar
+                    </button>
+                  </div>
+                )}
 
                 {/* Comprovante */}
                 {atendimento.status === 'entregue' && atendimento.assinatura_base64 && (
@@ -706,6 +940,11 @@ export default function AtendimentoModal({
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ─── TAB HISTÓRICO ─── */}
+            {activeTab === 'historico' && (
+              <AtendimentoHistorico atendimentoId={atendimento.id} />
             )}
           </div>
 

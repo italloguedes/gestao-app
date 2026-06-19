@@ -39,6 +39,8 @@ interface Atendimento {
   status: string;
   observacoes?: string;
   atendente_nome?: string;
+  coletor_nome?: string;
+  coletor_id?: string;
 }
 
 interface EditAtendimentoModalProps {

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { to, subject, html } = await request.json();
+    const { to, subject, html, attachments: rawAttachments } = await request.json();
 
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
     // Fallback em texto puro, removendo tags do HTML
     const plainText = html.replace(/<[^>]*>/g, '');
 
+    // Processar attachments se existirem
+    const processedAttachments = rawAttachments?.map((a: { filename: string; content: string; contentType: string }) => ({
+      filename: a.filename,
+      content: Buffer.from(a.content, 'base64'),
+      contentType: a.contentType,
+    }));
+
     const mailOptions = {
       from: `"Atendimento realizado com sucesso!! " <${process.env.GMAIL_USER}>`,
       to,
@@ -57,6 +64,7 @@ export async function POST(request: NextRequest) {
           </body>
         </html>
       `,
+      ...(processedAttachments?.length ? { attachments: processedAttachments } : {}),
     };
 
     const info = await transporter.sendMail(mailOptions);

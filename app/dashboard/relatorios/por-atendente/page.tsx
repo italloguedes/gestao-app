@@ -13,9 +13,12 @@ import {
   FiSearch,
   FiArrowLeft,
   FiClock,
-  FiActivity
+  FiActivity,
+  FiDatabase,
+  FiDownload
 } from 'react-icons/fi';
 import { MdFingerprint } from 'react-icons/md';
+import jsPDF from 'jspdf';
 
 interface Atendimento {
   id: string;
@@ -55,6 +58,208 @@ export default function RelatoriosPorAtendentePage() {
   const [atendenteStats, setAtendenteStats] = useState<AtendenteStats[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [atendenteExpandido, setAtendenteExpandido] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/alece_logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
+
+  const gerarPDFRelatorio = () => {
+    if (atendenteStats.length === 0) return;
+    setLoadingPdf(true);
+
+    try {
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      const periodoTexto = dataInicio && dataFim
+        ? `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`
+        : 'Período completo';
+
+      const primaryColor = [0, 135, 81] as [number, number, number]; // Verde ALECE
+
+      // --- Cabeçalho ---
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, pageW, 42, 'F');
+
+      // Logo à esquerda
+      if (logoBase64) {
+        try {
+          doc.addImage(logoBase64, 'PNG', 12, 3, 36, 36);
+        } catch (e) {
+          console.error('Erro ao adicionar logo ao PDF:', e);
+        }
+      }
+
+      // Título principal
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      const title = 'ATENDIMENTOS POR COLABORADOR';
+      const titleWidth = doc.getStringUnitWidth(title) * 14 / doc.internal.scaleFactor;
+      const titleX = logoBase64 ? 52 + (pageW - 52 - titleWidth) / 2 : (pageW - titleWidth) / 2;
+      doc.text(title, titleX, 16);
+
+      // Subtítulo
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const subtitle = 'Assembleia Legislativa do Estado do Ceará';
+      const subtitleWidth = doc.getStringUnitWidth(subtitle) * 10 / doc.internal.scaleFactor;
+      const subtitleX = logoBase64 ? 52 + (pageW - 52 - subtitleWidth) / 2 : (pageW - subtitleWidth) / 2;
+      doc.text(subtitle, subtitleX, 24);
+
+      // Período
+      doc.setFontSize(9);
+      const infoText = `Período: ${periodoTexto}  |  Emitido em: ${hoje}`;
+      const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+      const infoX = logoBase64 ? 52 + (pageW - 52 - infoWidth) / 2 : (pageW - infoWidth) / 2;
+      doc.text(infoText, infoX, 32);
+
+      // --- Totais Gerais ---
+      const totalAtend = atendimentosData.length;
+      const totalColetas = atendenteStats.reduce((acc, s) => acc + s.coletas, 0);
+      const totalGeral = totalAtend + totalColetas;
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(10, 48, pageW - 20, 14, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Total de Atendimentos: ${totalAtend}`, 15, 56);
+      doc.text(`Total de Coletas: ${totalColetas}`, 80, 56);
+      doc.text(`Total Geral: ${totalGeral}`, 155, 56);
+
+      // --- Cabeçalho da tabela ---
+      let y = 68;
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(10, y, pageW - 20, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text('COLABORADOR', 15, y + 5.5);
+      doc.text('ATEND.', 120, y + 5.5, { align: 'center' });
+      doc.text('COLETAS', 150, y + 5.5, { align: 'center' });
+      doc.text('TOTAL', 180, y + 5.5, { align: 'center' });
+      y += 8;
+
+      // --- Linhas da tabela ---
+      atendenteStats.forEach((stats, idx) => {
+        if (y > pageH - 20) {
+          doc.addPage();
+          // Draw compact header for subsequent pages
+          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.rect(0, 0, pageW, 16, 'F');
+
+          if (logoBase64) {
+            try {
+              doc.addImage(logoBase64, 'PNG', 6, 1, 14, 14);
+            } catch (e) { /* skip */ }
+          }
+
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('ATENDIMENTOS POR COLABORADOR', logoBase64 ? 24 : 15, 11);
+
+          // Período no canto direito
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          const headerPeriodoWidth = doc.getStringUnitWidth(periodoTexto) * 7 / doc.internal.scaleFactor;
+          doc.text(periodoTexto, pageW - 15 - headerPeriodoWidth, 11);
+
+          y = 22;
+          // repetir cabeçalho da tabela
+          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.rect(10, y, pageW - 20, 8, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(255, 255, 255);
+          doc.text('COLABORADOR', 15, y + 5.5);
+          doc.text('ATEND.', 120, y + 5.5, { align: 'center' });
+          doc.text('COLETAS', 150, y + 5.5, { align: 'center' });
+          doc.text('TOTAL', 180, y + 5.5, { align: 'center' });
+          y += 8;
+        }
+
+        const isEven = idx % 2 === 0;
+        doc.setFillColor(isEven ? 252 : 248, isEven ? 253 : 250, isEven ? 254 : 252);
+        doc.rect(10, y, pageW - 20, 8, 'F');
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
+        const nomeText = stats.nome.length > 35 ? stats.nome.substring(0, 32) + '...' : stats.nome;
+        doc.text(nomeText, 15, y + 5.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(String(stats.total), 120, y + 5.5, { align: 'center' });
+
+        doc.setTextColor(109, 40, 217);
+        doc.text(String(stats.coletas), 150, y + 5.5, { align: 'center' });
+
+        doc.setTextColor(13, 148, 136);
+        doc.text(String(stats.total + stats.coletas), 180, y + 5.5, { align: 'center' });
+
+        // linha divisora
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.1);
+        doc.line(10, y + 8, pageW - 10, y + 8);
+
+        y += 8;
+      });
+
+      // --- Linha de total final ---
+      if (y > pageH - 20) {
+        doc.addPage();
+        y = 22;
+      }
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(10, y, pageW - 20, 9, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL GERAL', 15, y + 6);
+      doc.text(String(totalAtend), 120, y + 6, { align: 'center' });
+      doc.text(String(totalColetas), 150, y + 6, { align: 'center' });
+      doc.text(String(totalGeral), 180, y + 6, { align: 'center' });
+
+      // --- Rodapé em todas as páginas via pós-processamento ---
+      const pageCount = (doc as any).getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const rodY = pageH - 10;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          `Assembleia Legislativa do Estado do Ceará  |  Gerado em ${hoje}  |  Página ${i} de ${pageCount}`,
+          pageW / 2, rodY, { align: 'center' }
+        );
+      }
+
+      const fileName = `relatorio-colaboradores-${periodoTexto.replace(/\//g, '-').replace(/ /g, '')}.pdf`;
+      doc.save(fileName);
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
@@ -67,7 +272,7 @@ export default function RelatoriosPorAtendentePage() {
     return timeString.substring(0, 5);
   };
 
-  const setDateRange = (range: 'hoje' | 'semana' | 'mes') => {
+  const setDateRange = (range: 'hoje' | 'semana' | 'mes' | 'completo') => {
     const hoje = new Date();
     const dataFimStr = hoje.toISOString().split('T')[0];
     let dataInicioStr = '';
@@ -82,6 +287,8 @@ export default function RelatoriosPorAtendentePage() {
       const mesPassado = new Date(hoje);
       mesPassado.setMonth(hoje.getMonth() - 1);
       dataInicioStr = mesPassado.toISOString().split('T')[0];
+    } else if (range === 'completo') {
+      dataInicioStr = '2020-01-01'; // data inicial do sistema
     }
 
     setDataInicio(dataInicioStr);
@@ -108,32 +315,46 @@ export default function RelatoriosPorAtendentePage() {
         return;
       }
 
-      let query = supabase
-        .from('atendimentos')
-        .select('*');
-
+      // Busca paginada para superar o limite de 1000 registros do Supabase
       const dataInicioAjustada = dataInicio + 'T00:00:00';
       const dataFimAjustada = dataFim + 'T23:59:59';
-      query = query
-        .gte('dia_atual', dataInicioAjustada)
-        .lte('dia_atual', dataFimAjustada);
 
-      // Se filtro por ação estiver ativado, usar ilike para buscar 'acao' no solicitante
-      if (filtroAcao) {
-        query = query.ilike('solicitante', '%acao%');
-      }
+      const fetchAllAtendimentos = async () => {
+        const BATCH = 1000;
+        let from = 0;
+        let allData: any[] = [];
+        let hasMore = true;
 
-      query = query.order('atendente_nome', { ascending: true })
-        .order('dia_atual', { ascending: true })
-        .order('horario', { ascending: true });
+        while (hasMore) {
+          let q = supabase
+            .from('atendimentos')
+            .select('*')
+            .gte('dia_atual', dataInicioAjustada)
+            .lte('dia_atual', dataFimAjustada)
+            .order('atendente_nome', { ascending: true })
+            .order('dia_atual', { ascending: true })
+            .order('horario', { ascending: true })
+            .range(from, from + BATCH - 1);
 
-      const { data: atendimentos, error } = await query;
+          if (filtroAcao) {
+            q = q.ilike('solicitante', '%acao%');
+          }
 
-      if (error) {
-        console.error('Erro ao buscar atendimentos:', error);
-        setMessage({ text: 'Erro ao buscar atendimentos: ' + error.message, type: 'error' });
-        return;
-      }
+          const { data, error } = await q;
+
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            hasMore = false;
+          } else {
+            allData = [...allData, ...data];
+            if (data.length < BATCH) hasMore = false;
+            else from += BATCH;
+          }
+        }
+        return allData;
+      };
+
+      const atendimentos = await fetchAllAtendimentos();
 
       if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Nenhum atendimento encontrado no período selecionado', type: 'error' });
@@ -146,10 +367,18 @@ export default function RelatoriosPorAtendentePage() {
       // Processar dados por atendente (unificando Atendente e Coletor)
       const pessoasMap = new Map<string, AtendenteStats>();
 
-      const getOrInitStats = (nome: string) => {
-        if (!pessoasMap.has(nome)) {
-          pessoasMap.set(nome, {
-            nome: nome,
+      // Normaliza para maiúsculo como chave (evita duplicatas por capitalização)
+      const normalizarChave = (nome: string) => nome.trim().toUpperCase();
+
+      // Formata o nome em Title Case para exibição
+      const formatarNome = (nome: string) =>
+        nome.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+      const getOrInitStats = (nomeOriginal: string) => {
+        const chave = normalizarChave(nomeOriginal);
+        if (!pessoasMap.has(chave)) {
+          pessoasMap.set(chave, {
+            nome: formatarNome(nomeOriginal),
             total: 0,
             concluidos: 0,
             cancelados: 0,
@@ -157,7 +386,7 @@ export default function RelatoriosPorAtendentePage() {
             atendimentos: []
           });
         }
-        return pessoasMap.get(nome)!;
+        return pessoasMap.get(chave)!;
       };
 
       atendimentos.forEach((atendimento: any) => {
@@ -174,11 +403,10 @@ export default function RelatoriosPorAtendentePage() {
         if (atendimento.coletor_nome && atendimento.fotos_coletadas) {
           const stats = getOrInitStats(atendimento.coletor_nome);
           stats.coletas++;
-          // Não adicionamos ao array de atendimentos aqui para não duplicar mas o filtro de tabela cuidará da exibição
         }
       });
 
-      const statsArray = Array.from(pessoasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+      const statsArray = Array.from(pessoasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
       setAtendenteStats(statsArray);
       setAtendimentosData(atendimentos);
 
@@ -237,6 +465,23 @@ export default function RelatoriosPorAtendentePage() {
               Acompanhe o desempenho detalhado de atendimentos e coletas biométricas.
             </p>
           </div>
+          {atendenteStats.length > 0 && (
+            <button
+              onClick={gerarPDFRelatorio}
+              disabled={loadingPdf}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+            >
+              {loadingPdf ? (
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <FiDownload className="w-4 h-4" />
+              )}
+              Exportar PDF
+            </button>
+          )}
         </div>
 
         {/* Filtros Card */}
@@ -270,6 +515,14 @@ export default function RelatoriosPorAtendentePage() {
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
               >
                 Último Mês
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange('completo')}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <FiDatabase className="w-3 h-3" />
+                Período Completo
               </button>
               <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
               <button
@@ -353,87 +606,95 @@ export default function RelatoriosPorAtendentePage() {
         {atendenteStats.length > 0 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {atendenteStats.map((stats, index) => (
-                <div key={stats.nome} className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-emerald-100 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* Resumo Geral */}
+            <div className="flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 shadow-xl text-white border border-slate-700">
+              <div className="mb-6 md:mb-0 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-white">Resumo Geral</h2>
+                <p className="text-slate-400 mt-1 text-sm">Desempenho de toda a equipe no período selecionado</p>
+              </div>
+              <div className="flex flex-wrap justify-center md:justify-end gap-4 w-full md:w-auto">
+                <div className="bg-slate-800/50 px-6 py-4 rounded-2xl border border-slate-700/50 text-center">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Atendimentos</p>
+                  <p className="text-5xl font-black text-emerald-400 drop-shadow-md">{atendimentosData.length}</p>
+                </div>
+                {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0) > 0 && (
+                  <div className="bg-slate-800/50 px-6 py-4 rounded-2xl border border-slate-700/50 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                      <MdFingerprint className="w-3.5 h-3.5" /> Coletas
+                    </p>
+                    <p className="text-5xl font-black text-purple-400 drop-shadow-md">
+                      {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0)}
+                    </p>
+                  </div>
+                )}
+                {atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0) > 0 && (
+                  <div className="bg-teal-900/40 px-6 py-4 rounded-2xl border border-teal-700/40 text-center">
+                    <p className="text-xs font-bold text-teal-300 uppercase tracking-widest mb-1">Total Geral</p>
+                    <p className="text-5xl font-black text-teal-300 drop-shadow-md">
+                      {atendimentosData.length + atendenteStats.reduce((acc, curr) => acc + curr.coletas, 0)}
+                    </p>
+                    <p className="text-[10px] text-teal-500 font-semibold mt-1">atend. + coletas</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                        <FiUsers className="w-5 h-5" />
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {atendenteStats.map((stats, index) => (
+                <div key={stats.nome} className="group bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all duration-300 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors duration-300 border border-slate-100 group-hover:border-emerald-100">
+                        <FiUsers className="w-6 h-6" />
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-emerald-700 transition-colors">{stats.nome}</h3>
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Colaborador</span>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Colaborador</span>
                       </div>
                     </div>
-                    <div className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold font-mono">
-                      #{index + 1}
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Total</p>
-                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</p>
-                      <p className="text-[10px] text-emerald-600/70 font-medium mt-1">Atendimentos</p>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
-                      <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-1 flex items-center gap-1">
-                        <MdFingerprint className="w-3.5 h-3.5" /> Coletas
-                      </p>
-                      <p className="text-3xl font-black text-slate-800 tracking-tight">{stats.coletas}</p>
-                      <p className="text-[10px] text-purple-600/70 font-medium mt-1">Biometrias</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-slate-600">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        Concluídos
-                      </span>
-                      <span className="font-bold text-slate-700">{stats.concluidos}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-slate-600">
-                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                        Cancelados
-                      </span>
-                      <span className="font-bold text-slate-700">{stats.cancelados}</span>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-100 mt-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 uppercase">Taxa de Eficiência</span>
-                        <span className="text-sm font-bold text-emerald-600 font-mono">
-                          {stats.total > 0 ? Math.round((stats.concluidos / stats.total) * 100) : 0}%
-                        </span>
+                    <div className="mb-8">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col">
+                          <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.total}</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase mt-1">Atendimentos</span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-100 pl-3">
+                          <span className="text-4xl font-black text-purple-600 tracking-tighter">{stats.coletas}</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase mt-1 flex items-center gap-1">
+                            <MdFingerprint className="w-3.5 h-3.5" /> Coletas
+                          </span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-100 pl-3">
+                          <span className="text-4xl font-black text-teal-600 tracking-tighter">{stats.total + stats.coletas}</span>
+                          <span className="text-xs font-bold text-teal-400 uppercase mt-1">Total</span>
+                        </div>
                       </div>
-                      {/* Mini progress bar */}
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
-                          style={{ width: `${stats.total > 0 ? (stats.concluidos / stats.total) * 100 : 0}%` }}
-                        ></div>
-                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {stats.concluidos > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                          <FiCheckCircle className="w-4 h-4 text-emerald-500" />
+                          <span>{stats.concluidos} Concluídos</span>
+                        </div>
+                      )}
+                      {stats.cancelados > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border border-slate-100">
+                          <FiXCircle className="w-4 h-4 text-red-400" />
+                          <span>{stats.cancelados} Cancelados</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {(stats.total > 0 || stats.coletas > 0) && (
                     <button
                       onClick={() => setAtendenteExpandido(atendenteExpandido === stats.nome ? null : stats.nome)}
-                      className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-emerald-600 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"
+                      className={`w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${atendenteExpandido === stats.nome ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100'}`}
                     >
-                      <span>{atendenteExpandido === stats.nome ? 'Ocultar Detalhes' : 'Ver Detalhes'}</span>
-                      <svg
-                        className={`w-4 h-4 transition-transform duration-300 ${atendenteExpandido === stats.nome ? 'rotate-180' : ''}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <span>{atendenteExpandido === stats.nome ? 'Ocultar Tabela' : 'Filtrar na Tabela'}</span>
                     </button>
                   )}
                 </div>
