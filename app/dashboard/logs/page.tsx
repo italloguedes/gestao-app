@@ -109,7 +109,7 @@ export default function LogsPage() {
   const [runningMigration, setRunningMigration] = useState(false);
 
   // Filtros
-  const [dateFilter, setDateFilter] = useState(getTodayDate());
+  const [dateFilter, setDateFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [entityFilter, setEntityFilter] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
@@ -240,7 +240,7 @@ export default function LogsPage() {
   };
 
   const clearFilters = () => {
-    setDateFilter(getTodayDate());
+    setDateFilter('');
     setActionFilter('');
     setEntityFilter('');
     setSearchFilter('');
