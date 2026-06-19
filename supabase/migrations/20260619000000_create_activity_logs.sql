@@ -5,8 +5,13 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
   entity_type VARCHAR(255) NOT NULL,
   description TEXT,
   user_id VARCHAR(255),
+  user_name VARCHAR(255),
   user_email VARCHAR(255),
   user_role VARCHAR(255),
+  entity_id VARCHAR(255),
+  details JSONB,
+  ip_address VARCHAR(255),
+  module VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('America/Fortaleza'::text, now()) NOT NULL
 );
 

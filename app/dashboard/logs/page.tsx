@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { FiActivity, FiSearch, FiFilter, FiCalendar, FiUser, FiRefreshCw, FiChevronLeft, FiChevronRight, FiClock, FiEdit, FiTrash2, FiPlus, FiLogIn, FiLogOut, FiUpload, FiMail, FiFileText, FiPhone, FiLock, FiUnlock, FiToggleLeft, FiCheckCircle, FiXCircle, FiArrowRight } from 'react-icons/fi';
+import { usePermissions } from '@/hooks/usePermissions';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { FiActivity, FiSearch, FiFilter, FiCalendar, FiUser, FiRefreshCw, FiChevronLeft, FiChevronRight, FiClock, FiEdit, FiTrash2, FiPlus, FiLogIn, FiLogOut, FiUpload, FiMail, FiFileText, FiPhone, FiLock, FiUnlock, FiToggleLeft, FiCheckCircle, FiXCircle, FiArrowRight, FiDatabase, FiArrowLeft, FiAlertTriangle } from 'react-icons/fi';
 
 // ========================================
 // PÁGINA DE LOGS DE ATIVIDADES
@@ -101,6 +104,9 @@ export default function LogsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isTableMissing, setIsTableMissing] = useState(false);
+  const [runningMigration, setRunningMigration] = useState(false);
 
   // Filtros
   const [dateFilter, setDateFilter] = useState(getTodayDate());
@@ -113,6 +119,7 @@ export default function LogsPage() {
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
@@ -130,8 +137,16 @@ export default function LogsPage() {
       });
 
       if (!res.ok) {
-        console.error('Erro ao buscar logs:', res.status);
-        return;
+        if (res.status === 500) {
+          // Confirmar se é tabela inexistente consultando diretamente via supabase client
+          const { error: testError } = await supabase.from('activity_logs').select('id').limit(1);
+          if (testError && (testError.code === 'PGRST310' || testError.message?.includes('does not exist'))) {
+            setIsTableMissing(true);
+            return;
+          }
+        }
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${res.status} ao buscar logs`);
       }
 
       const data: LogsResponse = await res.json();
@@ -139,16 +154,85 @@ export default function LogsPage() {
       setTotal(data.total);
       setTotalPages(data.total_pages);
       setStats(data.stats);
-    } catch (err) {
+      setIsTableMissing(false);
+    } catch (err: any) {
       console.error('Erro ao buscar logs:', err);
+      setError(err.message || 'Falha ao buscar logs da API');
     } finally {
       setLoading(false);
     }
   }, [dateFilter, actionFilter, entityFilter, searchFilter, page]);
 
+  const handleCreateLogsTable = async () => {
+    setRunningMigration(true);
+    try {
+      const sql = `
+        CREATE TABLE IF NOT EXISTS public.activity_logs (
+          id BIGSERIAL PRIMARY KEY,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          user_id TEXT,
+          user_name TEXT,
+          user_email TEXT,
+          user_role TEXT,
+          action TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id TEXT,
+          description TEXT NOT NULL,
+          details JSONB,
+          ip_address TEXT,
+          module TEXT
+        );
+        
+        -- Garantir colunas em tabelas já existentes
+        ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS user_name TEXT;
+        ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS entity_id TEXT;
+        ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS details JSONB;
+        ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS ip_address TEXT;
+        ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS module TEXT;
+        
+        CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id);
+        CREATE INDEX IF NOT EXISTS idx_activity_logs_entity_type ON activity_logs (entity_type);
+        CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs (action);
+        CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON activity_logs ((created_at::date));
+        
+        ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+        
+        DROP POLICY IF EXISTS "Usuários autenticados podem inserir logs" ON activity_logs;
+        CREATE POLICY "Usuários autenticados podem inserir logs"
+          ON activity_logs FOR INSERT TO authenticated WITH CHECK (true);
+          
+        DROP POLICY IF EXISTS "Admins podem ler logs" ON activity_logs;
+        CREATE POLICY "Admins podem ler logs"
+          ON activity_logs FOR SELECT TO authenticated
+          USING (
+            EXISTS (
+              SELECT 1 FROM users
+              WHERE users.auth_id = auth.uid()::text
+              AND users.role IN ('superadmin', 'admin')
+            )
+          );
+      `;
+
+      const { error: rpcError } = await supabase.rpc('exec_sql', { sql });
+      if (rpcError) throw rpcError;
+
+      setIsTableMissing(false);
+      fetchLogs();
+    } catch (err: any) {
+      alert('Erro ao criar tabela de logs. Certifique-se de que você é um superadmin ou execute o arquivo SQL de migração no painel do Supabase. Erro: ' + err.message);
+    } finally {
+      setRunningMigration(false);
+    }
+  };
+
+  const { isAdmin, loading: permissionsLoading } = usePermissions();
+
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (!permissionsLoading && isAdmin) {
+      fetchLogs();
+    }
+  }, [permissionsLoading, isAdmin, fetchLogs]);
 
   const handleSearch = () => {
     setSearchFilter(searchInput);
@@ -167,6 +251,35 @@ export default function LogsPage() {
   const getActionConfig = (action: string) => {
     return actionConfig[action] || { icon: FiActivity, color: 'text-gray-600', bg: 'bg-gray-100', label: action };
   };
+
+  if (permissionsLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
+        <p className="mt-4 text-sm text-gray-500 font-medium">Validando credenciais...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
+        <div className="h-16 w-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4 border border-red-100 shadow-sm animate-bounce">
+          <FiLock className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
+        <p className="text-sm text-gray-500 max-w-md mb-6">
+          Esta página é restrita a administradores do sistema.
+        </p>
+        <Link href="/dashboard">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl">
+            <FiArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -348,143 +461,186 @@ export default function LogsPage() {
         </div>
       )}
 
-      {/* Timeline de Logs */}
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        {/* Header da tabela */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-700">
-            {total} {total === 1 ? 'registro' : 'registros'} encontrados
-          </span>
-          {dateFilter && (
-            <span className="text-xs text-gray-500 font-medium">
-              📅 {new Date(dateFilter + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-            </span>
-          )}
+      {error && (
+        <div className="p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-center gap-2 max-w-7xl mx-auto shadow-sm">
+          <FiAlertTriangle className="h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-emerald-200 border-t-emerald-600" />
+      {isTableMissing ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center max-w-2xl mx-auto shadow-sm">
+          <div className="h-12 w-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+            <FiDatabase className="h-6 w-6" />
           </div>
-        ) : logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <FiActivity className="w-12 h-12 mb-3 opacity-50" />
-            <p className="text-lg font-semibold">Nenhum registro encontrado</p>
-            <p className="text-sm mt-1">Ajuste os filtros ou selecione outra data</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Tabela de Logs não Instalada</h3>
+          <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+            A tabela <code>activity_logs</code> necessária para rastrear as atividades do sistema não foi encontrada no banco de dados. 
+            Você pode tentar criá-la automaticamente clicando no botão abaixo ou executando o script de migração correspondente.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Button
+              onClick={handleCreateLogsTable}
+              disabled={runningMigration}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl"
+            >
+              {runningMigration ? (
+                <>
+                  <FiRefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Instalando...
+                </>
+              ) : (
+                <>
+                  <FiDatabase className="mr-2 h-4 w-4" />
+                  Criar Tabela de Logs
+                </>
+              )}
+            </Button>
+            <Link href="/dashboard">
+              <Button variant="outline" className="border-gray-200 hover:bg-gray-50 rounded-xl">
+                Voltar
+              </Button>
+            </Link>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {logs.map((log) => {
-              const config = getActionConfig(log.action);
-              const IconComponent = config.icon;
-              const isExpanded = expandedLog === log.id;
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+          {/* Header da tabela */}
+          <div className="px-5 py-3.5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between">
+            <span className="text-sm font-bold text-gray-700">
+              {total} {total === 1 ? 'registro' : 'registros'} encontrados
+            </span>
+            {dateFilter && (
+              <span className="text-xs text-gray-500 font-medium">
+                📅 {new Date(dateFilter + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+              </span>
+            )}
+          </div>
 
-              return (
-                <div
-                  key={log.id}
-                  className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer"
-                  onClick={() => setExpandedLog(isExpanded ? null : log.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Ícone da ação */}
-                    <div className={`p-2 rounded-xl ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
-                      <IconComponent className="w-4 h-4" />
-                    </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-emerald-200 border-t-emerald-600" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <FiActivity className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-lg font-semibold">Nenhum registro encontrado</p>
+              <p className="text-sm mt-1">Ajuste os filtros ou selecione outra data</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {logs.map((log) => {
+                const config = getActionConfig(log.action);
+                const IconComponent = config.icon;
+                const isExpanded = expandedLog === log.id;
 
-                    {/* Conteúdo */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 leading-snug">
-                            {log.description}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            {/* Badge da ação */}
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${config.bg} ${config.color}`}>
-                              {config.label}
-                            </span>
-                            {/* Badge do módulo */}
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
-                              {entityLabels[log.entity_type] || log.entity_type}
-                            </span>
-                            {/* Usuário */}
-                            {log.user_name && (
-                              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                                <FiUser className="w-3 h-3" />
-                                {log.user_name}
+                return (
+                  <div
+                    key={log.id}
+                    className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer"
+                    onClick={() => setExpandedLog(isExpanded ? null : log.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Ícone da ação */}
+                      <div className={`p-2 rounded-xl ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+
+                      {/* Conteúdo */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 leading-snug">
+                              {log.description}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              {/* Badge da ação */}
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${config.bg} ${config.color}`}>
+                                {config.label}
                               </span>
-                            )}
-                            {/* Role */}
-                            {log.user_role && roleLabels[log.user_role] && (
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${roleLabels[log.user_role].color}`}>
-                                {roleLabels[log.user_role].label}
+                              {/* Badge do módulo */}
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+                                {entityLabels[log.entity_type] || log.entity_type}
                               </span>
-                            )}
+                              {/* Usuário */}
+                              {log.user_name && (
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                  <FiUser className="w-3 h-3" />
+                                  {log.user_name}
+                                </span>
+                              )}
+                              {/* Role */}
+                              {log.user_role && roleLabels[log.user_role] && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${roleLabels[log.user_role].color}`}>
+                                  {roleLabels[log.user_role].label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Horário */}
+                          <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
+                            <FiClock className="w-3 h-3" />
+                            {formatTime(log.created_at)}
                           </div>
                         </div>
 
-                        {/* Horário */}
-                        <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
-                          <FiClock className="w-3 h-3" />
-                          {formatTime(log.created_at)}
-                        </div>
+                        {/* Detalhes expandidos */}
+                        {isExpanded && log.details && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded-xl text-xs">
+                            <p className="font-bold text-gray-600 mb-1.5">Detalhes:</p>
+                            <pre className="text-gray-600 whitespace-pre-wrap break-all font-mono leading-relaxed">
+                              {JSON.stringify(log.details, null, 2)}
+                            </pre>
+                            {log.entity_id && (
+                              <p className="mt-2 text-gray-500">
+                                <span className="font-semibold">ID:</span> {log.entity_id}
+                              </p>
+                            )}
+                            {log.ip_address && (
+                              <p className="text-gray-500">
+                                <span className="font-semibold">IP:</span> {log.ip_address}
+                              </p>
+                            )}
+                            <p className="text-gray-400 mt-1">
+                              {formatDateTime(log.created_at)}
+                            </p>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Detalhes expandidos */}
-                      {isExpanded && log.details && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded-xl text-xs">
-                          <p className="font-bold text-gray-600 mb-1.5">Detalhes:</p>
-                          <pre className="text-gray-600 whitespace-pre-wrap break-all font-mono leading-relaxed">
-                            {JSON.stringify(log.details, null, 2)}
-                          </pre>
-                          {log.entity_id && (
-                            <p className="mt-2 text-gray-500">
-                              <span className="font-semibold">ID:</span> {log.entity_id}
-                            </p>
-                          )}
-                          {log.ip_address && (
-                            <p className="text-gray-500">
-                              <span className="font-semibold">IP:</span> {log.ip_address}
-                            </p>
-                          )}
-                          <p className="text-gray-400 mt-1">
-                            {formatDateTime(log.created_at)}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="px-5 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-500">
-              Página {page} de {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page <= 1}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <FiChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <FiChevronRight className="w-4 h-4" />
-              </button>
+                );
+              })}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="px-5 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                Página {page} de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page <= 1}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <FiChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page >= totalPages}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <FiChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
