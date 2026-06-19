@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
+import { registrarLog } from '@/lib/activity-log';
 import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus, FiBriefcase, FiHash, FiImage, FiUpload } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,6 +158,27 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           const errorData = await response.json();
           throw new Error(errorData.error || errorData.details || 'Erro ao criar usuário');
         }
+      }
+      // Registrar log de auditoria
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (user?.id) {
+        await registrarLog({
+          action: 'atualizacao_usuario',
+          entity_type: 'user',
+          description: `Atualizado usuário: ${formData.name} (${formData.email}) - Função: ${formData.role}, Status: ${formData.status}`,
+          user_id: currentUser?.id,
+          user_email: currentUser?.email,
+          user_role: currentUser?.user_metadata?.role
+        });
+      } else {
+        await registrarLog({
+          action: 'criacao_usuario',
+          entity_type: 'user',
+          description: `Criado usuário: ${formData.name} (${formData.email}) - Função: ${formData.role}`,
+          user_id: currentUser?.id,
+          user_email: currentUser?.email,
+          user_role: currentUser?.user_metadata?.role
+        });
       }
 
       onSuccess?.();

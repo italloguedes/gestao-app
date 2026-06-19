@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
 import UserForm from './UserForm';
+import { registrarLog } from '@/lib/activity-log';
 import {
   FiEdit2, FiTrash2, FiSearch, FiUserPlus, FiRefreshCw,
   FiShield, FiMail, FiUser, FiCheckCircle, FiXCircle,
@@ -81,8 +82,20 @@ export default function UserList() {
         return;
       }
 
+      const deletedUser = deleteTarget;
       setUsers(users.filter(u => u.id !== userId));
       setDeleteTarget(null);
+
+      // Registrar log de exclusão
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      await registrarLog({
+        action: 'exclusao_usuario',
+        entity_type: 'user',
+        description: `Excluído usuário: ${deletedUser?.name || 'Sem Nome'} (${deletedUser?.email || 'Sem Email'})`,
+        user_id: currentUser?.id,
+        user_email: currentUser?.email,
+        user_role: currentUser?.user_metadata?.role
+      });
     } catch {
       alert('Erro ao excluir usuário');
     }

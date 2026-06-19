@@ -7,6 +7,7 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { AUTH_CONFIG } from '../lib/auth-config';
 import { validatePassword, validateEmail } from '../lib/auth-utils';
 import { supabase, checkSupabaseConnection, handleSupabaseError } from '../lib/supabase-client';
+import { registrarLog } from '@/lib/activity-log';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { FaPuzzlePiece, FaHandsHelping, FaInfinity, FaEye, FaEyeSlash, FaShieldAlt, FaLock, FaExclamationTriangle, FaCheckCircle, FaSearch, FaHeart, FaUsers, FaStar } from 'react-icons/fa';
@@ -288,6 +289,15 @@ export default function Home() {
 
           // Ler role diretamente do user_metadata
           const userRole = data.session.user.user_metadata?.role;
+
+          await registrarLog({
+            action: 'login',
+            entity_type: 'session',
+            description: `Usuário realizou login`,
+            user_id: data.session.user.id,
+            user_email: data.session.user.email,
+            user_role: userRole || 'user'
+          });
 
           if (userRole === 'admin' || userRole === 'atendente' || userRole === 'superadmin') {
             router.push(AUTH_CONFIG.REDIRECT_URLS.DASHBOARD);
