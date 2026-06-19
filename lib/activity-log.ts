@@ -41,7 +41,6 @@ export interface LogParams {
   description: string;
   details?: Record<string, any>;
   module?: string;
-  // Dados do usuário podem ser passados manualmente (útil no login antes de ter sessão)
   user_id?: string;
   user_name?: string;
   user_email?: string;
@@ -53,18 +52,6 @@ export interface LogParams {
  * 
  * Esta função é "fire-and-forget": não bloqueia a operação principal
  * e falha silenciosamente em caso de erro (apenas loga no console).
- * 
- * @example
- * ```ts
- * registrarLog({
- *   action: 'create',
- *   entity_type: 'atendimento',
- *   entity_id: '123',
- *   description: 'Criou novo atendimento para João Silva',
- *   details: { nome: 'João Silva', cpf: '123.456.789-00' },
- *   module: 'dashboard'
- * });
- * ```
  */
 export async function registrarLog(params: LogParams): Promise<void> {
   try {
@@ -92,7 +79,6 @@ export async function registrarLog(params: LogParams): Promise<void> {
 
             if (userData) {
               userRole = userData.role;
-              // Preferir o nome da tabela users (pode estar mais atualizado)
               if (userData.name) {
                 userName = userData.name;
               }
@@ -100,7 +86,6 @@ export async function registrarLog(params: LogParams): Promise<void> {
           }
         }
       } catch {
-        // Se não conseguir obter o usuário, continua sem essa info
         console.warn('[activity-log] Não foi possível obter dados do usuário');
       }
     }
@@ -122,7 +107,6 @@ export async function registrarLog(params: LogParams): Promise<void> {
       console.error('[activity-log] Erro ao registrar log:', error.message);
     }
   } catch (err) {
-    // Falha silenciosa - o log não deve impedir o funcionamento do sistema
     console.error('[activity-log] Exceção ao registrar log:', err);
   }
 }
@@ -130,10 +114,6 @@ export async function registrarLog(params: LogParams): Promise<void> {
 /**
  * Versão server-side do registrarLog para uso em API routes.
  * Recebe o supabase client do servidor como parâmetro.
- * 
- * @param supabaseClient - Cliente Supabase do servidor (com service_role)
- * @param params - Parâmetros do log
- * @param request - Objeto Request para extrair IP (opcional)
  */
 export async function registrarLogServer(
   supabaseClient: any,
@@ -141,7 +121,6 @@ export async function registrarLogServer(
   request?: Request
 ): Promise<void> {
   try {
-    // Extrair IP do request, se disponível
     let ipAddress: string | null = null;
     if (request) {
       ipAddress = request.headers.get('x-forwarded-for')
