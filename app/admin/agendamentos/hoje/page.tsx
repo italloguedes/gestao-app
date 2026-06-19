@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactElement, useEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,9 +64,9 @@ interface Agendamento {
 }
 
 const POSTOS = [
-  { id: 'Sala Sensorial', nome: 'Sala Sensorial', color: 'emerald' },
   { id: 'Alece Itinerante I', nome: 'Alece Itinerante I', color: 'blue' },
   { id: 'Alece Itinerante II', nome: 'Alece Itinerante II', color: 'purple' },
+  { id: 'Sala Sensorial', nome: 'Sala Sensorial', color: 'emerald' },
 ];
 
 const HORARIOS = (() => {
@@ -118,7 +119,8 @@ export default function AgendamentosHojePage() {
   const [showEmptySlots, setShowEmptySlots] = useState(true);
   const [showOnlyPreferential, setShowOnlyPreferential] = useState(false);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<AppointmentStatus | 'todos'>('todos');
-  const [selectedPosto, setSelectedPosto] = useState('Sala Sensorial');
+  const [selectedPosto, setSelectedPosto] = useState('Alece Itinerante I');
+  const [coletasPendentes, setColetasPendentes] = useState(0);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -406,6 +408,31 @@ export default function AgendamentosHojePage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Buscar coletas de digitais pendentes
+  const loadColetasPendentes = useCallback(async () => {
+    try {
+      const hoje = new Date().toLocaleDateString('en-CA');
+      const { count, error } = await supabase
+        .from('atendimentos')
+        .select('*', { count: 'exact', head: true })
+        .eq('dia_atual', hoje)
+        .eq('status', 'em_andamento')
+        .eq('fotos_coletadas', false);
+
+      if (!error) {
+        setColetasPendentes(count || 0);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar coletas pendentes:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadColetasPendentes();
+    const interval = setInterval(loadColetasPendentes, 15000);
+    return () => clearInterval(interval);
+  }, [loadColetasPendentes]);
+
   useEffect(() => {
     const checkUser = async () => {
       if (permissionsLoading) return;
@@ -595,6 +622,34 @@ export default function AgendamentosHojePage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Coletas de Digitais Pendentes - Destaque */}
+                  <Link
+                    href="/dashboard/coleta-digitais"
+                    className="group flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-md rounded-xl border-2 border-amber-400/50 hover:border-amber-300 hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="relative">
+                      <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                      </svg>
+                      {coletasPendentes > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                          {coletasPendentes > 9 ? '9+' : coletasPendentes}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm leading-tight">Coleta de Digitais</p>
+                      <p className="text-amber-100 text-xs font-semibold">
+                        {coletasPendentes > 0
+                          ? `${coletasPendentes} pendente${coletasPendentes !== 1 ? 's' : ''}`
+                          : 'Nenhuma pendente'}
+                      </p>
+                    </div>
+                    <svg className="w-5 h-5 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all duration-300 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
                 </div>
 
                 {/* Controles de Data */}
