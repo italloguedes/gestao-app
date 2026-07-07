@@ -749,12 +749,16 @@ export default function AcoesItinerantesPage() {
       return [item.acao, periodo, item.total.toString()];
     });
 
+    const totalQuantity = chronologicalData.reduce((sum, item) => sum + item.total, 0);
+
     autoTable(doc, {
       startY: 48,
       head: [['Ação', 'Período', 'Quantidade']],
       body: formattedData,
+      foot: [['Total', `${chronologicalData.length} ${chronologicalData.length === 1 ? 'Ação' : 'Ações'}`, totalQuantity.toString()]],
       theme: 'grid',
       headStyles: { fillColor: primaryColor, halign: 'center' },
+      footStyles: { fillColor: [232, 245, 233], textColor: [0, 135, 81], fontStyle: 'bold' },
       columnStyles: {
         0: { halign: 'left' },
         1: { halign: 'center', cellWidth: 50 },
