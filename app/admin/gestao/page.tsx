@@ -1,7 +1,7 @@
 // 'use client'; // Removed to allow server component async usage
 
 import Link from 'next/link';
-import { FiUsers, FiCalendar, FiClock, FiSettings, FiCheckCircle } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiClock, FiSettings, FiCheckCircle, FiTruck } from 'react-icons/fi';
 import { PreAgendamentoGestao } from './PreAgendamentoGestao';
 import SearchAgendamentos from './SearchAgendamentos';
 
@@ -9,6 +9,13 @@ export const dynamic = 'force-dynamic';
 
 export default function AdminGestaoPage() {
   const modules = [
+    {
+      title: 'Gestão de Viagens',
+      description: 'Programe e gerencie ações itinerantes nos municípios.',
+      href: '/dashboard/viagens',
+      icon: FiTruck,
+      color: 'bg-emerald-50 text-emerald-600',
+    },
     {
       title: 'Gerenciar Vagas',
       description: 'Configure a disponibilidade de horários e bloqueios.',
