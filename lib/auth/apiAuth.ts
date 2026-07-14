@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
  * IMPORTANTE: Use apenas em rotas API do servidor
  */
 
-export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'atendente' | 'recepcao' | 'user';
 
 export interface AuthenticatedUser {
   id: string;
@@ -124,17 +124,18 @@ export async function checkAuth(
 
 /**
  * Verifica se a role do usuário tem permissão para a ação
- * Hierarquia: superadmin > admin > atendente > user
+ * Hierarquia: superadmin > admin > atendente > recepcao > user
  */
 function checkRolePermission(userRole: UserRole, requiredRole: UserRole): boolean {
   const roleHierarchy: Record<UserRole, number> = {
-    superadmin: 4,
-    admin: 3,
-    atendente: 2,
+    superadmin: 5,
+    admin: 4,
+    atendente: 3,
+    recepcao: 2,
     user: 1
   };
 
-  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+  return (roleHierarchy[userRole] ?? 0) >= (roleHierarchy[requiredRole] ?? 0);
 }
 
 /**
