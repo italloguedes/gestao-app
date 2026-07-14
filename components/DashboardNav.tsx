@@ -145,6 +145,7 @@ export default function DashboardNav() {
   const isHome = pathname === '/dashboard';
   const isUsersPage = pathname === '/admin/users';
   const isAgendamentosPage = pathname === '/dashboard/agendamentos';
+  const isViagensPage = pathname.startsWith('/dashboard/viagens');
   const isColetaDigitaisPage = pathname === '/dashboard/coleta-digitais';
 
   return (
@@ -188,6 +189,7 @@ export default function DashboardNav() {
                 <>
                   <NavLink href="/admin/users" active={isUsersPage}>Gestão de Usuários</NavLink>
                   <NavLink href="/dashboard/agendamentos" active={isAgendamentosPage}>Gestão de Agendamentos</NavLink>
+                  <NavLink href="/dashboard/viagens" active={isViagensPage}>Gestão de Viagens</NavLink>
                   <NavLink href="/dashboard/coleta-digitais" active={isColetaDigitaisPage}>Coleta de Digitais</NavLink>
                 </>
               )}
@@ -258,6 +260,7 @@ export default function DashboardNav() {
               <>
                 <MobileNavLink href="/admin/users" active={isUsersPage}>Gestão de Usuários</MobileNavLink>
                 <MobileNavLink href="/dashboard/agendamentos" active={isAgendamentosPage}>Gestão de Agendamentos</MobileNavLink>
+                <MobileNavLink href="/dashboard/viagens" active={isViagensPage}>Gestão de Viagens</MobileNavLink>
                 <MobileNavLink href="/dashboard/coleta-digitais" active={isColetaDigitaisPage}>Coleta de Digitais</MobileNavLink>
               </>
             )}
