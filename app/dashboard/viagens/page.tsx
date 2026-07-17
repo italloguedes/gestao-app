@@ -131,7 +131,7 @@ export default function GestaoViagensPage() {
     }
   }, [statusFilter, searchTerm]);
 
-  // Carregar lista de usuários para escalação de equipe
+  // Carregar lista de usuários para escalação de equipe (apenas admin, superadmin e atendente)
   useEffect(() => {
     const loadSystemUsers = async () => {
       try {
@@ -142,7 +142,8 @@ export default function GestaoViagensPage() {
         });
         if (res.ok) {
           const users: User[] = await res.json();
-          setAvailableUsers(users.filter(u => u.status === 'active'));
+          const allowedRoles = ['admin', 'superadmin', 'atendente'];
+          setAvailableUsers(users.filter(u => u.status === 'active' && allowedRoles.includes(u.role)));
         }
       } catch (e) {
         console.error('Erro ao carregar usuários do sistema:', e);
@@ -158,8 +159,8 @@ export default function GestaoViagensPage() {
   // Cálculo de estatísticas
   const stats = useMemo(() => calculateViagemStats(viagens), [viagens]);
 
-  // Atualizar cálculo de dias da ação automaticamente ao mudar data de ida/retorno
-  useEffect(() => {
+  // Função auxiliar para auto-calcular dias da ação a partir do intervalo de datas (opcional)
+  const handleAutoCalcDiasAcao = () => {
     if (formData.data_ida && formData.data_retorno) {
       const start = new Date(formData.data_ida);
       const end = new Date(formData.data_retorno);
@@ -170,7 +171,7 @@ export default function GestaoViagensPage() {
         setFormData(prev => ({ ...prev, dias_acao: days }));
       }
     }
-  }, [formData.data_ida, formData.data_retorno]);
+  };
 
   // Handler para abrir modal de criação
   const handleOpenCreateModal = () => {
@@ -784,14 +785,44 @@ export default function GestaoViagensPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Dias da Ação (Atendimento)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={formData.dias_acao}
-                          onChange={e => setFormData({ ...formData, dias_acao: parseInt(e.target.value) || 1 })}
-                          className="w-full text-sm px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 text-emerald-800 font-bold rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                        />
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs font-semibold text-gray-700">Dias da Ação (Atendimento)</label>
+                          <button
+                            type="button"
+                            onClick={handleAutoCalcDiasAcao}
+                            className="text-[10px] text-emerald-700 hover:underline font-semibold"
+                            title="Calcular número de dias com base nas datas de Ida e Retorno"
+                          >
+                            Auto-calcular pelas datas
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            required
+                            value={formData.dias_acao}
+                            onChange={e => setFormData({ ...formData, dias_acao: parseInt(e.target.value) || 1 })}
+                            className="w-full text-sm px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 text-emerald-800 font-bold rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                          />
+                          <div className="flex flex-wrap gap-1 text-[11px]">
+                            {[1, 2, 3, 4, 5, 7, 10].map(d => (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, dias_acao: d })}
+                                className={`px-2 py-0.5 rounded-md font-semibold border transition-colors ${
+                                  formData.dias_acao === d
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-emerald-50'
+                                }`}
+                              >
+                                {d} {d === 1 ? 'dia' : 'dias'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -806,7 +837,10 @@ export default function GestaoViagensPage() {
 
                     {/* Seleção rápida de usuários */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Convocar Servidor do Sistema</label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-semibold text-gray-700">Convocar Servidor do Sistema</label>
+                        <span className="text-[10px] text-gray-400 font-medium">Apenas perfis: Admin, SuperAdmin e Atendente</span>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
                         {availableUsers.map(u => {
                           const isAdded = selectedServidores.some(s => s.user_id === u.id || s.nome === u.name);
