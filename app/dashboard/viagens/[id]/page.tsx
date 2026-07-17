@@ -24,10 +24,17 @@ import {
   FiExternalLink
 } from 'react-icons/fi';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdmin, getUserRole } from '@/lib/models/User';
+
 export default function ViagemDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const { user } = useAuth();
+
+  const userRole = getUserRole(user);
+  const userIsSuperAdmin = isSuperAdmin(userRole);
 
   const [viagem, setViagem] = useState<Viagem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,9 +63,15 @@ export default function ViagemDetailPage() {
     loadViagem();
   }, [loadViagem]);
 
-  // Alteração de status
+  // Alteração de status (apenas SuperAdmin pode marcar como 'concluida')
   const handleStatusChange = async (newStatus: ViagemStatus) => {
     if (!viagem) return;
+
+    if (newStatus === 'concluida' && !userIsSuperAdmin) {
+      alert('Apenas um SuperAdmin pode definir o status da ação/viagem como "Concluída".');
+      return;
+    }
+
     setUpdatingStatus(true);
     try {
       await updateViagemStatus(viagem.id, newStatus);
@@ -201,7 +214,9 @@ export default function ViagemDetailPage() {
                       >
                         <option value="planejada">🔵 Planejada</option>
                         <option value="em_andamento">🟢 Em Andamento</option>
-                        <option value="concluida">✅ Concluída</option>
+                        <option value="concluida" disabled={!userIsSuperAdmin && viagem.status !== 'concluida'}>
+                          ✅ Concluída {!userIsSuperAdmin ? '(Apenas SuperAdmin)' : ''}
+                        </option>
                         <option value="cancelada">🔴 Cancelada</option>
                       </select>
                     </div>

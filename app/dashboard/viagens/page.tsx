@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import DashboardGuard from '@/components/DashboardGuard';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/lib/models/User';
+import { User, isSuperAdmin, getUserRole } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
 import {
   Viagem,
@@ -69,6 +69,9 @@ const SETORES_PADRAO = [
 export default function GestaoViagensPage() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const userRole = getUserRole(user);
+  const userIsSuperAdmin = isSuperAdmin(userRole);
 
   // Estados principais
   const [viagens, setViagens] = useState<Viagem[]>([]);
@@ -266,6 +269,11 @@ export default function GestaoViagensPage() {
       return;
     }
 
+    if (formData.status === 'concluida' && !userIsSuperAdmin && (!editingViagem || editingViagem.status !== 'concluida')) {
+      alert('Apenas um SuperAdmin pode definir o status da ação/viagem como "Concluída".');
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingViagem) {
@@ -294,6 +302,11 @@ export default function GestaoViagensPage() {
 
   // Alteração rápida de status
   const handleQuickStatusChange = async (id: string, newStatus: ViagemStatus) => {
+    if (newStatus === 'concluida' && !userIsSuperAdmin) {
+      alert('Apenas um SuperAdmin pode definir o status da ação/viagem como "Concluída".');
+      return;
+    }
+
     try {
       await updateViagemStatus(id, newStatus);
       setViagens(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
@@ -750,6 +763,22 @@ export default function GestaoViagensPage() {
                           {SETORES_PADRAO.map(s => (
                             <option key={s} value={s}>{s}</option>
                           ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Status da Viagem</label>
+                        <select
+                          value={formData.status}
+                          onChange={e => setFormData({ ...formData, status: e.target.value as ViagemStatus })}
+                          className="w-full text-sm px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 font-bold rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        >
+                          <option value="planejada">🔵 Planejada</option>
+                          <option value="em_andamento">🟢 Em Andamento</option>
+                          <option value="concluida" disabled={!userIsSuperAdmin && (!editingViagem || editingViagem.status !== 'concluida')}>
+                            ✅ Concluída {!userIsSuperAdmin ? '(Apenas SuperAdmin)' : ''}
+                          </option>
+                          <option value="cancelada">🔴 Cancelada</option>
                         </select>
                       </div>
                     </div>
