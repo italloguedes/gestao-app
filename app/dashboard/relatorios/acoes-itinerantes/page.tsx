@@ -140,7 +140,7 @@ export default function AcoesItinerantesPage() {
 
   // Estados adicionais para destaque de Ações Concluídas
   const [viagensConcluidasSet, setViagensConcluidasSet] = useState<Set<string>>(new Set());
-  const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'em_andamento'>('todas');
+  const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'nao_concluidas' | 'pendentes' | 'em_andamento'>('todas');
   const [togglingAcao, setTogglingAcao] = useState<string | null>(null);
 
   // Função para verificar se uma ação itinerante está concluída
@@ -1424,11 +1424,11 @@ export default function AcoesItinerantesPage() {
             <select
               value={statusAcaoFilter}
               onChange={(e) => setStatusAcaoFilter(e.target.value as any)}
-              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 font-semibold transition-all text-emerald-800"
+              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 font-semibold transition-all text-emerald-800 cursor-pointer"
             >
-              <option value="todas">Todos os Status</option>
+              <option value="todas">Todas as Ações</option>
               <option value="concluidas">✅ Ações Concluídas</option>
-              <option value="em_andamento">⏳ Em Andamento</option>
+              <option value="nao_concluidas">⏳ Ações Não Concluídas</option>
             </select>
           </div>
         </div>
@@ -1438,9 +1438,9 @@ export default function AcoesItinerantesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard label="Total de Ações" value={acoes.length} icon={<FiActivity className="h-5 w-5" />} color="emerald" />
         <StatCard label="Ações Concluídas" value={`${acoes.filter(checkIsConcluida).length}/${acoes.length}`} icon={<FiCheckCircle className="h-5 w-5" />} color="green" />
+        <StatCard label="Ações Pendentes" value={acoes.length - acoes.filter(checkIsConcluida).length} icon={<FiClock className="h-5 w-5" />} color="amber" />
         <StatCard label="Atendimentos" value={totalAtendimentos} icon={<FiUsers className="h-5 w-5" />} color="teal" />
         <StatCard label="Concluídos" value={totalConcluidos} icon={<FiCheckCircle className="h-5 w-5" />} color="green" />
-        <StatCard label="Em Andamento" value={totalEmAndamento} icon={<FiClock className="h-5 w-5" />} color="amber" />
       </div>
 
       {/* === Charts === */}
@@ -1548,7 +1548,14 @@ export default function AcoesItinerantesPage() {
             <FiMapPin className="h-3.5 w-3.5 text-emerald-600" />
           </div>
           <h3 className="text-sm font-bold text-gray-900">Detalhamento por Ação</h3>
-          <span className="ml-auto text-xs text-gray-400">{acoes.length} ações</span>
+          <span className="ml-auto text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            {acoes.filter((acao) => {
+              const isConc = checkIsConcluida(acao);
+              if (statusAcaoFilter === 'concluidas') return isConc;
+              if (statusAcaoFilter === 'nao_concluidas' || statusAcaoFilter === 'pendentes' || statusAcaoFilter === 'em_andamento') return !isConc;
+              return true;
+            }).length} de {acoes.length} ações
+          </span>
         </div>
 
         {acoes.length === 0 ? (
@@ -1575,12 +1582,12 @@ export default function AcoesItinerantesPage() {
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Relatórios</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {acoes
                   .filter((acao) => {
                     const isConc = checkIsConcluida(acao);
                     if (statusAcaoFilter === 'concluidas') return isConc;
-                    if (statusAcaoFilter === 'em_andamento') return !isConc;
+                    if (statusAcaoFilter === 'nao_concluidas' || statusAcaoFilter === 'pendentes' || statusAcaoFilter === 'em_andamento') return !isConc;
                     return true;
                   })
                   .map((acao, idx) => {
@@ -1588,18 +1595,18 @@ export default function AcoesItinerantesPage() {
                     return (
                       <tr
                         key={acao.nome}
-                        className={`transition-colors duration-150 ${
+                        className={`transition-all duration-150 ${
                           isConcluida
-                            ? 'bg-emerald-50/50 hover:bg-emerald-100/50 border-l-4 border-l-emerald-500'
-                            : idx % 2 === 0 ? 'bg-white hover:bg-emerald-50/30' : 'bg-gray-50/30 hover:bg-emerald-50/30'
+                            ? 'bg-emerald-100/60 hover:bg-emerald-100/90 border-l-4 border-l-emerald-600 font-medium text-emerald-950 shadow-2xs'
+                            : idx % 2 === 0 ? 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent' : 'bg-slate-50/50 hover:bg-slate-50 border-l-4 border-l-transparent'
                         }`}
                       >
                         <td className="px-4 py-3 font-semibold text-gray-900">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span>{acao.nome}</span>
+                            <span className={isConcluida ? 'font-extrabold text-emerald-950' : 'text-gray-900'}>{acao.nome}</span>
                             {isConcluida && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
-                                <FiCheckCircle className="w-3 h-3 text-emerald-600" />
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-2xs">
+                                <FiCheckCircle className="w-3 h-3 text-white" />
                                 Ação Concluída
                               </span>
                             )}
