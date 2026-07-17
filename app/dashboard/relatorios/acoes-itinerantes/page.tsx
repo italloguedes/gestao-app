@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdmin, getUserRole } from '@/lib/models/User';
+import { updateViagemStatus, createViagem } from '@/lib/viagens-service';
 import {
   FiMapPin,
   FiTrendingUp,
@@ -118,6 +120,9 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AcoesItinerantesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const userRole = getUserRole(user);
+  const userIsSuperAdmin = isSuperAdmin(userRole);
+
   const [loading, setLoading] = useState(true);
   const [acoes, setAcoes] = useState<AcaoData[]>([]);
   const [statusData, setStatusData] = useState<StatusData[]>([]);
@@ -136,6 +141,7 @@ export default function AcoesItinerantesPage() {
   // Estados adicionais para destaque de Ações Concluídas
   const [viagensConcluidasSet, setViagensConcluidasSet] = useState<Set<string>>(new Set());
   const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'em_andamento'>('todas');
+  const [togglingAcao, setTogglingAcao] = useState<string | null>(null);
 
   // Função para verificar se uma ação itinerante está concluída
   const checkIsConcluida = useCallback((acao: AcaoData) => {
@@ -150,6 +156,72 @@ export default function AcoesItinerantesPage() {
     }
     return false;
   }, [viagensConcluidasSet]);
+
+  // Alternar conclusão da ação diretamente pelo relatório (Exclusivo SuperAdmin)
+  const handleToggleConcluirAcao = async (acaoNome: string) => {
+    if (!userIsSuperAdmin) {
+      alert('Apenas SuperAdmins podem alterar o status de conclusão da ação.');
+      return;
+    }
+
+    setTogglingAcao(acaoNome);
+    const nomeNorm = acaoNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const isCurrentlyConcluida = Array.from(viagensConcluidasSet).some(vName => vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm)));
+    const newStatus = isCurrentlyConcluida ? 'em_andamento' : 'concluida';
+
+    try {
+      const { data: existingViagens } = await supabase
+        .from('viagens')
+        .select('id, titulo, municipio')
+        .or(`titulo.ilike.%${acaoNome}%,municipio.ilike.%${acaoNome}%`);
+
+      if (existingViagens && existingViagens.length > 0) {
+        for (const v of existingViagens) {
+          await updateViagemStatus(v.id, newStatus);
+        }
+      } else {
+        const municipioExtraido = acaoNome.replace(/^(Ação|Assembleia)\s+Itinerante\s*[-–—]?\s*/i, '').trim() || acaoNome;
+        await createViagem(
+          {
+            titulo: acaoNome,
+            municipio: municipioExtraido,
+            local_evento: 'Ação Itinerante',
+            setor: 'DIRETORIA GERAL',
+            data_ida: new Date().toISOString(),
+            data_retorno: new Date().toISOString(),
+            dias_acao: 1,
+            status: newStatus,
+            objetivo: `Ação Itinerante ${acaoNome} definida como ${newStatus} por SuperAdmin via relatório.`,
+            responsavel_nome: '',
+            meta_atendimentos: 0,
+            orcamento_estimado: 0,
+            transporte_info: ''
+          },
+          [],
+          []
+        );
+      }
+
+      setViagensConcluidasSet(prev => {
+        const next = new Set(prev);
+        if (newStatus === 'concluida') {
+          next.add(nomeNorm);
+        } else {
+          for (const vName of Array.from(next)) {
+            if (vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm))) {
+              next.delete(vName);
+            }
+          }
+        }
+        return next;
+      });
+    } catch (err: any) {
+      console.error('Erro ao alterar status da ação:', err);
+      alert('Erro ao atualizar status da ação: ' + (err.message || 'Ocorreu um erro inesperado.'));
+    } finally {
+      setTogglingAcao(null);
+    }
+  };
 
   // Pre-load logo as base64
   useEffect(() => {
@@ -1499,6 +1571,7 @@ export default function AcoesItinerantesPage() {
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Em Andamento</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Cancelados</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% Conclusão</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Relatórios</th>
                 </tr>
               </thead>
@@ -1811,6 +1884,44 @@ export default function AcoesItinerantesPage() {
                               {isConcluida && <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600 inline-block" />}
                             </span>
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {isConcluida ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                Concluída
+                              </span>
+                              {userIsSuperAdmin && (
+                                <button
+                                  onClick={() => handleToggleConcluirAcao(acao.nome)}
+                                  disabled={togglingAcao === acao.nome}
+                                  title="Clique para desmarcar conclusão (Exclusivo SuperAdmin)"
+                                  className="px-2 py-0.5 text-[10px] font-bold text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 hover:border-rose-200 rounded-md transition-all cursor-pointer"
+                                >
+                                  {togglingAcao === acao.nome ? '...' : 'Reabrir'}
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1.5">
+                              {userIsSuperAdmin ? (
+                                <button
+                                  onClick={() => handleToggleConcluirAcao(acao.nome)}
+                                  disabled={togglingAcao === acao.nome}
+                                  title="Clique para definir esta ação como Concluída (Exclusivo SuperAdmin)"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
+                                >
+                                  <FiCheckCircle className="w-3.5 h-3.5" />
+                                  {togglingAcao === acao.nome ? 'Salvando...' : 'Marcar Concluída'}
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                  <FiClock className="w-3 h-3 text-amber-600" /> Em Andamento
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1.5">
