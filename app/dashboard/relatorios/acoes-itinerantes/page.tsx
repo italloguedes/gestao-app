@@ -138,24 +138,37 @@ export default function AcoesItinerantesPage() {
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
-  // Estados adicionais para destaque de Ações Concluídas
+  // Estados adicionais para destaque de Ações Concluídas e Reabertas
   const [viagensConcluidasSet, setViagensConcluidasSet] = useState<Set<string>>(new Set());
+  const [viagensReabertasSet, setViagensReabertasSet] = useState<Set<string>>(new Set());
   const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'nao_concluidas' | 'pendentes' | 'em_andamento'>('todas');
   const [togglingAcao, setTogglingAcao] = useState<string | null>(null);
 
   // Função para verificar se uma ação itinerante está concluída
   const checkIsConcluida = useCallback((acao: AcaoData) => {
-    if (acao.total > 0 && acao.emAndamento === 0 && (acao.concluidos === acao.total || acao.percentualConclusao >= 100)) {
-      return true;
-    }
     const nomeNorm = acao.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    // 1. Se estiver explicitamente definida como Em Andamento / Reaberta no banco, NÃO é concluída
+    for (const rName of Array.from(viagensReabertasSet)) {
+      if (rName && (nomeNorm.includes(rName) || rName.includes(nomeNorm))) {
+        return false;
+      }
+    }
+
+    // 2. Se estiver explicitamente definida como Concluída no banco, É concluída
     for (const vName of Array.from(viagensConcluidasSet)) {
       if (vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm))) {
         return true;
       }
     }
+
+    // 3. Fallback: Se 100% dos atendimentos forem concluídos sem pendências
+    if (acao.total > 0 && acao.emAndamento === 0 && (acao.concluidos === acao.total || acao.percentualConclusao >= 100)) {
+      return true;
+    }
+
     return false;
-  }, [viagensConcluidasSet]);
+  }, [viagensConcluidasSet, viagensReabertasSet]);
 
   // Alternar conclusão da ação diretamente pelo relatório (Exclusivo SuperAdmin)
   const handleToggleConcluirAcao = async (acaoNome: string) => {
@@ -166,7 +179,7 @@ export default function AcoesItinerantesPage() {
 
     setTogglingAcao(acaoNome);
     const nomeNorm = acaoNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    const isCurrentlyConcluida = Array.from(viagensConcluidasSet).some(vName => vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm)));
+    const isCurrentlyConcluida = checkIsConcluida({ nome: acaoNome } as any);
     const newStatus = isCurrentlyConcluida ? 'em_andamento' : 'concluida';
 
     try {
@@ -210,6 +223,20 @@ export default function AcoesItinerantesPage() {
           for (const vName of Array.from(next)) {
             if (vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm))) {
               next.delete(vName);
+            }
+          }
+        }
+        return next;
+      });
+
+      setViagensReabertasSet(prev => {
+        const next = new Set(prev);
+        if (newStatus === 'em_andamento') {
+          next.add(nomeNorm);
+        } else {
+          for (const rName of Array.from(next)) {
+            if (rName && (nomeNorm.includes(rName) || rName.includes(nomeNorm))) {
+              next.delete(rName);
             }
           }
         }
@@ -288,12 +315,24 @@ export default function AcoesItinerantesPage() {
       try {
         const { data: vData } = await supabase.from('viagens').select('titulo, municipio, status');
         if (vData) {
-          const setV = new Set<string>();
-          vData.filter((v: any) => v.status === 'concluida').forEach((v: any) => {
-            if (v.municipio) setV.add(v.municipio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
-            if (v.titulo) setV.add(v.titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
+          const setConc = new Set<string>();
+          const setReab = new Set<string>();
+
+          vData.forEach((v: any) => {
+            const munNorm = v.municipio ? v.municipio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+            const titNorm = v.titulo ? v.titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+
+            if (v.status === 'concluida') {
+              if (munNorm) setConc.add(munNorm);
+              if (titNorm) setConc.add(titNorm);
+            } else {
+              if (munNorm) setReab.add(munNorm);
+              if (titNorm) setReab.add(titNorm);
+            }
           });
-          setViagensConcluidasSet(setV);
+
+          setViagensConcluidasSet(setConc);
+          setViagensReabertasSet(setReab);
         }
       } catch (errV) {
         console.error('Erro ao consultar viagens para status de conclusão:', errV);
