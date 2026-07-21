@@ -207,11 +207,16 @@ export default function AgendamentosHojePage() {
         .from("agendamentos")
         .update({
           nome: updatedAppointment.nome,
+          email: updatedAppointment.email,
+          cpf: updatedAppointment.cpf,
           telefone: updatedAppointment.telefone,
+          data: updatedAppointment.data,
+          horario: updatedAppointment.horario,
           data_nascimento: updatedAppointment.data_nascimento,
           observacoes: updatedAppointment.observacoes,
           atendimento_preferencial: updatedAppointment.atendimento_preferencial,
-          posto: updatedAppointment.posto
+          posto: updatedAppointment.posto,
+          status: updatedAppointment.status,
         })
         .eq("id", updatedAppointment.id);
 

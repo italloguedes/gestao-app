@@ -350,12 +350,25 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
       } else if (action === 'edit') {
         console.log('🔄 EditAppointmentModal: Editando agendamento...');
+        const dbPayload = {
+          nome: updatedAppointment.nome,
+          email: updatedAppointment.email,
+          cpf: updatedAppointment.cpf,
+          telefone: updatedAppointment.telefone,
+          data: updatedAppointment.data,
+          horario: updatedAppointment.horario,
+          data_nascimento: updatedAppointment.data_nascimento,
+          atendimento_preferencial: updatedAppointment.atendimento_preferencial,
+          status: updatedAppointment.status,
+          posto: updatedAppointment.posto,
+          observacoes: updatedAppointment.observacoes,
+        };
         const { error } = await supabase
           .from('agendamentos')
-          .update(updatedAppointment)
+          .update(dbPayload)
           .eq('id', appointment.id);
         if (error) throw error;
-        onSave(updatedAppointment);
+        await onSave(updatedAppointment);
         setMessage('Agendamento atualizado com sucesso!');
       } else if (action === 'delete') {
         if (onDelete) {
