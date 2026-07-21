@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
         data_nascimento,
         atendimento_preferencial: atendimento_preferencial || false,
         posto: postoAtual,
-        status: 'confirmado'
+        status: 'confirmado',
+        user_id: authCheck.user?.id || null
       })
       .select()
       .single();

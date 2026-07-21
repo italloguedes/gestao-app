@@ -538,6 +538,10 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                         <span className="text-blue-500 text-xs font-semibold">Telefone</span>
                         <p className="text-blue-800 font-medium">{appointment.telefone}</p>
                       </div>
+                      <div className="bg-white/60 rounded-lg px-3 py-2 col-span-2">
+                        <span className="text-blue-500 text-xs font-semibold">Criado por</span>
+                        <p className="text-blue-800 font-medium truncate">{appointment.criado_por_nome || 'Agendamento Online'}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -609,6 +613,12 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
               {/* EDIT - Edição completa */}
               {action === 'edit' && (
                 <div className="space-y-4">
+                  {appointment.criado_por_nome && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-600 flex items-center gap-2">
+                      <FiUser className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Criado por: <strong className="text-slate-800">{appointment.criado_por_nome}</strong></span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Data</label>

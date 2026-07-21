@@ -61,6 +61,8 @@ interface Agendamento {
   locked_by?: string;
   locked_at?: string;
   posto?: string;
+  user_id?: string;
+  criado_por_nome?: string;
 }
 
 const POSTOS = [
@@ -133,14 +135,49 @@ export default function AgendamentosHojePage() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, locked_by, locked_at, posto")
+        .select("id, nome, email, cpf, telefone, data, horario, status, data_nascimento, tipo_cancelamento, atendimento_preferencial, observacoes, locked_by, locked_at, posto, user_id")
         .eq("data", selectedDate)
         .eq("posto", selectedPosto)
         .in("status", ["confirmado", "cancelado", "bloqueado", "concluido", "ausente", "chamando"])
         .order("horario", { ascending: true });
 
       if (error) throw error;
-      setAgendamentos(data || []);
+
+      const agendamentosData = data || [];
+      const userIds = Array.from(new Set(agendamentosData.map((a: any) => a.user_id).filter(Boolean)));
+
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("auth_id, name, email")
+          .in("auth_id", userIds);
+
+        if (usersData) {
+          usersData.forEach((u: any) => {
+            if (u.auth_id) {
+              userMap[u.auth_id] = u.name || u.email || 'Usuário';
+            }
+          });
+        }
+      }
+
+      const agendamentosComCriador = agendamentosData.map((a: any) => {
+        let criadoPor = 'Agendamento Online';
+        if (a.user_id && userMap[a.user_id]) {
+          criadoPor = userMap[a.user_id];
+        } else if (a.user_id) {
+          criadoPor = 'Usuário Cadastrado';
+        } else if (a.observacoes && a.observacoes.toLowerCase().includes('pré-agendamento')) {
+          criadoPor = 'Pré-Agendamento';
+        }
+        return {
+          ...a,
+          criado_por_nome: criadoPor
+        };
+      });
+
+      setAgendamentos(agendamentosComCriador);
     } catch (err) {
       console.error("Erro ao carregar agendamentos:", err);
     } finally {
@@ -315,12 +352,12 @@ export default function AgendamentosHojePage() {
 
 
       // --- TABELA ---
-      const tableColumn = ['Horário', 'Nome', 'CPF', 'Data', 'Telefone', 'Status'];
+      const tableColumn = ['Horário', 'Nome', 'CPF', 'Criado Por', 'Telefone', 'Status'];
       const tableRows = filteredAgendamentos.map(a => [
         a.horario?.substring(0, 5) || '',
         a.nome,
         a.cpf,
-        formatDate(a.data),
+        a.criado_por_nome || 'Online',
         a.telefone,
         a.status.charAt(0).toUpperCase() + a.status.slice(1),
       ]);
@@ -349,7 +386,7 @@ export default function AgendamentosHojePage() {
           0: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }, // Horário
           1: { cellWidth: 'auto', halign: 'left' },                  // Nome
           2: { cellWidth: 30, halign: 'center' },                     // CPF
-          3: { cellWidth: 22, halign: 'center' },                     // Data
+          3: { cellWidth: 30, halign: 'center' },                     // Criado Por
           4: { cellWidth: 28, halign: 'center' },                     // Telefone
           5: { cellWidth: 22, halign: 'center' },                     // Status
         },
@@ -912,6 +949,12 @@ export default function AgendamentosHojePage() {
                                     <FiPhone className="w-3.5 h-3.5 mr-2 opacity-75" />
                                     {agendamento.telefone}
                                   </div>
+                                  {agendamento.criado_por_nome && (
+                                    <div className="flex items-center text-slate-500 font-medium text-xs pt-1.5 border-t border-slate-100" title={`Agendamento criado por: ${agendamento.criado_por_nome}`}>
+                                      <FiUser className="w-3.5 h-3.5 mr-1.5 text-emerald-600 shrink-0" />
+                                      <span className="truncate">Criado por: <strong className="text-slate-700">{agendamento.criado_por_nome}</strong></span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Ações */}

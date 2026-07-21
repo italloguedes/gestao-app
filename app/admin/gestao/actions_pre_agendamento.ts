@@ -226,7 +226,8 @@ export async function approvePreScheduling(preAgendamentoId: string, scheduleDat
                 status: 'confirmado',
                 email: 'nao_informado@exemplo.com',
                 data_nascimento: '2000-01-01',
-                observacoes: 'Agendamento via Pré-Agendamento'
+                observacoes: 'Agendamento via Pré-Agendamento',
+                user_id: session.user.id
             });
 
         if (insertError) throw insertError;
