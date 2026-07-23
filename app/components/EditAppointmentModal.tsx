@@ -182,7 +182,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
         const { error: updateError } = await supabase
           .from('agendamentos')
-          .update({ status: 'concluido' })
+          .update({ status: 'concluido', locked_by: null, locked_at: null })
           .eq('id', appointment.id);
         if (updateError) {
           console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
@@ -299,7 +299,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         try {
           const { error: updateError } = await supabase
             .from('agendamentos')
-            .update({ status: 'ausente', tipo_cancelamento: motivo, observacoes: `Ausente - Motivo: ${motivo}` })
+            .update({ status: 'ausente', tipo_cancelamento: motivo, observacoes: `Ausente - Motivo: ${motivo}`, locked_by: null, locked_at: null })
             .eq('id', appointment.id);
           if (updateError) {
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
@@ -316,7 +316,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         console.log('🔄 EditAppointmentModal: Concluindo atendimento...');
         const { error: updateError } = await supabase
           .from('agendamentos')
-          .update({ status: 'concluido' })
+          .update({ status: 'concluido', locked_by: null, locked_at: null })
           .eq('id', appointment.id);
         if (updateError) {
           console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
@@ -335,7 +335,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         try {
           const { error: updateError } = await supabase
             .from('agendamentos')
-            .update({ status: 'cancelado', tipo_cancelamento: motivo, observacoes: `Cancelado - Motivo: ${motivo}` })
+            .update({ status: 'cancelado', tipo_cancelamento: motivo, observacoes: `Cancelado - Motivo: ${motivo}`, locked_by: null, locked_at: null })
             .eq('id', appointment.id);
           if (updateError) {
             console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
