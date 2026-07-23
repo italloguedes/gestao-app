@@ -908,12 +908,6 @@ export default function AgendamentosHojePage() {
 
                         {!isEmpty ? (
                           <div className="flex items-center gap-2">
-                            {hasBeingAttended && (
-                              <span className="px-2.5 py-1 text-xs rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center gap-1.5 animate-pulse">
-                                <FiUser className="w-3.5 h-3.5" />
-                                Em Atendimento
-                              </span>
-                            )}
                             {agendamentosHorario.map((agendamento) => {
                               // Badges de status compactos
                               const inAtt = isBeingAttended(agendamento);
@@ -947,30 +941,18 @@ export default function AgendamentosHojePage() {
                             {agendamentosHorario.map((agendamento: Agendamento, index: number) => {
                               const inAttendance = isBeingAttended(agendamento);
                               const isMine = agendamento.locked_by === user?.id;
-                              const attendantName = isMine ? "Você" : (agendamento.locked_by_nome || "Outro atendente");
+                              const attendantName = isMine ? "você" : (agendamento.locked_by_nome || "outro atendente");
 
                               return (
                                 <div key={agendamento.id} className={`${index > 0 ? 'border-t border-slate-100 pt-4' : ''}`}>
-                                  {/* Banner destacado para Em Atendimento */}
-                                  {inAttendance && (
-                                    <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center justify-between shadow-md mb-3 border border-indigo-400/30 animate-pulse">
-                                      <div className="flex items-center gap-2 truncate">
-                                        <FiUser className="w-4 h-4 shrink-0 text-indigo-200" />
-                                        <span className="truncate">
-                                          Em atendimento por <strong>{attendantName}</strong>
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-
                                   <div className="flex items-center justify-between mb-3">
                                     {/* Status Badge Full */}
                                     {(() => {
                                       if (inAttendance) {
                                         return (
-                                          <span className="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-300 inline-flex items-center gap-1.5 shadow-sm">
-                                            <FiRefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                                            Em Atendimento
+                                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm inline-flex items-center gap-1.5" title={`Em atendimento por: ${attendantName}`}>
+                                            <FiRefreshCw className="w-3.5 h-3.5 animate-spin text-white/90" />
+                                            Em atendimento por <strong>{attendantName}</strong>
                                           </span>
                                         );
                                       }
@@ -1087,9 +1069,7 @@ export default function AgendamentosHojePage() {
                                         }`}
                                       >
                                         <FiCheckCircle className="w-4 h-4 mr-2" />
-                                        {inAttendance
-                                          ? (isMine ? "Continuar Atendimento" : `Em Atendimento por ${attendantName}`)
-                                          : "Iniciar Atendimento"}
+                                        {inAttendance && isMine ? "Continuar Atendimento" : "Iniciar Atendimento"}
                                       </button>
                                     )}
                                     {!isRecepcao && (
