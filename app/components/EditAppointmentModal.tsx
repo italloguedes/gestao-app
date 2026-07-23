@@ -71,18 +71,22 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isOpen || action !== 'iniciar') return;
-      if (event.key === 'F7') {
+      if (!isOpen) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleClose();
+      } else if (action === 'iniciar' && event.key === 'F7') {
         event.preventDefault();
         event.stopPropagation();
         copyPhone();
-      } else if (event.key === 'F8') {
+      } else if (action === 'iniciar' && event.key === 'F8') {
         event.preventDefault();
         event.stopPropagation();
         copyCPF();
       }
     };
-    if (isOpen && action === 'iniciar') {
+    if (isOpen) {
       window.addEventListener('keydown', handleKeyDown, true);
     }
     return () => {
@@ -713,6 +717,23 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   </div>
                 </div>
               )}
+
+              {/* Teclas de Atalho */}
+              <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/80 px-4 py-2.5 rounded-xl border border-slate-200/80 mt-2 mb-1">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px] font-bold text-slate-700 shadow-2xs">Esc</kbd> Fechar modal
+                </span>
+                {action === 'iniciar' && (
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px] font-bold text-slate-700 shadow-2xs">F7</kbd> Copiar Tel
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px] font-bold text-slate-700 shadow-2xs">F8</kbd> Copiar CPF
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Botões */}
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
