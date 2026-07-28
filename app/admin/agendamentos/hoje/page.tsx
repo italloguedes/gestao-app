@@ -199,18 +199,26 @@ export default function AgendamentosHojePage() {
   };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
+    // Atualização otimista imediata (0ms) das cores e status do card
+    setAgendamentos(prev => prev.map(a =>
+      a.id === id
+        ? { ...a, status: newStatus as AppointmentStatus, locked_by: undefined, locked_at: undefined, locked_by_nome: undefined }
+        : a
+    ));
+
     try {
       const { error } = await supabase
         .from("agendamentos")
-        .update({ status: newStatus as AppointmentStatus })
+        .update({ status: newStatus as AppointmentStatus, locked_by: null, locked_at: null })
         .eq("id", id);
 
       if (error) throw error;
-      await loadAgendamentos();
       setIsModalOpen(false);
+      loadAgendamentos();
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       alert("Erro ao atualizar status do agendamento.");
+      loadAgendamentos();
     }
   };
 
@@ -1024,22 +1032,41 @@ export default function AgendamentosHojePage() {
                                             return;
                                           }
 
-                                          // Open modal INSTANTLY (0ms delay!)
-                                          setSelectedAppointment(agendamento);
+                                          const currentUserName = user.user_metadata?.name || user.user_metadata?.full_name || 'você';
+                                          const lockTime = new Date().toISOString();
+
+                                          // 1. Atualização OTIMISTA imediata (0ms) da cor do card e do atendente no grid
+                                          setAgendamentos(prev => prev.map(a =>
+                                            a.id === agendamento.id
+                                              ? { ...a, locked_by: user.id, locked_at: lockTime, locked_by_nome: currentUserName }
+                                              : a
+                                          ));
+
+                                          // 2. Abrir modal INSTANTANEAMENTE (0ms)
+                                          const updatedAgendamento = {
+                                            ...agendamento,
+                                            locked_by: user.id,
+                                            locked_at: lockTime,
+                                            locked_by_nome: currentUserName
+                                          };
+                                          setSelectedAppointment(updatedAgendamento);
                                           setModalAction("iniciar");
                                           setIsModalOpen(true);
 
-                                          // Lock in background if not already locked by user
+                                          // 3. Bloqueio no banco em background
                                           if (agendamento.locked_by !== user.id) {
                                             supabase
                                               .from("agendamentos")
                                               .update({
                                                 locked_by: user.id,
-                                                locked_at: new Date().toISOString()
+                                                locked_at: lockTime
                                               })
                                               .eq("id", agendamento.id)
                                               .then(({ error }: { error: any }) => {
-                                                if (error) console.error("Error locking appointment:", error);
+                                                if (error) {
+                                                  console.error("Error locking appointment:", error);
+                                                  loadAgendamentos();
+                                                }
                                               });
                                           }
                                         }}
