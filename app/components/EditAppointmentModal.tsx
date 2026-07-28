@@ -242,7 +242,8 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
 
         if (emailEditado) {
-          supabase.auth.getSession().then(({ data: { session } }) => {
+          supabase.auth.getSession().then(({ data }: { data: any }) => {
+            const session = data?.session;
             fetch('/api/send-email', {
               method: 'POST',
               headers: {

@@ -1038,7 +1038,7 @@ export default function AgendamentosHojePage() {
                                                 locked_at: new Date().toISOString()
                                               })
                                               .eq("id", agendamento.id)
-                                              .then(({ error }) => {
+                                              .then(({ error }: { error: any }) => {
                                                 if (error) console.error("Error locking appointment:", error);
                                               });
                                           }
