@@ -1016,48 +1016,31 @@ export default function AgendamentosHojePage() {
 
                                     {agendamento.status === "confirmado" && !isRecepcao && (
                                       <button
-                                        onClick={async () => {
+                                        onClick={() => {
                                           if (!user) return;
-                                          try {
-                                            const { data: currentData, error: fetchError } = await supabase
-                                              .from("agendamentos")
-                                              .select("locked_by, locked_at")
-                                              .eq("id", agendamento.id)
-                                              .single();
+                                          if (agendamento.locked_by && agendamento.locked_by !== user.id) {
+                                            const lockedByName = (agendamento as any).locked_by_nome || "outro atendente";
+                                            alert(`Este agendamento está sendo atendido por: ${lockedByName}`);
+                                            return;
+                                          }
 
-                                            if (fetchError) throw fetchError;
+                                          // Open modal INSTANTLY (0ms delay!)
+                                          setSelectedAppointment(agendamento);
+                                          setModalAction("iniciar");
+                                          setIsModalOpen(true);
 
-                                            if (currentData.locked_by && currentData.locked_by !== user.id) {
-                                              const { data: userData } = await supabase
-                                                .from("users")
-                                                .select("name")
-                                                .eq("auth_id", currentData.locked_by)
-                                                .single();
-
-                                              const lockedByName = userData?.name || "Outro usuário";
-                                              alert(`Este agendamento está sendo atendido por: ${lockedByName}`);
-                                              return;
-                                            }
-
-                                            // Lock
-                                            const { error: lockError } = await supabase
+                                          // Lock in background if not already locked by user
+                                          if (agendamento.locked_by !== user.id) {
+                                            supabase
                                               .from("agendamentos")
                                               .update({
                                                 locked_by: user.id,
                                                 locked_at: new Date().toISOString()
                                               })
-                                              .eq("id", agendamento.id);
-
-                                            if (lockError) throw lockError;
-
-                                            // Success
-                                            setSelectedAppointment(agendamento);
-                                            setModalAction("iniciar");
-                                            setIsModalOpen(true);
-
-                                          } catch (error) {
-                                            console.error("Error locking:", error);
-                                            alert("Erro ao iniciar atendimento.");
+                                              .eq("id", agendamento.id)
+                                              .then(({ error }) => {
+                                                if (error) console.error("Error locking appointment:", error);
+                                              });
                                           }
                                         }}
                                         className={`w-full px-3.5 py-2 text-xs rounded-lg text-white font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs ${

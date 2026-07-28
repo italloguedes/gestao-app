@@ -184,78 +184,75 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           setLoading(false);
           return;
         }
-        const { error: updateError } = await supabase
-          .from('agendamentos')
-          .update({ status: 'concluido', locked_by: null, locked_at: null })
-          .eq('id', appointment.id);
-        if (updateError) {
-          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateError);
-          throw updateError;
-        }
-        onStatusChange(appointment.id, 'concluido');
+
         const now = new Date();
         const diaAtual = now.toISOString().split('T')[0];
         const horario = now.toTimeString().split(' ')[0];
-        let atendenteNome = 'Não identificado';
-        if (user) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('name')
-            .eq('auth_id', user.id)
-            .single();
-          if (userError) {
-            console.error('Erro ao buscar dados do atendente:', userError);
-          } else if (userData?.name) {
-            atendenteNome = userData.name;
-          }
-        }
-        const { error: atendimentoError } = await supabase.from('atendimentos').insert([
-          {
-            nome: formData.get('nome') || appointment.nome,
-            cpf: formData.get('cpf') || appointment.cpf,
-            email: formData.get('email') || appointment.email,
-            solicitante: formData.get('solicitante') || '',
-            horario,
-            dia_atual: diaAtual,
-            usuario_id: appointment.usuario_id || appointment.user_id,
-            atendente_nome: atendenteNome,
-            protocolo,
-            status: 'em_andamento',
-            atendimento_preferencial: appointment.atendimento_preferencial || false,
-          },
+        const atendenteNome = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atendente';
+        const nomeEditado = formData.get('nome') || appointment.nome;
+        const emailEditado = formData.get('email') || appointment.email;
+
+        // Executar atualização do status e criação do atendimento em paralelo
+        const [updateRes, insertRes] = await Promise.all([
+          supabase
+            .from('agendamentos')
+            .update({ status: 'concluido', locked_by: null, locked_at: null })
+            .eq('id', appointment.id),
+          supabase
+            .from('atendimentos')
+            .insert([
+              {
+                nome: nomeEditado,
+                cpf: cpfEditado,
+                email: emailEditado,
+                solicitante: formData.get('solicitante') || '',
+                horario,
+                dia_atual: diaAtual,
+                usuario_id: appointment.usuario_id || appointment.user_id,
+                atendente_nome: atendenteNome,
+                protocolo,
+                status: 'em_andamento',
+                atendimento_preferencial: appointment.atendimento_preferencial || false,
+              },
+            ])
+            .select('id')
+            .single()
         ]);
-        if (atendimentoError) {
-          console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', atendimentoError);
-          throw atendimentoError;
+
+        if (updateRes.error) {
+          console.error('❌ EditAppointmentModal: Erro ao atualizar status:', updateRes.error);
+          throw updateRes.error;
+        }
+        if (insertRes.error) {
+          console.error('❌ EditAppointmentModal: Erro ao criar atendimento:', insertRes.error);
+          throw insertRes.error;
         }
 
-        // Registrar histórico de criação
-        const cpfFinalHist = formData.get('cpf') || appointment.cpf;
-        const { data: novoAte } = await supabase.from('atendimentos').select('id').eq('cpf', cpfFinalHist).order('created_at', { ascending: false }).limit(1).single();
-        if (novoAte?.id && user) {
-          await registrarHistorico({
-            atendimento_id: novoAte.id,
+        onStatusChange(appointment.id, 'concluido');
+        const novoAteId = insertRes.data?.id;
+
+        // Histórico e envio de e-mail assíncronos (não-bloqueantes para resposta instantânea)
+        if (novoAteId && user) {
+          registrarHistorico({
+            atendimento_id: novoAteId,
             acao: 'criacao',
             atendente_id: user.id,
             atendente_nome: atendenteNome,
-          });
+          }).catch(err => console.error('Erro historico background:', err));
         }
 
-        try {
-          const nomeEditado = formData.get('nome') || appointment.nome;
-          const emailEditado = formData.get('email') || appointment.email;
-          const cpfFinal = formData.get('cpf') || appointment.cpf;
-          const { data: { session } } = await supabase.auth.getSession();
-          const res = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': session ? `Bearer ${session.access_token}` : ''
-            },
-            body: JSON.stringify({
-              to: emailEditado,
-              subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
-              html: `
+        if (emailEditado) {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            fetch('/api/send-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': session ? `Bearer ${session.access_token}` : ''
+              },
+              body: JSON.stringify({
+                to: emailEditado,
+                subject: `Atendimento Realizado, ${nomeEditado}! 🎉`,
+                html: `
   <div style="background: #fafbfc; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
     <div style="text-align: center; margin-bottom: 24px;">
       <img src="https://salasensorial.vercel.app/logoautismo.png" alt="Logo Autismo" style="max-width: 120px; margin-bottom: 8px;" />
@@ -269,7 +266,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
       </p>
       <p style="margin-bottom: 10px;">
         <b>Nome:</b> ${nomeEditado}<br>
-        <b>CPF:</b> ${cpfFinal}<br>
+        <b>CPF:</b> ${cpfEditado}<br>
         <b>Número de Protocolo:</b> ${protocolo}
       </p>
       <p style="margin-bottom: 0;">
@@ -281,18 +278,14 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
     </div>
   </div>
 `,
-            }),
+              }),
+            }).catch(err => console.error('Erro envio email background:', err));
           });
-          const result = await res.json();
-          if (res.ok) {
-            setMessage('Atendimento concluído com sucesso! E-mail enviado.');
-          } else {
-            setMessage('Atendimento concluído, mas erro ao enviar e-mail: ' + result.error);
-          }
-        } catch (err) {
-          setMessage('Atendimento concluído, mas houve erro ao enviar o e-mail.');
         }
-        console.log('✅ EditAppointmentModal: Atendimento criado e concluído');
+
+        console.log('✅ EditAppointmentModal: Atendimento concluído instantaneamente');
+        onClose();
+        return;
       } else if (action === 'ausente') {
         console.log('🔄 EditAppointmentModal: Marcando como ausente...');
         if (!motivo.trim()) {
@@ -311,7 +304,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           }
           onStatusChange(appointment.id, 'ausente');
           console.log('✅ EditAppointmentModal: Status atualizado para ausente');
-          setMessage('Atendimento marcado como ausente com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao marcar como ausente:', error);
           throw error;
@@ -328,7 +320,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         }
         onStatusChange(appointment.id, 'concluido');
         console.log('✅ EditAppointmentModal: Status atualizado para concluido');
-        setMessage('Atendimento concluído com sucesso!');
       } else if (action === 'cancelar') {
         console.log('🔄 EditAppointmentModal: Cancelando atendimento...');
         if (!motivo.trim()) {
@@ -347,7 +338,6 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           }
           onStatusChange(appointment.id, 'cancelado');
           console.log('✅ EditAppointmentModal: Status atualizado para cancelado');
-          setMessage('Atendimento cancelado com sucesso!');
         } catch (error) {
           console.error('❌ EditAppointmentModal: Erro ao cancelar:', error);
           throw error;
@@ -373,18 +363,13 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           .eq('id', appointment.id);
         if (error) throw error;
         await onSave(updatedAppointment);
-        setMessage('Agendamento atualizado com sucesso!');
       } else if (action === 'delete') {
         if (onDelete) {
           await onDelete(appointment.id);
-          setMessage('Agendamento excluído com sucesso!');
         }
       }
 
-      setTimeout(() => {
-        console.log('🔄 EditAppointmentModal: Fechando modal após sucesso');
-        onClose();
-      }, 2000);
+      onClose();
     } catch (err) {
       console.error('❌ EditAppointmentModal: Erro no handleSubmit:', err);
       console.error('❌ Stack trace:', err instanceof Error ? err.stack : 'No stack trace available');
