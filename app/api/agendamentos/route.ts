@@ -54,19 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar quantos agendamentos já existem no mesmo horário e posto
+    // Verificar quantos agendamentos ativos já existem no mesmo horário e posto
     const postoAtual = posto || 'Sala Sensorial';
     const { data: existingAppointments, error: checkError } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', data)
       .eq('horario', horario)
-      .eq('posto', postoAtual);
+      .eq('posto', postoAtual)
+      .in('status', ['confirmado', 'bloqueado', 'concluido', 'ausente', 'chamando']);
 
     if (checkError) {
       console.error('Erro ao verificar agendamentos existentes:', checkError);
       return NextResponse.json(
-        { error: 'Erro ao verificar disponibilidade' },
+        { error: 'Erro ao verificar disponibilidade de horário' },
         { status: 500 }
       );
     }
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Permitir apenas 1 agendamento por horário por posto
     if (existingAppointments && existingAppointments.length >= 1) {
       return NextResponse.json(
-        { error: 'Este horário já está completo neste posto (máximo 1 agendamento por horário)' },
+        { error: `O horário ${horario} no posto '${postoAtual}' acabou de ser reservado por outro atendente. Por favor, escolha outro horário livre.` },
         { status: 409 }
       );
     }
