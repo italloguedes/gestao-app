@@ -111,7 +111,7 @@ export default function CreateAppointmentModal({
           .select("horario")
           .eq("data", selectedDate)
           .eq("posto", posto)
-          .in("status", ["confirmado", "bloqueado", "concluido", "ausente", "chamando"]);
+          .in("status", ["confirmado", "bloqueado", "concluido", "ausente", "chamando", "cancelado"]);
 
         if (data) {
           const slots = data
