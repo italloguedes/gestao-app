@@ -170,6 +170,24 @@ export default function CreateAppointmentModal({
     return slots;
   }, []);
 
+  // Encontrar o próximo horário livre após o slot em conflito
+  const findNextAvailableSlot = (conflictSlot: string): string | null => {
+    const idx = HORARIOS.indexOf(conflictSlot);
+    if (idx === -1) return HORARIOS.find(s => !liveOccupiedSlots.includes(s)) || null;
+
+    // Buscar para frente a partir do horário em conflito
+    for (let i = idx + 1; i < HORARIOS.length; i++) {
+      if (!liveOccupiedSlots.includes(HORARIOS[i])) return HORARIOS[i];
+    }
+    // Se não encontrar depois, buscar antes
+    for (let i = idx - 1; i >= 0; i--) {
+      if (!liveOccupiedSlots.includes(HORARIOS[i])) return HORARIOS[i];
+    }
+    return null;
+  };
+
+  const [autoSwitched, setAutoSwitched] = useState<{ from: string; to: string } | null>(null);
+
   const validate = () => {
     const errs: typeof errors = {};
     const cleanCpf = cpf.replace(/\D/g, "");
@@ -196,11 +214,22 @@ export default function CreateAppointmentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError("");
+    setAutoSwitched(null);
     if (!validate()) return;
 
+    // Verificação pré-submit: se outro atendente pegou o horário enquanto digitava
     if (liveOccupiedSlots.includes(horario)) {
-      setServerError(`O horário ${horario} acabou de ser reservado por outro atendente. Por favor selecione outro horário livre.`);
-      setErrors(prev => ({ ...prev, horario: "Horário preenchido por outro usuário" }));
+      const nextSlot = findNextAvailableSlot(horario);
+      if (nextSlot) {
+        const oldHorario = horario;
+        setHorario(nextSlot);
+        setAutoSwitched({ from: oldHorario, to: nextSlot });
+        setServerError("");
+        setErrors({});
+      } else {
+        setServerError("Todos os horários do dia estão preenchidos.");
+        setErrors(prev => ({ ...prev, horario: "Sem horários disponíveis" }));
+      }
       return;
     }
 
@@ -231,16 +260,32 @@ export default function CreateAppointmentModal({
       setHorario(selectedTime);
       setErrors({});
       setServerError("");
+      setAutoSwitched(null);
     } catch (error: any) {
       console.error("Erro ao criar agendamento:", error);
-      // PRESERVAR TODOS OS DADOS DIGITADOS (Zero Data Loss)
       const msg = error?.message || "Erro ao criar agendamento. Verifique os dados e tente novamente.";
-      setServerError(msg);
 
+      // Se conflito de horário: auto-trocar para o próximo livre
       if (msg.toLowerCase().includes("horário") || msg.toLowerCase().includes("completo") || msg.toLowerCase().includes("reservado")) {
-        setErrors(prev => ({ ...prev, horario: "Escolha outro horário disponível abaixo" }));
+        // Marcar o slot atual como ocupado no estado local
+        setLiveOccupiedSlots(prev => [...new Set([...prev, horario])]);
+
+        const nextSlot = findNextAvailableSlot(horario);
+        if (nextSlot) {
+          const oldHorario = horario;
+          setHorario(nextSlot);
+          setAutoSwitched({ from: oldHorario, to: nextSlot });
+          setServerError("");
+          setErrors({});
+        } else {
+          setServerError("Todos os horários do dia estão preenchidos.");
+          setErrors(prev => ({ ...prev, horario: "Sem horários disponíveis" }));
+        }
       } else if (msg.toLowerCase().includes("cpf")) {
+        setServerError(msg);
         setErrors(prev => ({ ...prev, cpf: "CPF já cadastrado nesta data" }));
+      } else {
+        setServerError(msg);
       }
     } finally {
       setSubmitting(false);
@@ -265,6 +310,16 @@ export default function CreateAppointmentModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Banner de auto-troca de horário */}
+          {autoSwitched && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-xl flex items-start gap-2.5 text-amber-800 text-sm font-medium animate-fadeIn">
+              <FiAlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-snug">
+                O horário <strong>{autoSwitched.from}</strong> foi reservado por outro atendente. Trocamos automaticamente para <strong>{autoSwitched.to}</strong>. Clique em <strong>&quot;Criar Agendamento&quot;</strong> para confirmar.
+              </div>
+            </div>
+          )}
+
           {/* Banner de erro do servidor */}
           {serverError && (
             <div className="bg-rose-50 border-l-4 border-rose-500 p-3 rounded-xl flex items-start gap-2.5 text-rose-800 text-sm font-medium animate-fadeIn">
