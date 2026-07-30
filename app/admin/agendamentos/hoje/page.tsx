@@ -822,9 +822,9 @@ export default function AgendamentosHojePage() {
 
             </div>
           </div>
-          {/* Tabs de Postos */}
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 mb-6">
-            <div className="flex flex-wrap gap-2">
+          {/* Tabs de Postos - Scroll Horizontal no Mobile */}
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-3 sm:p-4 mb-4 sm:mb-6 overflow-hidden">
+            <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-none no-scrollbar">
               {POSTOS.map((posto) => {
                 const isActive = selectedPosto === posto.id;
                 const colorClasses = {
@@ -843,7 +843,7 @@ export default function AgendamentosHojePage() {
                   <button
                     key={posto.id}
                     onClick={() => setSelectedPosto(posto.id)}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${colorClasses}`}
+                    className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all duration-300 transform hover:-translate-y-0.5 ${colorClasses}`}
                   >
                     {posto.nome}
                   </button>
@@ -852,17 +852,17 @@ export default function AgendamentosHojePage() {
             </div>
           </div>
 
-          {/* Barra de Ações e Filtros */}
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-6">
-            <div className="flex flex-col lg:flex-row gap-6">
+          {/* Barra de Ações e Filtros - Adaptativa no Mobile */}
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 mb-4 sm:mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
               {/* Ações Principais */}
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
                 {!isRecepcao && (
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="group flex items-center px-6 py-3 text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-bold"
+                    className="flex-1 sm:flex-none justify-center group flex items-center px-4 sm:px-6 py-2.5 sm:py-3 text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg font-bold text-xs sm:text-sm"
                   >
-                    <FiPlus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                    <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                     Novo Agendamento
                   </button>
                 )}
@@ -870,45 +870,47 @@ export default function AgendamentosHojePage() {
                 <button
                   onClick={() => setIsReportModalOpen(true)}
                   disabled={agendamentos.length === 0 || actionLoading}
-                  className="flex items-center px-6 py-3 text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none font-bold"
+                  className="flex-1 sm:flex-none justify-center flex items-center px-4 sm:px-6 py-2.5 sm:py-3 text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xs sm:text-sm"
                 >
-                  <FiFileText className="w-5 h-5 mr-2" />
+                  <FiFileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   {actionLoading ? "Gerando..." : "Gerar PDF"}
                 </button>
               </div>
 
               {/* Filtros */}
-              <div className="flex-1 flex flex-wrap gap-3 lg:justify-end">
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border-2 border-slate-200">
-                  <FiFilter className="w-4 h-4 text-slate-600" />
-                  <span className="text-sm font-bold text-slate-700">Filtros:</span>
+              <div className="flex-1 flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3 lg:justify-end">
+                <div className="flex flex-wrap items-center gap-2 p-2 sm:p-2.5 bg-slate-50 rounded-xl border-2 border-slate-200 w-full sm:w-auto">
+                  <div className="flex items-center gap-1 text-slate-600 px-1">
+                    <FiFilter className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold text-slate-700">Filtros:</span>
+                  </div>
 
                   <button
                     onClick={() => setShowEmptySlots(!showEmptySlots)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showEmptySlots
-                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md'
-                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                    className={`flex items-center px-3 py-1.5 rounded-lg transition-all duration-300 font-bold text-xs ${showEmptySlots
+                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs'
+                      : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50'
                       }`}
                   >
-                    {showEmptySlots ? <FiEye className="w-4 h-4 mr-1.5" /> : <FiEyeOff className="w-4 h-4 mr-1.5" />}
+                    {showEmptySlots ? <FiEye className="w-3.5 h-3.5 mr-1" /> : <FiEyeOff className="w-3.5 h-3.5 mr-1" />}
                     {showEmptySlots ? 'Ocultar Livres' : 'Mostrar Livres'}
                   </button>
 
                   <button
                     onClick={() => setShowOnlyPreferential(!showOnlyPreferential)}
-                    className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 font-bold text-sm ${showOnlyPreferential
-                      ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md'
-                      : 'text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50'
+                    className={`flex items-center px-3 py-1.5 rounded-lg transition-all duration-300 font-bold text-xs ${showOnlyPreferential
+                      ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-xs'
+                      : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50'
                       }`}
                   >
-                    <FiStar className="w-4 h-4 mr-1.5" />
+                    <FiStar className="w-3.5 h-3.5 mr-1" />
                     {showOnlyPreferential ? 'Todos' : 'Preferenciais'}
                   </button>
 
                   <select
                     value={selectedStatusFilter}
                     onChange={(e) => setSelectedStatusFilter(e.target.value as AppointmentStatus | 'todos')}
-                    className="px-3 py-2 text-sm rounded-lg border-2 border-slate-300 bg-white hover:border-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 font-bold text-slate-700"
+                    className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:border-slate-400 focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-slate-700"
                   >
                     <option value="todos">Todos Status</option>
                     <option value="confirmado">Confirmados</option>
@@ -920,40 +922,40 @@ export default function AgendamentosHojePage() {
 
                 <button
                   onClick={() => router.push("/admin/gestao")}
-                  className="flex items-center px-6 py-3 text-slate-700 bg-white hover:bg-slate-50 rounded-xl border-2 border-slate-300 hover:border-slate-400 transition-all duration-300 shadow-md hover:shadow-lg font-bold"
+                  className="flex items-center justify-center px-4 py-2.5 text-slate-700 bg-white hover:bg-slate-50 rounded-xl border-2 border-slate-300 hover:border-slate-400 transition-all duration-300 shadow-xs font-bold text-xs sm:text-sm"
                 >
-                  <FiArrowLeft className="w-5 h-5 mr-2" />
+                  <FiArrowLeft className="w-4 h-4 mr-1.5" />
                   Voltar
                 </button>
               </div>
             </div>
 
             {/* Contagem de horários visíveis */}
-            <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-200">
               <div className="flex items-center justify-center">
-                <span className="text-sm font-semibold text-slate-600">
-                  Exibindo <span className="text-emerald-600 font-bold text-lg">{visibleSlots}</span> horários
+                <span className="text-xs sm:text-sm font-semibold text-slate-600">
+                  Exibindo <span className="text-emerald-600 font-bold text-base sm:text-lg">{visibleSlots}</span> horários
                 </span>
               </div>
             </div>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4">
               {[...Array(12)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-2xl shadow-md border border-slate-200 p-5 animate-pulse min-h-[240px]"
+                  className="bg-white rounded-2xl shadow-xs border border-slate-200 p-3 sm:p-5 animate-pulse min-h-[190px] sm:min-h-[240px]"
                 >
-                  <div className="h-6 bg-slate-200 rounded-xl w-1/3 mb-4"></div>
-                  <div className="h-5 bg-slate-200 rounded-lg w-2/3 mb-3"></div>
-                  <div className="h-4 bg-slate-200 rounded-lg w-1/2 mb-6"></div>
-                  <div className="h-10 bg-slate-200 rounded-lg w-full"></div>
+                  <div className="h-5 bg-slate-200 rounded-xl w-1/2 mb-3"></div>
+                  <div className="h-4 bg-slate-200 rounded-lg w-3/4 mb-2"></div>
+                  <div className="h-3 bg-slate-200 rounded-lg w-1/2 mb-4"></div>
+                  <div className="h-8 bg-slate-200 rounded-lg w-full"></div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4">
               {HORARIOS.map((horario) => {
                 const agendamentosHorario = agendamentos.filter((a) => a.horario === `${horario}:00`);
                 const isBeingAttended = (a: Agendamento) => Boolean(a.locked_by && a.status !== 'concluido' && a.status !== 'cancelado' && a.status !== 'ausente');
@@ -973,7 +975,7 @@ export default function AgendamentosHojePage() {
                 return (
                   <div
                     key={horario}
-                    className={`relative rounded-2xl transition-all duration-200 min-h-[250px] flex flex-col ${agendamentosHorario.length > 0
+                    className={`relative rounded-2xl transition-all duration-200 min-h-[190px] sm:min-h-[250px] flex flex-col ${agendamentosHorario.length > 0
                       ? hasBeingAttended
                         ? "bg-indigo-50/50 border-2 border-indigo-300 shadow-sm"
                         : hasPreferential
@@ -984,7 +986,7 @@ export default function AgendamentosHojePage() {
                       : "bg-slate-50/60 border border-dashed border-slate-200"
                       }`}
                   >
-                    <div className="p-5 flex flex-col h-full">
+                    <div className="p-3 sm:p-5 flex flex-col h-full">
                       {/* Header do Card */}
                       <div className="flex items-center justify-between mb-4">
                         <div
