@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { supabaseServer as supabase } from '@/lib/supabase-server';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 export const runtime = 'nodejs';
@@ -17,25 +16,23 @@ const getTodayDateString = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session: cookieSession } } = await supabase.auth.getSession();
+    const authCheck = await checkAuth(request, 'atendente');
 
-    let sessionUser: any = cookieSession?.user || null;
-
-    // Se não houver sessão por cookie, tenta via Bearer token
-    if (!sessionUser) {
-      const authCheck = await checkAuth(request, 'atendente');
-      if (authCheck.authenticated && authCheck.user) {
-        sessionUser = authCheck.user;
-      }
+    if (!authCheck.authenticated) {
+      return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
     }
 
+    if (!authCheck.authorized) {
+      return forbiddenResponse(authCheck.error || 'Acesso não autorizado');
+    }
+
+    const sessionUser = authCheck.user;
     if (!sessionUser) {
-      return NextResponse.json({ error: 'Autenticação necessária. Sessão ou token não encontrado.' }, { status: 401 });
+      return NextResponse.json({ error: 'Sessão do usuário não encontrada' }, { status: 401 });
     }
 
     const coletorId = sessionUser.id;
-    const coletorNome = sessionUser.user_metadata?.name || sessionUser.user_metadata?.full_name || sessionUser.name || 'Atendente';
+    const coletorNome = sessionUser.name || 'Atendente';
     const hoje = getTodayDateString();
 
     // 1. Tentar executar via chamada atômica RPC (caso exista no banco)
@@ -49,11 +46,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data: rpcData[0] });
       }
     } catch (e) {
-      // Se a função RPC ainda não estiver criada, cai para o fallback atômico abaixo
+      // Se a função RPC não estiver criada, cai para a trava atômica em JS
     }
 
-    // 2. Fallback Atômico com Re-tentativas (Optimistic Lock Loop)
-    // Tenta até 3 vezes caso haja colisão simultânea com outros atendentes
+    // 2. Trava Atômica em Loop (Optimistic Lock)
     for (let tentativa = 0; tentativa < 3; tentativa++) {
       // Descobrir qual foi o último tipo chamado no posto hoje
       const { data: ultimosData } = await supabase
@@ -77,7 +73,12 @@ export async function POST(request: NextRequest) {
         .eq('fotos_coletadas', false)
         .order('horario', { ascending: true });
 
-      if (fetchError || !pendentes || pendentes.length === 0) {
+      if (fetchError) {
+        console.error('Erro ao buscar pendentes:', fetchError);
+        return NextResponse.json({ error: 'Erro ao buscar pendentes na fila: ' + fetchError.message }, { status: 500 });
+      }
+
+      if (!pendentes || pendentes.length === 0) {
         return NextResponse.json({ message: 'Nenhuma pessoa aguardando coleta de digitais' }, { status: 404 });
       }
 
@@ -120,13 +121,13 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Se falhou por colisão com outro atendente, o loop tenta novamente na próxima iteração
+      // Se falhou por colisão com outro atendente, tenta a próxima iteração
     }
 
     return NextResponse.json({ error: 'Fila muito concorrida no momento. Tente novamente em um instante.' }, { status: 409 });
 
   } catch (error: any) {
     console.error('Erro inesperado ao chamar próximo para coleta:', error);
-    return NextResponse.json({ error: 'Erro interno ao processar chamada' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao processar chamada: ' + (error.message || 'Erro interno') }, { status: 500 });
   }
 }
