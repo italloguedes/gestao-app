@@ -164,6 +164,29 @@ export default function ColetaDigitaisPage() {
     return `${year}-${month}-${day}`;
   };
 
+  // Consultar globalmente no banco qual foi o tipo da última chamada de coleta realizada hoje
+  const getUltimoTipoChamadoGlobal = async (): Promise<'preferencial' | 'normal' | null> => {
+    try {
+      const hoje = getTodayDateString();
+      const { data } = await supabase
+        .from('atendimentos')
+        .select('atendimento_preferencial, updated_at')
+        .eq('dia_atual', hoje)
+        .or('status.eq.chamando,fotos_coletadas.eq.true')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        return data[0].atendimento_preferencial ? 'preferencial' : 'normal';
+      }
+    } catch (err) {
+      console.error('Erro ao consultar histórico global de chamadas:', err);
+    }
+    const local = localStorage.getItem('coleta_ultimo_tipo_chamado');
+    if (local === 'preferencial' || local === 'normal') return local;
+    return null;
+  };
+
   const loadFila = async () => {
     try {
       const hoje = getTodayDateString();
@@ -197,12 +220,16 @@ export default function ColetaDigitaisPage() {
       const preferenciais = rawData.filter((a: any) => a.atendimento_preferencial === true);
       const normais = rawData.filter((a: any) => !a.atendimento_preferencial || a.atendimento_preferencial === false);
 
-      // Intercalar corretamente: alterna 1 preferencial, 1 normal
-      // Resultado esperado: P1, N1, P2, N2, P3, N3...
+      // Descobrir qual foi a última chamada global no posto para iniciar a alternância correta
+      const ultimoTipoGlobal = await getUltimoTipoChamadoGlobal();
+
+      // Se o último chamado no posto foi Preferencial, o próximo do turno deve ser Normal (false)
+      // Se o último chamado foi Normal (ou ninguém), começa com Preferencial (true)
+      let turnoPreferencial = ultimoTipoGlobal === 'preferencial' ? false : true;
+
       const filaIntercalada: any[] = [];
       let prefIndex = 0;
       let normIndex = 0;
-      let turnoPreferencial = true; // Começa com preferencial
 
       while (prefIndex < preferenciais.length || normIndex < normais.length) {
         if (turnoPreferencial) {
@@ -292,8 +319,8 @@ export default function ColetaDigitaisPage() {
       const preferenciais = fila.filter(a => a.atendimento_preferencial === true);
       const normais = fila.filter(a => !a.atendimento_preferencial);
 
-      // Verificar o último tipo chamado no localStorage
-      const ultimoTipo = localStorage.getItem('coleta_ultimo_tipo_chamado');
+      // Obter o tipo da última chamada realizada GLOBALMENTE no banco
+      const ultimoTipo = await getUltimoTipoChamadoGlobal();
 
       let proximo: AtendimentoFila | null = null;
 
@@ -304,7 +331,7 @@ export default function ColetaDigitaisPage() {
         // Último foi normal → chamar preferencial (se houver)
         proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
       } else {
-        // Nunca chamou → começar com preferencial (se houver)
+        // Primeira chamada do dia → começar por preferencial (se houver)
         proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
       }
 
@@ -313,7 +340,7 @@ export default function ColetaDigitaisPage() {
         return;
       }
 
-      // Persistir o tipo que está sendo chamado agora
+      // Persistir o tipo localmente também
       localStorage.setItem(
         'coleta_ultimo_tipo_chamado',
         proximo.atendimento_preferencial ? 'preferencial' : 'normal'
