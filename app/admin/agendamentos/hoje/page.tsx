@@ -688,24 +688,42 @@ export default function AgendamentosHojePage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  {/* Coleta de Digitais Pendentes */}
+                  {/* Coleta de Digitais Pendentes (Design Elegante e Funcional) */}
                   <Link
                     href="/dashboard/coleta-digitais"
-                    className="group flex items-center gap-2.5 px-3.5 py-2 bg-amber-500/20 backdrop-blur-md rounded-xl border border-amber-400/40 hover:border-amber-300 hover:bg-amber-500/30 transition-all text-white text-xs font-bold"
+                    className={`group relative flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-all duration-300 backdrop-blur-md shadow-xs ${
+                      coletasPendentes > 0
+                        ? "bg-amber-500/15 hover:bg-amber-500/25 border-amber-400/40 text-amber-100"
+                        : "bg-white/10 hover:bg-white/20 border-white/20 text-white/90"
+                    }`}
                   >
-                    <div className="relative">
-                      <svg className="w-5 h-5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="relative flex items-center justify-center">
+                      <svg className={`w-5 h-5 transition-transform group-hover:scale-110 ${coletasPendentes > 0 ? "text-amber-300" : "text-emerald-300"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                       </svg>
                       {coletasPendentes > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
-                          {coletasPendentes > 9 ? '9+' : coletasPendentes}
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                         </span>
                       )}
                     </div>
-                    <span>Coleta de Digitais</span>
-                    <span className="bg-amber-400/20 px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-200">
-                      {coletasPendentes > 0 ? `${coletasPendentes} pendentes` : '0 pendente'}
+
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs font-extrabold tracking-tight leading-none group-hover:text-white">
+                        Coleta de Digitais
+                      </span>
+                      <span className={`text-[10px] font-semibold mt-0.5 ${coletasPendentes > 0 ? "text-amber-200" : "text-emerald-200"}`}>
+                        {coletasPendentes > 0 ? `${coletasPendentes} na fila` : "Nenhum pendente"}
+                      </span>
+                    </div>
+
+                    <span className={`px-2 py-0.5 rounded-lg text-[11px] font-black border transition-colors ${
+                      coletasPendentes > 0
+                        ? "bg-amber-400/20 border-amber-300/30 text-amber-200 group-hover:bg-amber-400/30"
+                        : "bg-emerald-400/20 border-emerald-300/30 text-emerald-200 group-hover:bg-emerald-400/30"
+                    }`}>
+                      {coletasPendentes}
                     </span>
                   </Link>
 

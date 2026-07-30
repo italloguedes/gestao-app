@@ -138,9 +138,8 @@ export default function AcoesItinerantesPage() {
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
-  // Estados adicionais para destaque de Ações Concluídas e Reabertas
-  const [viagensConcluidasSet, setViagensConcluidasSet] = useState<Set<string>>(new Set());
-  const [viagensReabertasSet, setViagensReabertasSet] = useState<Set<string>>(new Set());
+  // Estado adicional para mapear o status de cada ação na Gestão de Viagens (nomeNormalizado -> status)
+  const [viagensStatusMap, setViagensStatusMap] = useState<Map<string, string>>(new Map());
   const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'nao_concluidas' | 'pendentes' | 'em_andamento'>('todas');
   const [togglingAcao, setTogglingAcao] = useState<string | null>(null);
 
@@ -148,23 +147,18 @@ export default function AcoesItinerantesPage() {
   const checkIsConcluida = useCallback((acao: AcaoData) => {
     const nomeNorm = acao.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
-    // 1. Se estiver explicitamente definida como Em Andamento / Reaberta no banco, NÃO é concluída
-    if (viagensReabertasSet.has(nomeNorm)) {
-      return false;
+    // 1. Se houver status explícito cadastrado na Gestão de Viagens
+    if (viagensStatusMap.has(nomeNorm)) {
+      return viagensStatusMap.get(nomeNorm) === 'concluida';
     }
 
-    // 2. Se estiver explicitamente definida como Concluída no banco, É concluída
-    if (viagensConcluidasSet.has(nomeNorm)) {
-      return true;
-    }
-
-    // 3. Fallback: Se 100% dos atendimentos forem concluídos sem pendências
+    // 2. Fallback: Se 100% dos atendimentos forem concluídos sem pendências
     if (acao.total > 0 && acao.emAndamento === 0 && (acao.concluidos === acao.total || acao.percentualConclusao >= 100)) {
       return true;
     }
 
     return false;
-  }, [viagensConcluidasSet, viagensReabertasSet]);
+  }, [viagensStatusMap]);
 
   // Alternar conclusão da ação diretamente pelo relatório (Exclusivo SuperAdmin)
   const handleToggleConcluirAcao = async (acaoNome: string) => {
@@ -179,17 +173,29 @@ export default function AcoesItinerantesPage() {
     const newStatus = isCurrentlyConcluida ? 'em_andamento' : 'concluida';
 
     try {
-      const { data: existingViagens } = await supabase
+      const municipioExtraido = acaoNome.replace(/^(Ação|Assembleia)\s+Itinerante\s*[-–—]?\s*/i, '').trim() || acaoNome;
+
+      // Buscar viagens existentes por titulo ou municipio de forma segura sem falhar em PostgREST
+      const { data: byTitulo } = await supabase
         .from('viagens')
-        .select('id, titulo, municipio')
-        .or(`titulo.eq.${acaoNome},municipio.eq.${acaoNome}`);
+        .select('id, titulo, status')
+        .eq('titulo', acaoNome);
+
+      const { data: byMunicipio } = await supabase
+        .from('viagens')
+        .select('id, titulo, status')
+        .eq('municipio', municipioExtraido);
+
+      const allMatches = [...(byTitulo || []), ...(byMunicipio || [])];
+      const uniqueMap = new Map<number, any>();
+      allMatches.forEach(v => uniqueMap.set(v.id, v));
+      const existingViagens = Array.from(uniqueMap.values());
 
       if (existingViagens && existingViagens.length > 0) {
         for (const v of existingViagens) {
           await updateViagemStatus(v.id, newStatus);
         }
       } else {
-        const municipioExtraido = acaoNome.replace(/^(Ação|Assembleia)\s+Itinerante\s*[-–—]?\s*/i, '').trim() || acaoNome;
         await createViagem(
           {
             titulo: acaoNome,
@@ -211,23 +217,11 @@ export default function AcoesItinerantesPage() {
         );
       }
 
-      setViagensConcluidasSet(prev => {
-        const next = new Set(prev);
-        if (newStatus === 'concluida') {
-          next.add(nomeNorm);
-        } else {
-          next.delete(nomeNorm);
-        }
-        return next;
-      });
-
-      setViagensReabertasSet(prev => {
-        const next = new Set(prev);
-        if (newStatus === 'em_andamento') {
-          next.add(nomeNorm);
-        } else {
-          next.delete(nomeNorm);
-        }
+      setViagensStatusMap(prev => {
+        const next = new Map(prev);
+        next.set(nomeNorm, newStatus);
+        const munNorm = municipioExtraido.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        if (munNorm) next.set(munNorm, newStatus);
         return next;
       });
     } catch (err: any) {
@@ -303,21 +297,25 @@ export default function AcoesItinerantesPage() {
       try {
         const { data: vData } = await supabase.from('viagens').select('titulo, municipio, status');
         if (vData) {
-          const setConc = new Set<string>();
-          const setReab = new Set<string>();
+          const map = new Map<string, string>();
 
           vData.forEach((v: any) => {
             const titNorm = v.titulo ? v.titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+            const munNorm = v.municipio ? v.municipio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
 
-            if (v.status === 'concluida') {
-              if (titNorm) setConc.add(titNorm);
-            } else {
-              if (titNorm) setReab.add(titNorm);
+            if (titNorm) {
+              if (v.status === 'concluida' || !map.has(titNorm)) {
+                map.set(titNorm, v.status);
+              }
+            }
+            if (munNorm) {
+              if (v.status === 'concluida' || !map.has(munNorm)) {
+                map.set(munNorm, v.status);
+              }
             }
           });
 
-          setViagensConcluidasSet(setConc);
-          setViagensReabertasSet(setReab);
+          setViagensStatusMap(map);
         }
       } catch (errV) {
         console.error('Erro ao consultar viagens para status de conclusão:', errV);
