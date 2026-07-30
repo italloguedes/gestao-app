@@ -29,6 +29,9 @@ import {
   FiEye,
   FiEyeOff,
   FiPlus,
+  FiUsers,
+  FiUserX,
+  FiTrendingUp,
 } from "react-icons/fi";
 import DashboardHeader from "@/components/DashboardHeader";
 import EditAppointmentModal from "../../../components/EditAppointmentModal";
@@ -578,14 +581,25 @@ export default function AgendamentosHojePage() {
   }, []);
 
   // Memoize statistics
-  const stats = useMemo(() => ({
-    total: agendamentos.length,
-    confirmados: agendamentos.filter(a => a.status === 'confirmado').length,
-    concluidos: agendamentos.filter(a => a.status === 'concluido').length,
-    ausentes: agendamentos.filter(a => a.status === 'ausente').length,
-    cancelados: agendamentos.filter(a => a.status === 'cancelado').length,
-    preferenciais: agendamentos.filter(a => a.atendimento_preferencial).length,
-  }), [agendamentos]);
+  const stats = useMemo(() => {
+    const confirmados = agendamentos.filter(a => a.status === 'confirmado').length;
+    const concluidos = agendamentos.filter(a => a.status === 'concluido').length;
+    const ausentes = agendamentos.filter(a => a.status === 'ausente').length;
+    const cancelados = agendamentos.filter(a => a.status === 'cancelado').length;
+    const preferenciais = agendamentos.filter(a => a.atendimento_preferencial).length;
+    const total = agendamentos.length;
+    const confirmadosPlusConcluidos = confirmados + concluidos;
+
+    return {
+      total,
+      confirmados,
+      concluidos,
+      confirmadosPlusConcluidos,
+      ausentes,
+      cancelados,
+      preferenciais,
+    };
+  }, [agendamentos]);
 
   const visibleSlots = useMemo(() => {
     let filteredHorarios = HORARIOS;
@@ -652,84 +666,142 @@ export default function AgendamentosHojePage() {
       <DashboardHeader />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-[1920px] mx-auto px-4 py-6 sm:px-6 lg:px-8 pt-20">
-          {/* Header Principal com Gradiente */}
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl shadow-xl border border-emerald-500/20 p-8 mb-6 overflow-hidden relative">
-            <div className="absolute inset-0 bg-white/5 backdrop-blur-sm"></div>
-            <div className="relative z-10">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div>
-                  <h1 className="text-4xl font-bold text-white mb-3 drop-shadow-lg">Agenda do Dia</h1>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center text-white/90 text-lg backdrop-blur-sm bg-white/10 px-4 py-2 rounded-xl">
-                      <FiCalendar className="w-5 h-5 mr-2" />
-                      {formatDate(selectedDate)}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-white/30">
-                        {stats.total} total
-                      </span>
-                      <span className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-white/30">
-                        {stats.confirmados} confirmados
-                      </span>
-                      <span className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-white/30">
-                        {stats.concluidos} concluídos
-                      </span>
-                      {stats.preferenciais > 0 && (
-                        <span className="px-4 py-2 bg-amber-500/30 backdrop-blur-md text-white rounded-xl text-sm font-bold border border-amber-400/50 flex items-center gap-1.5">
-                          <FiStar className="w-4 h-4" />
-                          {stats.preferenciais} preferenciais
-                        </span>
-                      )}
-                    </div>
+          {/* Header Principal Tecnico com KPIs */}
+          <div className="bg-gradient-to-r from-teal-800 via-emerald-800 to-cyan-900 rounded-2xl shadow-2xl border border-emerald-500/20 p-6 mb-6 overflow-hidden relative">
+            <div className="absolute inset-0 bg-white/5 backdrop-blur-xs"></div>
+            <div className="relative z-10 space-y-5">
+              
+              {/* Linha Superior: Titulo + Controles e Acoes */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-white shrink-0">
+                    <FiCalendar className="w-6 h-6" />
                   </div>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md">
+                      Agenda do Dia
+                    </h1>
+                    <p className="text-emerald-100/90 text-xs sm:text-sm font-medium">
+                      Painel Operacional — {formatDate(selectedDate)}
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Coletas de Digitais Pendentes - Destaque */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Coleta de Digitais Pendentes */}
                   <Link
                     href="/dashboard/coleta-digitais"
-                    className="group flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-md rounded-xl border-2 border-amber-400/50 hover:border-amber-300 hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-300 cursor-pointer"
+                    className="group flex items-center gap-2.5 px-3.5 py-2 bg-amber-500/20 backdrop-blur-md rounded-xl border border-amber-400/40 hover:border-amber-300 hover:bg-amber-500/30 transition-all text-white text-xs font-bold"
                   >
                     <div className="relative">
-                      <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-5 h-5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                       </svg>
                       {coletasPendentes > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
                           {coletasPendentes > 9 ? '9+' : coletasPendentes}
                         </span>
                       )}
                     </div>
-                    <div>
-                      <p className="text-white font-bold text-sm leading-tight">Coleta de Digitais</p>
-                      <p className="text-amber-100 text-xs font-semibold">
-                        {coletasPendentes > 0
-                          ? `${coletasPendentes} pendente${coletasPendentes !== 1 ? 's' : ''}`
-                          : 'Nenhuma pendente'}
-                      </p>
-                    </div>
-                    <svg className="w-5 h-5 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all duration-300 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <span>Coleta de Digitais</span>
+                    <span className="bg-amber-400/20 px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-200">
+                      {coletasPendentes > 0 ? `${coletasPendentes} pendentes` : '0 pendente'}
+                    </span>
                   </Link>
-                </div>
 
-                {/* Controles de Data */}
-                <div className="flex items-center gap-3">
+                  {/* Seletor de Data */}
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value)}
-                    className="border-2 border-white/30 bg-white/10 backdrop-blur-md text-white rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-white/50 focus:border-white/50 placeholder-white/60"
+                    className="border border-white/30 bg-white/10 backdrop-blur-md text-white rounded-xl px-3.5 py-2 text-xs font-semibold focus:ring-2 focus:ring-white/50 focus:border-white/50"
                   />
+
+                  {/* Botão Atualizar */}
                   <button
                     onClick={() => loadAgendamentos()}
                     disabled={loading}
-                    className="flex items-center px-4 py-3 text-white bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl border-2 border-white/30 transition-all duration-300 font-semibold disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-white bg-white/15 hover:bg-white/25 backdrop-blur-md rounded-xl border border-white/30 transition-all text-xs font-semibold disabled:opacity-50"
                   >
-                    <FiRefreshCw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    Atualizar
+                    <FiRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    <span>Atualizar</span>
                   </button>
                 </div>
               </div>
+
+              {/* Grid de Cards KPIs Tecnicos */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                {/* 1. Total */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/20 hover:bg-white/15 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-white/80 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-200">Total Vagas</span>
+                    <FiUsers className="w-4 h-4 text-cyan-200" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.total}</div>
+                  <div className="text-[10px] text-teal-100 font-medium mt-0.5 truncate">Agendamentos hoje</div>
+                </div>
+
+                {/* 2. Confirmados + Concluidos */}
+                <div className="bg-emerald-500/25 backdrop-blur-md rounded-xl p-3.5 border border-emerald-300/40 hover:bg-emerald-500/35 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-emerald-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-200">Conf. + Concl.</span>
+                    <FiTrendingUp className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.confirmadosPlusConcluidos}</div>
+                  <div className="text-[10px] text-emerald-100 font-semibold mt-0.5 truncate">Soma de ativos</div>
+                </div>
+
+                {/* 3. Confirmados */}
+                <div className="bg-blue-500/25 backdrop-blur-md rounded-xl p-3.5 border border-blue-300/40 hover:bg-blue-500/35 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-blue-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-200">Confirmados</span>
+                    <FiClock className="w-4 h-4 text-blue-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.confirmados}</div>
+                  <div className="text-[10px] text-blue-100 font-medium mt-0.5 truncate">Aguardando atendimento</div>
+                </div>
+
+                {/* 4. Concluidos */}
+                <div className="bg-teal-500/25 backdrop-blur-md rounded-xl p-3.5 border border-teal-300/40 hover:bg-teal-500/35 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-teal-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-200">Concluídos</span>
+                    <FiCheckCircle className="w-4 h-4 text-teal-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.concluidos}</div>
+                  <div className="text-[10px] text-teal-100 font-medium mt-0.5 truncate">Atendimentos finalizados</div>
+                </div>
+
+                {/* 5. Ausentes */}
+                <div className="bg-amber-500/25 backdrop-blur-md rounded-xl p-3.5 border border-amber-300/40 hover:bg-amber-500/35 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-amber-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">Ausentes</span>
+                    <FiUserX className="w-4 h-4 text-amber-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.ausentes}</div>
+                  <div className="text-[10px] text-amber-100 font-medium mt-0.5 truncate">Não compareceram</div>
+                </div>
+
+                {/* 6. Cancelados */}
+                <div className="bg-rose-500/25 backdrop-blur-md rounded-xl p-3.5 border border-rose-300/40 hover:bg-rose-500/35 transition-all flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-rose-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-200">Cancelados</span>
+                    <FiXCircle className="w-4 h-4 text-rose-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.cancelados}</div>
+                  <div className="text-[10px] text-rose-100 font-medium mt-0.5 truncate">Horários desmarcados</div>
+                </div>
+
+                {/* 7. Preferenciais */}
+                <div className="bg-yellow-500/25 backdrop-blur-md rounded-xl p-3.5 border border-yellow-300/40 hover:bg-yellow-500/35 transition-all col-span-2 sm:col-span-1 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-yellow-100 mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-200">Preferenciais</span>
+                    <FiStar className="w-4 h-4 text-yellow-300" />
+                  </div>
+                  <div className="text-2xl font-black text-white tracking-tight">{stats.preferenciais}</div>
+                  <div className="text-[10px] text-yellow-100 font-medium mt-0.5 truncate">Prioridade legal</div>
+                </div>
+              </div>
+
             </div>
           </div>
           {/* Tabs de Postos */}
