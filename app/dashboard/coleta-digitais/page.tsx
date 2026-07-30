@@ -310,8 +310,15 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch('/api/coleta/chamar-proximo', {
         method: 'POST',
+        headers
       });
 
       const resData = await response.json();

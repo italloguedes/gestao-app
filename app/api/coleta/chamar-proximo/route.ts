@@ -17,16 +17,25 @@ const getTodayDateString = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    const authCheck = await checkAuth(request, 'atendente');
-    if (!authCheck.authenticated) return unauthorizedResponse(authCheck.error || 'Autenticação necessária');
-    if (!authCheck.authorized) return forbiddenResponse(authCheck.error || 'Acesso não autorizado');
-
     const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 401 });
+    const { data: { session: cookieSession } } = await supabase.auth.getSession();
 
-    const coletorId = session.user.id;
-    const coletorNome = session.user.user_metadata?.name || session.user.user_metadata?.full_name || 'Atendente';
+    let sessionUser: any = cookieSession?.user || null;
+
+    // Se não houver sessão por cookie, tenta via Bearer token
+    if (!sessionUser) {
+      const authCheck = await checkAuth(request, 'atendente');
+      if (authCheck.authenticated && authCheck.user) {
+        sessionUser = authCheck.user;
+      }
+    }
+
+    if (!sessionUser) {
+      return NextResponse.json({ error: 'Autenticação necessária. Sessão ou token não encontrado.' }, { status: 401 });
+    }
+
+    const coletorId = sessionUser.id;
+    const coletorNome = sessionUser.user_metadata?.name || sessionUser.user_metadata?.full_name || sessionUser.name || 'Atendente';
     const hoje = getTodayDateString();
 
     // 1. Tentar executar via chamada atômica RPC (caso exista no banco)
