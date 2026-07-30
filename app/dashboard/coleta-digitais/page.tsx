@@ -338,24 +338,14 @@ export default function ColetaDigitaisPage() {
         atendimento.atendimento_preferencial ? 'preferencial' : 'normal'
       );
 
-      // Mudar status para 'chamando' atomicamente
-      const { data: updatedData, error: updateError } = await supabase
+      // Mudar status para 'chamando'
+      const { error: updateError } = await supabase
         .from('atendimentos')
         .update({ status: 'chamando' })
-        .eq('id', atendimento.id)
-        .eq('status', 'em_andamento') // Só atualiza se ainda estiver em andamento
-        .select('id');
+        .eq('id', atendimento.id);
 
       if (updateError) {
         throw updateError;
-      }
-
-      // Se nenhum registro foi atualizado, a pessoa já foi chamada simultaneamente por outro atendente
-      if (!updatedData || updatedData.length === 0) {
-        await loadFila();
-        await loadStats();
-        alert('Esta pessoa já foi chamada por outro atendente. Atualizando a fila...');
-        return;
       }
 
       // Criar objeto da chamada para o modal com a flag de preferencial correta
@@ -387,29 +377,24 @@ export default function ColetaDigitaisPage() {
   };
 
   const cancelarChamada = async () => {
-    if (!chamadaAtual) {
-      setShowModal(false);
-      return;
-    }
-
     try {
       setProcessando(true);
-      // Restaurar status para 'em_andamento'
-      await supabase
-        .from('atendimentos')
-        .update({ status: 'em_andamento' })
-        .eq('id', chamadaAtual.atendimento_id)
-        .eq('status', 'chamando');
-
+      if (chamadaAtual) {
+        // Restaurar status para 'em_andamento' para poder ser chamado novamente
+        await supabase
+          .from('atendimentos')
+          .update({ status: 'em_andamento' })
+          .eq('id', chamadaAtual.atendimento_id);
+      }
+    } catch (err) {
+      console.error('Erro ao cancelar chamada:', err);
+    } finally {
       setShowModal(false);
       setChamadaAtual(null);
       setObservacao('');
+      setProcessando(false);
       await loadFila();
       await loadStats();
-    } catch (err) {
-      setShowModal(false);
-    } finally {
-      setProcessando(false);
     }
   };
 
@@ -431,14 +416,12 @@ export default function ColetaDigitaisPage() {
         coletorNome = userData?.name || 'Não identificado';
       }
 
-      // Atualizar atendimento: fotos coletadas e voltar status para em_andamento
+      // 1. Atualizar obrigatoriamente fotos_coletadas para true e status para em_andamento
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
           fotos_coletadas: true,
-          status: 'em_andamento',
-          coletor_id: user?.id,
-          coletor_nome: coletorNome
+          status: 'em_andamento'
         })
         .eq('id', chamadaAtual.atendimento_id);
 
@@ -446,13 +429,30 @@ export default function ColetaDigitaisPage() {
         throw atendimentoError;
       }
 
-      // Registrar histórico de coleta
-      await registrarHistorico({
-        atendimento_id: chamadaAtual.atendimento_id,
-        acao: 'coleta_biometrica',
-        atendente_id: user?.id,
-        atendente_nome: coletorNome,
-      });
+      // 2. Tentar atualizar informações adicionais do coletor (caso os campos existam no banco)
+      try {
+        await supabase
+          .from('atendimentos')
+          .update({
+            coletor_id: user?.id,
+            coletor_nome: coletorNome
+          })
+          .eq('id', chamadaAtual.atendimento_id);
+      } catch (colErr) {
+        // Ignora caso as colunas de coletor não existam na tabela
+      }
+
+      // 3. Registrar histórico de coleta
+      try {
+        await registrarHistorico({
+          atendimento_id: chamadaAtual.atendimento_id,
+          acao: 'coleta_biometrica',
+          atendente_id: user?.id,
+          atendente_nome: coletorNome,
+        });
+      } catch (histErr) {
+        console.error('Erro ao registrar histórico de coleta:', histErr);
+      }
 
       // Fechar modal e recarregar
       setShowModal(false);
@@ -474,11 +474,11 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      // Voltar status para 'em_andamento' para pessoa poder ser chamada novamente
+      // Marcar status como 'ausente' para não ficar retornando à fila de coleta
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
-          status: 'em_andamento'
+          status: 'ausente'
         })
         .eq('id', chamadaAtual.atendimento_id);
 
