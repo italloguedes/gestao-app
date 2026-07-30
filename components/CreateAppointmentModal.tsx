@@ -148,19 +148,16 @@ export default function CreateAppointmentModal({
 
   const HORARIOS = React.useMemo(() => {
     const slots: string[] = [];
-    let hora = 7;
+    let hora = 5;
     let minuto = 0;
-    const endHour = 22;
-    const endMinute = 0;
+    const MAX_SLOTS = 300;
 
-    while (true) {
-      if (hora === endHour && minuto === endMinute) break;
-
+    while (slots.length < MAX_SLOTS) {
       const horaStr = hora.toString().padStart(2, "0");
       const minutoStr = minuto.toString().padStart(2, "0");
       slots.push(`${horaStr}:${minutoStr}`);
 
-      minuto += 5;
+      minuto += 3;
       if (minuto >= 60) {
         minuto = 0;
         hora += 1;
