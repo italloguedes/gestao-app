@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
+import { formatCpf } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   FiX,
@@ -274,12 +275,13 @@ export default function EditAtendimentoModal({
                       <label className="block text-sm font-semibold text-slate-700 mb-2">CPF *</label>
                       <input
                         type="text"
-                        value={editingAtendimento.cpf || ''}
-                        onChange={(e) => onInputChange('cpf', e.target.value)}
-                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium ${
+                        value={formatCpf(editingAtendimento.cpf || '')}
+                        onChange={(e) => onInputChange('cpf', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all font-medium font-mono ${
                           validationErrors.cpf ? 'border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                         }`}
                         placeholder="000.000.000-00"
+                        maxLength={14}
                       />
                       {validationErrors.cpf && <p className="text-red-500 text-sm mt-1">{validationErrors.cpf}</p>}
                     </div>

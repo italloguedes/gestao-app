@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { FiX, FiUser, FiCalendar, FiClock, FiPhone, FiMapPin, FiAlertTriangle, FiRefreshCw } from "react-icons/fi";
 import { supabase } from "@/lib/supabase-client";
+import { formatCpf } from "@/lib/utils";
 
 const POSTOS = [
   { id: 'Sala Sensorial', nome: 'Sala Sensorial' },
@@ -354,13 +355,13 @@ export default function CreateAppointmentModal({
               <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
+                value={formatCpf(cpf)}
+                onChange={(e) => setCpf(e.target.value.replace(/\D/g, "").slice(0, 11))}
                 className={`w-full pl-10 pr-3 py-2.5 border rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${
                   errors.cpf ? "border-rose-400 bg-rose-50/20" : "border-slate-200"
                 }`}
-                placeholder="00000000000"
-                maxLength={11}
+                placeholder="000.000.000-00"
+                maxLength={14}
               />
             </div>
             {errors.cpf && (

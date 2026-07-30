@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
+import { formatCpf } from '@/lib/utils';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { AtendimentoObservacao } from '@/types/supabase';
@@ -774,8 +775,8 @@ export default function AtendimentoModal({
 
                     <div className="grid grid-cols-2 gap-3">
                       <InputField label="CPF" icon={<FiHash className="w-4 h-4" />}
-                        value={formData.cpf || ''} onChange={(v) => handleChange('cpf', v)}
-                        error={validationErrors.cpf} mono />
+                        value={formatCpf(formData.cpf || '')} onChange={(v) => handleChange('cpf', v.replace(/\D/g, '').slice(0, 11))}
+                        error={validationErrors.cpf} mono placeholder="000.000.000-00" />
                       <InputField label="E-mail" icon={<FiMail className="w-4 h-4" />}
                         value={formData.email || ''} onChange={(v) => handleChange('email', v)}
                         error={validationErrors.email} type="email" />

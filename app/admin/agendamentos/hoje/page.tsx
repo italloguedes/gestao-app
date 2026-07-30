@@ -4,6 +4,7 @@ import React, { ReactElement, useEffect, useState, useMemo, useCallback } from "
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { formatCpf } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -378,7 +379,7 @@ export default function AgendamentosHojePage() {
       const tableRows = filteredAgendamentos.map(a => [
         a.horario?.substring(0, 5) || '',
         a.nome,
-        a.cpf,
+        formatCpf(a.cpf),
         a.criado_por_nome || 'Online',
         a.telefone,
         a.status.charAt(0).toUpperCase() + a.status.slice(1),

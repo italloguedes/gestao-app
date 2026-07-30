@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/models/User';
 import { supabase } from '@/lib/supabase-client';
+import { formatCpf } from '@/lib/utils';
 import { registrarLog } from '@/lib/activity-log';
 import { FiUser, FiMail, FiShield, FiToggleRight, FiAlertCircle, FiRefreshCw, FiPhone, FiLock, FiSave, FiX, FiUserPlus, FiBriefcase, FiHash, FiImage, FiUpload } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
@@ -336,10 +337,11 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 </label>
                 <Input
                   name="cpf"
-                  value={formData.cpf || ''}
-                  onChange={handleChange}
-                  placeholder="Ex: 00000000000"
-                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100"
+                  value={formatCpf(formData.cpf || '')}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value.replace(/\D/g, '').slice(0, 11) }))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  className="h-10 rounded-lg border-gray-200 focus:border-emerald-400 focus:ring-emerald-100 font-mono"
                 />
               </div>
             </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiX, FiUser, FiPhone, FiCalendar, FiClock, FiCheck, FiXCircle, FiCopy, FiMail, FiHash, FiFileText, FiStar, FiAlertTriangle, FiCheckCircle, FiSlash, FiEdit3, FiTrash2 } from 'react-icons/fi';
 import { supabase } from '@/lib/supabase-client';
+import { formatCpf } from '@/lib/utils';
 import Loading from './Loading';
 import { registrarHistorico } from '@/lib/historico-utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -146,7 +147,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
         nome: formData.get('nome') || appointment.nome,
         telefone: formData.get('telefone') || appointment.telefone,
         email: formData.get('email') || appointment.email,
-        cpf: formData.get('cpf') || appointment.cpf,
+        cpf: (formData.get('cpf') as string || appointment.cpf).replace(/\D/g, ''),
         data: formData.get('data') || appointment.data,
         horario: formData.get('horario') ? `${formData.get('horario')}:00` : appointment.horario,
         data_nascimento: formData.get('data_nascimento') || appointment.data_nascimento,
@@ -163,7 +164,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
           setLoading(false);
           return;
         }
-        const cpfEditado = formData.get('cpf') || appointment.cpf;
+        const cpfEditado = (formData.get('cpf') as string || appointment.cpf).replace(/\D/g, '');
         if (!/^[0-9]{11}$/.test(cpfEditado)) {
           setMessage('CPF inválido. Use apenas números, sem pontos ou traços.');
           setLoading(false);
@@ -531,7 +532,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                       </div>
                       <div className="bg-white/60 rounded-lg px-3 py-2">
                         <span className="text-blue-500 text-xs font-semibold">CPF</span>
-                        <p className="text-blue-800 font-medium font-mono">{appointment.cpf}</p>
+                        <p className="text-blue-800 font-medium font-mono">{formatCpf(appointment.cpf)}</p>
                       </div>
                       <div className="bg-white/60 rounded-lg px-3 py-2">
                         <span className="text-blue-500 text-xs font-semibold">Email</span>
@@ -568,8 +569,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                         CPF * <span className="text-blue-500 normal-case font-normal">(F8 copiar)</span>
                       </label>
                       <div className="relative">
-                        <input type="text" name="cpf" defaultValue={appointment.cpf} required
-                          className="w-full px-4 py-3 pr-12 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium font-mono" />
+                        <input type="text" name="cpf" defaultValue={formatCpf(appointment.cpf)} required
+                          className="w-full px-4 py-3 pr-12 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium font-mono"
+                          placeholder="000.000.000-00" maxLength={14} />
                         <button type="button" onClick={() => copyCPF()}
                           className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-all">
                           <FiCopy className="w-4 h-4" />
@@ -677,8 +679,9 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">CPF</label>
-                      <input type="text" name="cpf" defaultValue={appointment.cpf} required
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium font-mono" />
+                      <input type="text" name="cpf" defaultValue={formatCpf(appointment.cpf)} required
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-200 text-sm font-medium font-mono"
+                        placeholder="000.000.000-00" maxLength={14} />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Data de Nascimento</label>

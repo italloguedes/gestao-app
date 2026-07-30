@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiSearch, FiUser, FiCheck, FiAlertCircle, FiPrinter, FiList } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatCpf } from '@/lib/utils';
 
 interface Atendimento {
     id: number; nome: string; cpf: string; email: string; solicitante: string;
@@ -151,7 +152,7 @@ export default function EntregarCinModal({
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-gray-800 text-sm">{a.nome}</p>
-                                                    <p className="text-xs text-gray-500">{a.cpf} · {fmtDate(a.dia_atual)}</p>
+                                                    <p className="text-xs text-gray-500 font-mono">{formatCpf(a.cpf)} · {fmtDate(a.dia_atual)}</p>
                                                 </div>
                                             </div>
                                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(a.status)}`}>{a.status}</span>
@@ -169,7 +170,7 @@ export default function EntregarCinModal({
                             <h3 className="text-sm font-semibold text-gray-700 mb-2">Dados do Atendimento</h3>
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 grid grid-cols-2 gap-3 text-sm">
                                 <div><p className="text-gray-400 text-xs">Nome</p><p className="font-medium">{selected.nome}</p></div>
-                                <div><p className="text-gray-400 text-xs">CPF</p><p className="font-medium">{selected.cpf}</p></div>
+                                <div><p className="text-gray-400 text-xs">CPF</p><p className="font-medium font-mono">{formatCpf(selected.cpf)}</p></div>
                                 <div><p className="text-gray-400 text-xs">Data</p><p className="font-medium">{fmtDate(selected.dia_atual)}</p></div>
                                 <div><p className="text-gray-400 text-xs">Protocolo</p><p className="font-medium">{selected.protocolo}</p></div>
                             </div>
@@ -185,7 +186,7 @@ export default function EntregarCinModal({
                                     <div className="space-y-1"><label className="text-xs font-medium text-gray-600">Nome Recebedor</label>
                                         <Input value={nomeRecebedor} onChange={e => setNomeRecebedor(e.target.value)} placeholder="Nome completo" /></div>
                                     <div className="space-y-1"><label className="text-xs font-medium text-gray-600">CPF Recebedor</label>
-                                        <Input value={cpfRecebedor} onChange={e => setCpfRecebedor(e.target.value)} placeholder="000.000.000-00" /></div>
+                                        <Input value={formatCpf(cpfRecebedor)} onChange={e => setCpfRecebedor(e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="000.000.000-00" maxLength={14} className="font-mono" /></div>
                                 </div>
                                 <div className="space-y-1"><label className="text-xs font-medium text-gray-600">Vínculo</label>
                                     <select value={vinculo} onChange={e => setVinculo(e.target.value)}
@@ -293,7 +294,7 @@ export default function EntregarCinModal({
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium text-gray-600">CPF do Recebedor</label>
-                                        <Input value={loteCpf} onChange={e => setLoteCpf(e.target.value)} placeholder="000.000.000-00" />
+                                        <Input value={formatCpf(loteCpf)} onChange={e => setLoteCpf(e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="000.000.000-00" maxLength={14} className="font-mono" />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
