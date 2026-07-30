@@ -310,46 +310,41 @@ export default function ColetaDigitaisPage() {
     try {
       setProcessando(true);
 
-      if (fila.length === 0) {
-        alert('Não há pessoas na fila para coleta de digitais');
+      const response = await fetch('/api/coleta/chamar-proximo', {
+        method: 'POST',
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        alert(resData.message || resData.error || 'Erro ao chamar próximo');
         return;
       }
 
-      // Separar a fila em preferenciais e normais
-      const preferenciais = fila.filter(a => a.atendimento_preferencial === true);
-      const normais = fila.filter(a => !a.atendimento_preferencial);
+      const pessoa = resData.data;
 
-      // Obter o tipo da última chamada realizada GLOBALMENTE no banco
-      const ultimoTipo = await getUltimoTipoChamadoGlobal();
+      const chamadaFormatada: ChamadaDigital = {
+        chamada_id: pessoa.id,
+        atendimento_id: pessoa.id,
+        agendamento_id: pessoa.id,
+        nome: pessoa.nome,
+        cpf: pessoa.cpf,
+        protocolo: pessoa.protocolo || '',
+        status: 'chamando',
+        data_hora_chamada: new Date().toISOString(),
+        preferencial: pessoa.atendimento_preferencial === true,
+        atendente_id: user?.id || '',
+        atendente_nome: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atendente'
+      };
 
-      let proximo: AtendimentoFila | null = null;
+      setChamadaAtual(chamadaFormatada);
+      setShowModal(true);
 
-      if (ultimoTipo === 'preferencial') {
-        // Último foi preferencial → chamar normal (se houver)
-        proximo = normais.length > 0 ? normais[0] : preferenciais[0] || null;
-      } else if (ultimoTipo === 'normal') {
-        // Último foi normal → chamar preferencial (se houver)
-        proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
-      } else {
-        // Primeira chamada do dia → começar por preferencial (se houver)
-        proximo = preferenciais.length > 0 ? preferenciais[0] : normais[0] || null;
-      }
-
-      if (!proximo) {
-        alert('Não há pessoas na fila para coleta de digitais');
-        return;
-      }
-
-      // Persistir o tipo localmente também
-      localStorage.setItem(
-        'coleta_ultimo_tipo_chamado',
-        proximo.atendimento_preferencial ? 'preferencial' : 'normal'
-      );
-
-      await chamarPessoa(proximo);
+      await loadFila();
+      await loadStats();
 
     } catch (error: any) {
-      alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
+      alert('Erro ao chamar próximo: ' + (error.message || 'Tente novamente'));
     } finally {
       setProcessando(false);
     }
