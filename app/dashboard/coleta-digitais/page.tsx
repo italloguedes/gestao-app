@@ -155,10 +155,18 @@ export default function ColetaDigitaisPage() {
 
   };
 
+  // Helper para obter data de hoje no fuso local (evita bug de mudar de dia após 21h UTC)
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const loadFila = async () => {
     try {
-      // Formato ISO para match com o banco: YYYY-MM-DD
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = getTodayDateString();
 
       // Buscar atendimentos pendentes de coleta
       // Exclui quem está com status 'chamando' (já sendo atendido por outro atendente)
@@ -245,8 +253,7 @@ export default function ColetaDigitaisPage() {
 
   const loadStats = async () => {
     try {
-      // Formato ISO para match com o banco: YYYY-MM-DD
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = getTodayDateString();
 
       // Total pendente (atendimentos em andamento sem fotos)
       const { count: pendente } = await supabase
@@ -331,18 +338,27 @@ export default function ColetaDigitaisPage() {
         atendimento.atendimento_preferencial ? 'preferencial' : 'normal'
       );
 
-      // Mudar status para 'chamando' para evitar que outro atendente chame a mesma pessoa
-      const { error: updateError } = await supabase
+      // Mudar status para 'chamando' atomicamente
+      const { data: updatedData, error: updateError } = await supabase
         .from('atendimentos')
         .update({ status: 'chamando' })
         .eq('id', atendimento.id)
-        .eq('status', 'em_andamento'); // Só atualiza se ainda estiver esperando
+        .eq('status', 'em_andamento') // Só atualiza se ainda estiver em andamento
+        .select('id');
 
       if (updateError) {
         throw updateError;
       }
 
-      // Criar objeto da chamada para o modal
+      // Se nenhum registro foi atualizado, a pessoa já foi chamada simultaneamente por outro atendente
+      if (!updatedData || updatedData.length === 0) {
+        await loadFila();
+        await loadStats();
+        alert('Esta pessoa já foi chamada por outro atendente. Atualizando a fila...');
+        return;
+      }
+
+      // Criar objeto da chamada para o modal com a flag de preferencial correta
       const chamadaFormatada: ChamadaDigital = {
         chamada_id: atendimento.id,
         atendimento_id: atendimento.id,
@@ -352,20 +368,46 @@ export default function ColetaDigitaisPage() {
         protocolo: atendimento.protocolo || '',
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
-        preferencial: false,  // Tabela atendimentos não tem preferencial
+        preferencial: atendimento.atendimento_preferencial === true,
         atendente_id: user?.id || '',
-        atendente_nome: 'Atendente'
+        atendente_nome: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atendente'
       };
 
       setChamadaAtual(chamadaFormatada);
       setShowModal(true);
 
-      // Recarregar fila (atendimento não aparece mais pois está com status 'chamando')
       await loadFila();
       await loadStats();
 
     } catch (error: any) {
       alert('Erro ao chamar pessoa: ' + (error.message || 'Tente novamente'));
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const cancelarChamada = async () => {
+    if (!chamadaAtual) {
+      setShowModal(false);
+      return;
+    }
+
+    try {
+      setProcessando(true);
+      // Restaurar status para 'em_andamento'
+      await supabase
+        .from('atendimentos')
+        .update({ status: 'em_andamento' })
+        .eq('id', chamadaAtual.atendimento_id)
+        .eq('status', 'chamando');
+
+      setShowModal(false);
+      setChamadaAtual(null);
+      setObservacao('');
+      await loadFila();
+      await loadStats();
+    } catch (err) {
+      setShowModal(false);
     } finally {
       setProcessando(false);
     }
@@ -389,12 +431,12 @@ export default function ColetaDigitaisPage() {
         coletorNome = userData?.name || 'Não identificado';
       }
 
-      // Atualizar atendimento: fotos coletadas e voltar status
+      // Atualizar atendimento: fotos coletadas e voltar status para em_andamento
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
           fotos_coletadas: true,
-          status: 'em_andamento',  // Volta para status normal (coleta concluída)
+          status: 'em_andamento',
           coletor_id: user?.id,
           coletor_nome: coletorNome
         })
@@ -433,11 +475,10 @@ export default function ColetaDigitaisPage() {
       setProcessando(true);
 
       // Voltar status para 'em_andamento' para pessoa poder ser chamada novamente
-      // Fotos ainda não foram coletadas (fotos_coletadas permanece false)
       const { error: atendimentoError } = await supabase
         .from('atendimentos')
         .update({
-          status: 'em_andamento'  // Volta para fila
+          status: 'em_andamento'
         })
         .eq('id', chamadaAtual.atendimento_id);
 
@@ -658,14 +699,25 @@ export default function ColetaDigitaisPage() {
                 <h2 className="text-2xl font-bold text-gray-900">
                   Pessoa Chamada
                 </h2>
-                {chamadaAtual.preferencial && (
-                  <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold border border-amber-300 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                <div className="flex items-center gap-2">
+                  {chamadaAtual.preferencial && (
+                    <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold border border-amber-300 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      PREFERENCIAL
+                    </span>
+                  )}
+                  <button
+                    onClick={cancelarChamada}
+                    className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                    title="Fechar (Volta para a fila)"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    PREFERENCIAL
-                  </span>
-                )}
+                  </button>
+                </div>
               </div>
 
               {/* Informações da Pessoa */}
@@ -737,6 +789,13 @@ export default function ColetaDigitaisPage() {
 
             {/* Botões de Ação */}
             <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={cancelarChamada}
+                disabled={processando}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                Voltar à Fila
+              </button>
               <button
                 onClick={marcarComoAusente}
                 disabled={processando}
