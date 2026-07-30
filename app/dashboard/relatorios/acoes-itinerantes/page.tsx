@@ -149,17 +149,13 @@ export default function AcoesItinerantesPage() {
     const nomeNorm = acao.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
     // 1. Se estiver explicitamente definida como Em Andamento / Reaberta no banco, NÃO é concluída
-    for (const rName of Array.from(viagensReabertasSet)) {
-      if (rName && (nomeNorm.includes(rName) || rName.includes(nomeNorm))) {
-        return false;
-      }
+    if (viagensReabertasSet.has(nomeNorm)) {
+      return false;
     }
 
     // 2. Se estiver explicitamente definida como Concluída no banco, É concluída
-    for (const vName of Array.from(viagensConcluidasSet)) {
-      if (vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm))) {
-        return true;
-      }
+    if (viagensConcluidasSet.has(nomeNorm)) {
+      return true;
     }
 
     // 3. Fallback: Se 100% dos atendimentos forem concluídos sem pendências
@@ -186,7 +182,7 @@ export default function AcoesItinerantesPage() {
       const { data: existingViagens } = await supabase
         .from('viagens')
         .select('id, titulo, municipio')
-        .or(`titulo.ilike.%${acaoNome}%,municipio.ilike.%${acaoNome}%`);
+        .or(`titulo.eq.${acaoNome},municipio.eq.${acaoNome}`);
 
       if (existingViagens && existingViagens.length > 0) {
         for (const v of existingViagens) {
@@ -220,11 +216,7 @@ export default function AcoesItinerantesPage() {
         if (newStatus === 'concluida') {
           next.add(nomeNorm);
         } else {
-          for (const vName of Array.from(next)) {
-            if (vName && (nomeNorm.includes(vName) || vName.includes(nomeNorm))) {
-              next.delete(vName);
-            }
-          }
+          next.delete(nomeNorm);
         }
         return next;
       });
@@ -234,11 +226,7 @@ export default function AcoesItinerantesPage() {
         if (newStatus === 'em_andamento') {
           next.add(nomeNorm);
         } else {
-          for (const rName of Array.from(next)) {
-            if (rName && (nomeNorm.includes(rName) || rName.includes(nomeNorm))) {
-              next.delete(rName);
-            }
-          }
+          next.delete(nomeNorm);
         }
         return next;
       });
@@ -319,14 +307,11 @@ export default function AcoesItinerantesPage() {
           const setReab = new Set<string>();
 
           vData.forEach((v: any) => {
-            const munNorm = v.municipio ? v.municipio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
             const titNorm = v.titulo ? v.titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
 
             if (v.status === 'concluida') {
-              if (munNorm) setConc.add(munNorm);
               if (titNorm) setConc.add(titNorm);
             } else {
-              if (munNorm) setReab.add(munNorm);
               if (titNorm) setReab.add(titNorm);
             }
           });
