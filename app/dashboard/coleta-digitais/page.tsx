@@ -45,48 +45,7 @@ export default function ColetaDigitaisPage() {
   const [showModal, setShowModal] = useState(false);
   const [observacao, setObservacao] = useState('');
   const [processando, setProcessando] = useState(false);
-  const [copiadoMsg, setCopiadoMsg] = useState('');
 
-  const copyProtocolo = async (protocoloText?: string) => {
-    const text = protocoloText || chamadaAtual?.protocolo;
-    if (!text) return;
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      setCopiadoMsg(text);
-      setTimeout(() => setCopiadoMsg(''), 3000);
-    } catch (err) {
-      console.error('Erro ao copiar protocolo:', err);
-    }
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!showModal || !chamadaAtual?.protocolo) return;
-      if (e.key === 'F7' || e.key === 'F8' || e.key === 'F9') {
-        e.preventDefault();
-        e.stopPropagation();
-        copyProtocolo(chamadaAtual.protocolo);
-      }
-    };
-    if (showModal) {
-      window.addEventListener('keydown', handleKeyDown, true);
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [showModal, chamadaAtual]);
 
   // Estatísticas
   const [stats, setStats] = useState({
@@ -660,24 +619,8 @@ export default function ColetaDigitaisPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{atendimento.nome}</div>
-                        <div className="flex items-center gap-1.5 text-sm text-gray-500 font-mono">
-                          <span>{atendimento.protocolo || '-'}</span>
-                          {atendimento.protocolo && (
-                            <button
-                              type="button"
-                              onClick={() => copyProtocolo(atendimento.protocolo)}
-                              title="Copiar protocolo"
-                              className="text-gray-400 hover:text-emerald-600 transition-colors p-0.5"
-                            >
-                              {copiadoMsg === atendimento.protocolo ? (
-                                <span className="text-xs text-emerald-600 font-sans font-semibold">✓ Copiado</span>
-                              ) : (
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 012-2h2a2 2 0 012-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-4 10h6m-6-4h6" />
-                                </svg>
-                              )}
-                            </button>
-                          )}
+                        <div className="text-sm text-gray-500 font-mono select-all cursor-text">
+                          {atendimento.protocolo || '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
@@ -764,39 +707,17 @@ export default function ColetaDigitaisPage() {
                   <span className="text-sm font-mono text-gray-700">{chamadaAtual.cpf}</span>
                 </div>
 
-                {/* Protocolo em destaque com Botão Copiar Direto */}
-                <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/90 border border-emerald-200 rounded-lg p-3.5">
+                {/* Protocolo em destaque - selecione e copie manualmente */}
+                <div className="mt-3 pt-3 border-t border-gray-200 bg-emerald-50/90 border border-emerald-200 rounded-lg p-3.5">
                   <div className="flex items-center gap-2.5">
                     <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                     </svg>
                     <div>
                       <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Protocolo de Atendimento</p>
-                      <p className="text-lg font-bold font-mono text-emerald-950">{chamadaAtual.protocolo || 'Não informado'}</p>
+                      <p className="text-xl font-bold font-mono text-emerald-950 select-all cursor-text">{chamadaAtual.protocolo || 'Não informado'}</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => copyProtocolo(chamadaAtual.protocolo)}
-                    disabled={!chamadaAtual.protocolo}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
-                  >
-                    {copiadoMsg === chamadaAtual.protocolo ? (
-                      <>
-                        <svg className="w-4 h-4 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 012-2h2a2 2 0 012-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-4 10h6m-6-4h6" />
-                        </svg>
-                        <span>Copiar Protocolo <span className="opacity-75 font-normal">(F7/F8)</span></span>
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
             </div>
