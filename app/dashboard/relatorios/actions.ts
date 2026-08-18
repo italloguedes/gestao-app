@@ -1,10 +1,10 @@
 'use server';
 
-import { supabaseServer } from '@/lib/supabase-server';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
-export async function searchApplicants(query: string) {
+export async function searchApplicants(query: string): Promise<{ value: string; label: string }[]> {
     try {
-        const { data, error } = await supabaseServer
+        const { data, error } = await getSupabaseServer()
             .from('atendimentos')
             .select('solicitante')
             .ilike('solicitante', `%${query}%`)
@@ -15,11 +15,7 @@ export async function searchApplicants(query: string) {
             return [];
         }
 
-        // Filter unique values
-        // Using Set to remove duplicates from the fetched 50 items.
-        // Note: Ideally we would use distinct in the query, but supabase-js simple query syntax 
-        // for distinct requires a bit more work or RPC. This should be sufficient for autocomplete.
-        const uniqueApplicants = Array.from(new Set(data?.map(item => item.solicitante))).filter(Boolean);
+        const uniqueApplicants = Array.from(new Set((data || []).map((item: any) => item.solicitante))).filter(Boolean) as string[];
 
         return uniqueApplicants.map(app => ({
             value: app,

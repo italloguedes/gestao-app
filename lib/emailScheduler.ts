@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client';
+import { supabaseServer as supabase } from './supabase-server';
 import { sendReminderEmail, sendInstructionsEmail } from './emailService';
 
 export async function scheduleReminderEmails() {

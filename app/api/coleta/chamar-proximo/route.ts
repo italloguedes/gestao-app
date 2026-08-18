@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       // Buscar pendentes de coleta
       const { data: pendentes, error: fetchError } = await supabase
         .from('atendimentos')
-        .select('id, nome, cpf, email, protocolo, dia_atual, horario, status, fotos_coletadas, atendimento_preferencial')
+        .select('id, nome, cpf, email, protocolo, dia_atual, horario, status, fotos_coletadas, atendimento_preferencial, pessoa_incapaz')
         .eq('dia_atual', hoje)
         .eq('status', 'em_andamento')
         .eq('fotos_coletadas', false)
@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
             cpf: candidato.cpf,
             protocolo: candidato.protocolo || '',
             atendimento_preferencial: candidato.atendimento_preferencial === true,
+            pessoa_incapaz: candidato.pessoa_incapaz === true,
             status: 'chamando'
           }
         });

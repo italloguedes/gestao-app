@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '@/lib/supabase-server';
+import { supabaseServer as supabaseRaw } from '@/lib/supabase-server';
 import { sendEmailConfirmation } from '@/lib/emailService';
 import { checkAuth, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
+
+const supabase = supabaseRaw as any;
 
 // Configuração de runtime para Vercel
 export const runtime = 'nodejs';
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Não permitir CPF duplicado na mesma data
     if (existingCpfAppointment && existingCpfAppointment.length > 0) {
       return NextResponse.json(
-        { error: `Já existe um agendamento para o CPF ${cpf} na data ${data}. Nome: ${existingCpfAppointment[0].nome}` },
+        { error: `Já existe um agendamento para o CPF ${cpf} na data ${data}. Nome: ${(existingCpfAppointment[0] as any).nome}` },
         { status: 409 }
       );
     }

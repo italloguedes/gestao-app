@@ -37,7 +37,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Erro ao carregar chamadas' }, { status: 500 });
     }
 
-    const calls: PublicCall[] = (data || []).map((call) => ({
+    const calls: PublicCall[] = (data || []).map((call: any) => ({
       id: call.id,
       senha: call.senha,
       tipo: call.tipo,

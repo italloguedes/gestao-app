@@ -6,10 +6,16 @@ import { createClient } from '@supabase/supabase-js';
 // GET /api/logs?date=YYYY-MM-DD&user_id=xxx&action=create&entity_type=atendimento&search=texto&page=1&limit=50
 // ========================================
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _supabaseAdmin: any = null;
+function getSupabaseAdmin(): any {
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient<any>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabaseAdmin;
+}
 
 export async function GET(request: Request) {
   try {
@@ -19,14 +25,14 @@ export async function GET(request: Request) {
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
 
       if (authError || !user) {
         return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
       }
 
       // Verificar se é admin ou superadmin
-      const { data: userData } = await supabaseAdmin
+      const { data: userData } = await getSupabaseAdmin()
         .from('users')
         .select('role')
         .eq('auth_id', user.id)
@@ -53,7 +59,7 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
 
     // Construir query
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('activity_logs')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
@@ -104,14 +110,14 @@ export async function GET(request: Request) {
       const endDate = `${endDateStr}T23:59:59`;
 
       // Total de ações por tipo
-      const { data: actionStats } = await supabaseAdmin
+      const { data: actionStats } = await getSupabaseAdmin()
         .from('activity_logs')
         .select('action')
         .gte('created_at', startDate)
         .lte('created_at', endDate);
 
       // Total de ações por usuário
-      const { data: userStats } = await supabaseAdmin
+      const { data: userStats } = await getSupabaseAdmin()
         .from('activity_logs')
         .select('user_name, user_id')
         .gte('created_at', startDate)

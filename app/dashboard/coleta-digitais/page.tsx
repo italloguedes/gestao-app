@@ -19,6 +19,7 @@ interface AtendimentoFila {
   status: string;
   fotos_coletadas: boolean;
   atendimento_preferencial?: boolean;
+  pessoa_incapaz?: boolean;
 }
 
 interface ChamadaDigital {
@@ -31,6 +32,7 @@ interface ChamadaDigital {
   status: string;
   data_hora_chamada: string;
   preferencial: boolean;
+  pessoa_incapaz: boolean;
   atendente_id: string;
   atendente_nome: string;
 }
@@ -164,7 +166,8 @@ export default function ColetaDigitaisPage() {
           horario,
           status,
           fotos_coletadas,
-          atendimento_preferencial
+          atendimento_preferencial,
+          pessoa_incapaz
         `)
         .eq('dia_atual', hoje)
         .eq('status', 'em_andamento')  // Status correto quando atendimento é criado
@@ -227,7 +230,8 @@ export default function ColetaDigitaisPage() {
         horario: atendimento.horario,
         status: atendimento.status,
         fotos_coletadas: atendimento.fotos_coletadas || false,
-        atendimento_preferencial: atendimento.atendimento_preferencial === true
+        atendimento_preferencial: atendimento.atendimento_preferencial === true,
+        pessoa_incapaz: atendimento.pessoa_incapaz === true
       }));
 
       setFila(atendimentosMapeados);
@@ -299,6 +303,7 @@ export default function ColetaDigitaisPage() {
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
         preferencial: pessoa.atendimento_preferencial === true,
+        pessoa_incapaz: pessoa.pessoa_incapaz === true,
         atendente_id: user?.id || '',
         atendente_nome: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atendente'
       };
@@ -347,6 +352,7 @@ export default function ColetaDigitaisPage() {
         status: 'chamando',
         data_hora_chamada: new Date().toISOString(),
         preferencial: atendimento.atendimento_preferencial === true,
+        pessoa_incapaz: atendimento.pessoa_incapaz === true,
         atendente_id: user?.id || '',
         atendente_nome: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atendente'
       };
@@ -611,14 +617,19 @@ export default function ColetaDigitaisPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {fila.map((atendimento, index) => (
-                    <tr key={atendimento.id} className={`hover:bg-gray-50 ${atendimento.atendimento_preferencial ? 'bg-amber-50/30' : ''}`}>
+                    <tr key={atendimento.id} className={`hover:bg-gray-50 ${atendimento.pessoa_incapaz ? 'bg-red-50/40' : atendimento.atendimento_preferencial ? 'bg-amber-50/30' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-lg font-mono font-semibold text-gray-900">
                           #{index + 1}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{atendimento.nome}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">{atendimento.nome}</span>
+                          {atendimento.pessoa_incapaz && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-700 border border-red-300 uppercase">Incapaz</span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-500 font-mono select-all cursor-text">
                           {atendimento.protocolo || '-'}
                         </div>
@@ -697,6 +708,21 @@ export default function ColetaDigitaisPage() {
                 </button>
               </div>
             </div>
+
+            {/* Banner Pessoa Incapaz */}
+            {chamadaAtual.pessoa_incapaz && (
+              <div className="bg-red-600 px-6 py-3 flex items-center gap-3 border-t border-red-700">
+                <div className="flex items-center justify-center w-8 h-8 bg-white/20 rounded-full animate-pulse">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-extrabold text-sm uppercase tracking-wider">🚨 Pessoa Incapaz</p>
+                  <p className="text-red-100 text-xs font-medium">Esta pessoa foi marcada como incapaz durante o atendimento</p>
+                </div>
+              </div>
+            )}
 
             <div className="p-6">
               {/* Alerta de Conferência de Dados */}

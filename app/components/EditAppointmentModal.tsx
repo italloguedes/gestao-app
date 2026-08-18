@@ -32,6 +32,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
   const [action, setAction] = React.useState<'iniciar' | 'ausente' | 'concluido' | 'cancelar' | 'edit' | 'delete' | null>(initialAction);
   const [motivo, setMotivo] = React.useState('');
   const [protocolo, setProtocolo] = React.useState('');
+  const [pessoaIncapaz, setPessoaIncapaz] = React.useState(false);
 
   React.useEffect(() => {
     setAction(initialAction);
@@ -214,6 +215,7 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                 protocolo,
                 status: 'em_andamento',
                 atendimento_preferencial: appointment.atendimento_preferencial || false,
+                pessoa_incapaz: pessoaIncapaz,
               },
             ])
             .select('id')
@@ -612,6 +614,26 @@ export default function EditAppointmentModal({ isOpen, onClose, appointment, onS
                   <p className="text-xs text-slate-400 flex items-center gap-1.5">
                     <FiHash className="w-3 h-3" /> Este número será usado para rastreamento do atendimento
                   </p>
+
+                  {/* Toggle Pessoa Incapaz */}
+                  <div className="mt-2 bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={pessoaIncapaz}
+                          onChange={(e) => setPessoaIncapaz(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-orange-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-bold text-orange-800">Pessoa Incapaz</span>
+                        <p className="text-xs text-orange-600 mt-0.5">Marque se a pessoa for incapaz. Esta informação será exibida na coleta de digitais.</p>
+                      </div>
+                      <FiAlertTriangle className={`w-5 h-5 ${pessoaIncapaz ? 'text-orange-500' : 'text-gray-300'} transition-colors`} />
+                    </label>
+                  </div>
                 </div>
               )}
 
