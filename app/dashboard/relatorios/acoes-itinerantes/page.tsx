@@ -807,10 +807,27 @@ export default function AcoesItinerantesPage() {
   };
 
   // =============================================
-  // PDF GENERATORS — updated colors to green
+  // PDF GENERATORS — updated to apply active filters
   // =============================================
 
+  const getAcoesFiltradasParaExportacao = () => {
+    return acoes.filter((acao) => {
+      if (selectedAcao && acao.nome !== selectedAcao) return false;
+      const isConc = checkIsConcluida(acao);
+      if (statusAcaoFilter === 'concluidas') return isConc;
+      if (statusAcaoFilter === 'nao_concluidas' || statusAcaoFilter === 'pendentes' || statusAcaoFilter === 'em_andamento') return !isConc;
+      return true;
+    });
+  };
+
   const generatePDF = () => {
+    const acoesFiltradas = getAcoesFiltradasParaExportacao();
+
+    if (acoesFiltradas.length === 0) {
+      alert('Nenhuma ação encontrada com os filtros selecionados para exportação.');
+      return;
+    }
+
     const doc = new jsPDF();
     const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -846,16 +863,23 @@ export default function AcoesItinerantesPage() {
     const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
     doc.text(subtitle, subtitleX, 24);
 
-    // Período e Total
-    doc.setFontSize(9);
+    // Período e Total Filtrado
+    const totalAtendimentosFiltrados = acoesFiltradas.reduce((sum, a) => sum + a.total, 0);
+    doc.setFontSize(8.5);
     const periodoText = `Período: ${getPeriodoTexto()}`;
-    const totalText = `Total Atendimentos: ${totalAtendimentos}`;
+    const statusText = statusAcaoFilter === 'concluidas'
+      ? ' | Status: Concluídas'
+      : statusAcaoFilter === 'nao_concluidas'
+      ? ' | Status: Não Concluídas'
+      : '';
+    const acoesCountText = `${acoesFiltradas.length} ${acoesFiltradas.length === 1 ? 'ação' : 'ações'}`;
+    const totalText = `Total: ${totalAtendimentosFiltrados} atendimentos (${acoesCountText}${statusText})`;
     const infoText = `${periodoText}  |  ${totalText}`;
-    const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 8.5 / doc.internal.scaleFactor;
     const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
     doc.text(infoText, infoX, 32);
 
-    const tableData = acoes.map(acao => {
+    const tableData = acoesFiltradas.map(acao => {
       const crono = chronologicalData.find(c => c.acao === acao.nome);
       const periodo = crono
         ? (crono.dataInicio === crono.dataFim
@@ -935,13 +959,20 @@ export default function AcoesItinerantesPage() {
       doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
-    const fileSuffix = tipoFiltroPeriodo === 'meses'
-      ? `meses-${anoSelecionado}-${mesesSelecionados.join('-')}`
-      : `${dataInicio}-${dataFim}`;
+    const fileSuffix = `${dataInicio}-${dataFim}`;
     doc.save(`acoes-itinerantes-${fileSuffix}.pdf`);
   };
 
   const generateChronologicalPDF = () => {
+    const acoesFiltradas = getAcoesFiltradasParaExportacao();
+    const nomesAcoesFiltradas = new Set(acoesFiltradas.map(a => a.nome));
+    const cronoFiltrada = chronologicalData.filter(item => nomesAcoesFiltradas.has(item.acao));
+
+    if (cronoFiltrada.length === 0) {
+      alert('Nenhuma ação encontrada com os filtros selecionados para exportação.');
+      return;
+    }
+
     const doc = new jsPDF();
     const primaryColor: [number, number, number] = [0, 135, 81]; // Verde ALECE
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -977,14 +1008,22 @@ export default function AcoesItinerantesPage() {
     const subtitleX = logoBase64 ? 52 + (pageWidth - 52 - subtitleWidth) / 2 : (pageWidth - subtitleWidth) / 2;
     doc.text(subtitle, subtitleX, 24);
 
-    // Período
-    doc.setFontSize(9);
+    // Período e Total
+    const totalCronoAtendimentos = cronoFiltrada.reduce((sum, item) => sum + item.total, 0);
+    doc.setFontSize(8.5);
     const periodoText = `Período: ${getPeriodoTexto()}`;
-    const infoWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
+    const statusText = statusAcaoFilter === 'concluidas'
+      ? ' | Status: Concluídas'
+      : statusAcaoFilter === 'nao_concluidas'
+      ? ' | Status: Não Concluídas'
+      : '';
+    const acoesCountText = `${cronoFiltrada.length} ${cronoFiltrada.length === 1 ? 'ação' : 'ações'}`;
+    const infoText = `${periodoText}  |  Total: ${totalCronoAtendimentos} atendimentos (${acoesCountText}${statusText})`;
+    const infoWidth = doc.getStringUnitWidth(infoText) * 8.5 / doc.internal.scaleFactor;
     const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
-    doc.text(periodoText, infoX, 32);
+    doc.text(infoText, infoX, 32);
 
-    const formattedData = chronologicalData.map(item => {
+    const formattedData = cronoFiltrada.map(item => {
       const dataInicioFormatted = formatDateFull(item.dataInicio);
       const dataFimFormatted = formatDateFull(item.dataFim);
       const periodo = item.dataInicio === item.dataFim
@@ -1060,9 +1099,7 @@ export default function AcoesItinerantesPage() {
       doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
-    const fileSuffix = tipoFiltroPeriodo === 'meses'
-      ? `meses-${anoSelecionado}-${mesesSelecionados.join('-')}`
-      : `${dataInicio}-${dataFim}`;
+    const fileSuffix = `${dataInicio}-${dataFim}`;
     doc.save(`acoes-itinerantes-cronologica-${fileSuffix}.pdf`);
   };
 
