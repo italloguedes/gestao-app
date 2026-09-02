@@ -62,15 +62,34 @@ export default function DashboardCharts() {
 
             if (usersError) throw usersError;
 
-            // 2. Fetch Atendimentos (Last 30 days)
-            const { data: atendimentos, error: dataError } = await supabase
-                .from('atendimentos')
-                .select('*')
-                .gte('created_at', dateStr);
+            // 2. Fetch Atendimentos (Last 30 days) with pagination
+            const BATCH = 1000;
+            let from = 0;
+            let allAtendimentos: any[] = [];
+            let hasMore = true;
 
-            if (dataError) throw dataError;
+            while (hasMore) {
+                const { data, error: dataError } = await supabase
+                    .from('atendimentos')
+                    .select('*')
+                    .gte('created_at', dateStr)
+                    .range(from, from + BATCH - 1);
 
-            processData(atendimentos || [], users || []);
+                if (dataError) throw dataError;
+
+                if (!data || data.length === 0) {
+                    hasMore = false;
+                } else {
+                    allAtendimentos = [...allAtendimentos, ...data];
+                    if (data.length < BATCH) {
+                        hasMore = false;
+                    } else {
+                        from += BATCH;
+                    }
+                }
+            }
+
+            processData(allAtendimentos, users || []);
         } catch (error) {
             console.error('Error fetching chart data:', error);
         } finally {

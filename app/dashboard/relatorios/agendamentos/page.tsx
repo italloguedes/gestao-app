@@ -296,47 +296,71 @@ export default function RelatorioAgendamentosPage() {
         return;
       }
 
-      let query = supabase
-        .from('agendamentos')
-        .select('id, nome, cpf, telefone, data, horario, status, posto');
+      const fetchAllAgendamentos = async () => {
+        const BATCH = 1000;
+        let from = 0;
+        let allData: any[] = [];
+        let hasMore = true;
 
-      // Filtros de data
-      if (dataInicio && dataFim) {
-        query = query.gte('data', dataInicio).lte('data', dataFim);
-      } else if (dataInicio) {
-        query = query.eq('data', dataInicio);
-      } else if (dataFim) {
-        query = query.lte('data', dataFim);
-      }
+        while (hasMore) {
+          let query = supabase
+            .from('agendamentos')
+            .select('id, nome, cpf, telefone, data, horario, status, posto');
 
-      if (nome) {
-        query = query.ilike('nome', `%${nome}%`);
-      }
+          // Filtros de data
+          if (dataInicio && dataFim) {
+            query = query.gte('data', dataInicio).lte('data', dataFim);
+          } else if (dataInicio) {
+            query = query.eq('data', dataInicio);
+          } else if (dataFim) {
+            query = query.lte('data', dataFim);
+          }
 
-      if (status) {
-        query = query.eq('status', status);
-      }
+          if (nome) {
+            query = query.ilike('nome', `%${nome}%`);
+          }
 
-      if (posto) {
-        query = query.eq('posto', posto);
-      }
+          if (status) {
+            query = query.eq('status', status);
+          }
 
-      // Ordenação
-      if (ordenacao === 'nome') {
-        query = query.order('nome', { ascending: true });
-      } else {
-        query = query
-          .order('data', { ascending: true })
-          .order('horario', { ascending: true });
-      }
+          if (posto) {
+            query = query.eq('posto', posto);
+          }
 
-      const { data: results, error } = await query;
+          // Ordenação
+          if (ordenacao === 'nome') {
+            query = query.order('nome', { ascending: true });
+          } else {
+            query = query
+              .order('data', { ascending: true })
+              .order('horario', { ascending: true });
+          }
 
-      if (error) {
-        console.error('Erro ao buscar agendamentos:', error);
-        setMessage({ text: 'Erro ao buscar agendamentos: ' + error.message, type: 'error' });
-        return;
-      }
+          query = query.range(from, from + BATCH - 1);
+
+          const { data, error } = await query;
+
+          if (error) {
+            throw error;
+          }
+
+          if (!data || data.length === 0) {
+            hasMore = false;
+          } else {
+            allData = [...allData, ...data];
+            if (data.length < BATCH) {
+              hasMore = false;
+            } else {
+              from += BATCH;
+            }
+          }
+        }
+
+        return allData;
+      };
+
+      const results = await fetchAllAgendamentos();
 
       if (!results || results.length === 0) {
         setMessage({ text: 'Nenhum agendamento encontrado com os filtros selecionados', type: 'error' });

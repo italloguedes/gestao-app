@@ -460,59 +460,83 @@ export default function GerarRelatorioPage() {
         return;
       }
 
-      let query = supabase
-        .from('atendimentos')
-        .select('*');
+      const fetchAllAtendimentos = async () => {
+        const BATCH = 1000;
+        let from = 0;
+        let allData: Atendimento[] = [];
+        let hasMore = true;
 
-      // Aplicar filtros de data
-      if (dataInicio && dataFim) {
-        // Se ambas as datas estão preenchidas, usar intervalo
-        const dataInicioAjustada = dataInicio + 'T00:00:00';
-        const dataFimAjustada = dataFim + 'T23:59:59';
-        query = query
-          .gte('dia_atual', dataInicioAjustada)
-          .lte('dia_atual', dataFimAjustada);
-      } else if (dataInicio) {
-        // Se apenas data inicial, usar do início deste dia até o fim
-        const dataInicioAjustada = dataInicio + 'T00:00:00';
-        const dataFimAjustada = dataInicio + 'T23:59:59';
-        query = query
-          .gte('dia_atual', dataInicioAjustada)
-          .lte('dia_atual', dataFimAjustada);
-      } else if (dataFim) {
-        // Se apenas data final, usar até o fim deste dia
-        const dataFimAjustada = dataFim + 'T23:59:59';
-        query = query.lte('dia_atual', dataFimAjustada);
-      }
+        while (hasMore) {
+          let query = supabase
+            .from('atendimentos')
+            .select('*');
 
-      if (nome) {
-        query = query.ilike('nome', `%${nome}%`);
-      }
+          // Aplicar filtros de data
+          if (dataInicio && dataFim) {
+            // Se ambas as datas estão preenchidas, usar intervalo
+            const dataInicioAjustada = dataInicio + 'T00:00:00';
+            const dataFimAjustada = dataFim + 'T23:59:59';
+            query = query
+              .gte('dia_atual', dataInicioAjustada)
+              .lte('dia_atual', dataFimAjustada);
+          } else if (dataInicio) {
+            // Se apenas data inicial, usar do início deste dia até o fim
+            const dataInicioAjustada = dataInicio + 'T00:00:00';
+            const dataFimAjustada = dataInicio + 'T23:59:59';
+            query = query
+              .gte('dia_atual', dataInicioAjustada)
+              .lte('dia_atual', dataFimAjustada);
+          } else if (dataFim) {
+            // Se apenas data final, usar até o fim deste dia
+            const dataFimAjustada = dataFim + 'T23:59:59';
+            query = query.lte('dia_atual', dataFimAjustada);
+          }
 
-      if (solicitantes.length > 0) {
-        query = query.in('solicitante', solicitantes);
-      }
+          if (nome) {
+            query = query.ilike('nome', `%${nome}%`);
+          }
 
-      if (status) {
-        query = query.eq('status', status);
-      }
+          if (solicitantes.length > 0) {
+            query = query.in('solicitante', solicitantes);
+          }
 
-      // Ordenação condicional conforme seleção do usuário
-      if (ordenacao === 'nome') {
-        query = query.order('nome', { ascending: true });
-      } else {
-        query = query
-          .order('dia_atual', { ascending: true })
-          .order('horario', { ascending: true });
-      }
+          if (status) {
+            query = query.eq('status', status);
+          }
 
-      const { data: atendimentos, error } = await query;
+          // Ordenação condicional conforme seleção do usuário
+          if (ordenacao === 'nome') {
+            query = query.order('nome', { ascending: true });
+          } else {
+            query = query
+              .order('dia_atual', { ascending: true })
+              .order('horario', { ascending: true });
+          }
 
-      if (error) {
-        console.error('Erro ao buscar atendimentos:', error);
-        setMessage({ text: 'Erro ao buscar atendimentos: ' + error.message, type: 'error' });
-        return;
-      }
+          query = query.range(from, from + BATCH - 1);
+
+          const { data, error } = await query;
+
+          if (error) {
+            throw error;
+          }
+
+          if (!data || data.length === 0) {
+            hasMore = false;
+          } else {
+            allData = [...allData, ...(data as Atendimento[])];
+            if (data.length < BATCH) {
+              hasMore = false;
+            } else {
+              from += BATCH;
+            }
+          }
+        }
+
+        return allData;
+      };
+
+      const atendimentos = await fetchAllAtendimentos();
 
       if (!atendimentos || atendimentos.length === 0) {
         setMessage({ text: 'Nenhum atendimento encontrado com os filtros selecionados', type: 'error' });
