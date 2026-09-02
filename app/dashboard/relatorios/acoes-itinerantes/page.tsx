@@ -87,6 +87,21 @@ const formatDateFull = (dateStr: string) => {
   return `${d}/${m}/${y}`;
 };
 
+const MESES = [
+  { numero: 1, nome: 'Janeiro', sigla: 'Jan' },
+  { numero: 2, nome: 'Fevereiro', sigla: 'Fev' },
+  { numero: 3, nome: 'Março', sigla: 'Mar' },
+  { numero: 4, nome: 'Abril', sigla: 'Abr' },
+  { numero: 5, nome: 'Maio', sigla: 'Mai' },
+  { numero: 6, nome: 'Junho', sigla: 'Jun' },
+  { numero: 7, nome: 'Julho', sigla: 'Jul' },
+  { numero: 8, nome: 'Agosto', sigla: 'Ago' },
+  { numero: 9, nome: 'Setembro', sigla: 'Set' },
+  { numero: 10, nome: 'Outubro', sigla: 'Out' },
+  { numero: 11, nome: 'Novembro', sigla: 'Nov' },
+  { numero: 12, nome: 'Dezembro', sigla: 'Dez' },
+];
+
 // Updated color palette — emerald / teal / green tones
 const COLORS = {
   primary: '#059669',   // emerald-600
@@ -127,6 +142,9 @@ export default function AcoesItinerantesPage() {
   const [acoes, setAcoes] = useState<AcaoData[]>([]);
   const [statusData, setStatusData] = useState<StatusData[]>([]);
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
+  const [tipoFiltroPeriodo, setTipoFiltroPeriodo] = useState<'meses' | 'personalizado'>('meses');
+  const [anoSelecionado, setAnoSelecionado] = useState<number>(new Date().getFullYear());
+  const [mesesSelecionados, setMesesSelecionados] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [totalAtendimentos, setTotalAtendimentos] = useState(0);
@@ -142,6 +160,100 @@ export default function AcoesItinerantesPage() {
   const [viagensStatusMap, setViagensStatusMap] = useState<Map<string, string>>(new Map());
   const [statusAcaoFilter, setStatusAcaoFilter] = useState<'todas' | 'concluidas' | 'nao_concluidas' | 'pendentes' | 'em_andamento'>('todas');
   const [togglingAcao, setTogglingAcao] = useState<string | null>(null);
+
+  const aplicarMeses = (novosMeses: number[], ano: number) => {
+    setMesesSelecionados(novosMeses);
+    if (novosMeses.length > 0) {
+      const minMes = Math.min(...novosMeses);
+      const maxMes = Math.max(...novosMeses);
+      const inicioMesStr = String(minMes).padStart(2, '0');
+      const fimMesStr = String(maxMes).padStart(2, '0');
+      const ultimoDia = new Date(ano, maxMes, 0).getDate();
+      setDataInicio(`${ano}-${inicioMesStr}-01`);
+      setDataFim(`${ano}-${fimMesStr}-${String(ultimoDia).padStart(2, '0')}`);
+    }
+  };
+
+  const toggleMes = (num: number) => {
+    let novosMeses: number[];
+    if (mesesSelecionados.includes(num)) {
+      novosMeses = mesesSelecionados.filter(m => m !== num);
+      if (novosMeses.length === 0) novosMeses = [num];
+    } else {
+      novosMeses = [...mesesSelecionados, num].sort((a, b) => a - b);
+    }
+    aplicarMeses(novosMeses, anoSelecionado);
+  };
+
+  const selecionarTodosMeses = () => {
+    aplicarMeses([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], anoSelecionado);
+  };
+
+  const selecionarPrimeiroSemestre = () => {
+    aplicarMeses([1, 2, 3, 4, 5, 6], anoSelecionado);
+  };
+
+  const selecionarSegundoSemestre = () => {
+    aplicarMeses([7, 8, 9, 10, 11, 12], anoSelecionado);
+  };
+
+  const selecionarMesAtual = () => {
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = hoje.getMonth() + 1;
+    setAnoSelecionado(anoAtual);
+    aplicarMeses([mesAtual], anoAtual);
+  };
+
+  const mudarAno = (novoAno: number) => {
+    setAnoSelecionado(novoAno);
+    aplicarMeses(mesesSelecionados.length > 0 ? mesesSelecionados : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], novoAno);
+  };
+
+  const getPeriodoTexto = useCallback(() => {
+    if (!dataInicio || !dataFim) return '';
+    if (dataInicio === dataFim) return formatDateFull(dataInicio);
+
+    const [yIni, mIni, dIni] = dataInicio.split('-').map(Number);
+    const [yFim, mFim, dFim] = dataFim.split('-').map(Number);
+
+    if (!yIni || !mIni || !dIni || !yFim || !mFim || !dFim) {
+      return `${dataInicio} a ${dataFim}`;
+    }
+
+    const ultimoDiaFim = new Date(yFim, mFim, 0).getDate();
+
+    // Se começou no dia 01 e terminou no último dia do mesmo mês
+    if (yIni === yFim && mIni === mFim && dIni === 1 && dFim === ultimoDiaFim) {
+      const mesNome = MESES.find(m => m.numero === mIni)?.nome || `Mês ${mIni}`;
+      return `${mesNome} de ${yIni}`;
+    }
+
+    // Se for o ano completo (01/01 a 31/12)
+    if (yIni === yFim && mIni === 1 && dIni === 1 && mFim === 12 && dFim === 31) {
+      return `Ano Completo de ${yIni}`;
+    }
+
+    // Se for 1º semestre (01/01 a 30/06)
+    if (yIni === yFim && mIni === 1 && dIni === 1 && mFim === 6 && dFim === 30) {
+      return `1º Semestre de ${yIni}`;
+    }
+
+    // Se for 2º semestre (01/07 a 31/12)
+    if (yIni === yFim && mIni === 7 && dIni === 1 && mFim === 12 && dFim === 31) {
+      return `2º Semestre de ${yIni}`;
+    }
+
+    // Se começou no dia 01 de um mês e terminou no último dia de outro mês no mesmo ano
+    if (yIni === yFim && dIni === 1 && dFim === ultimoDiaFim) {
+      const mesIniNome = MESES.find(m => m.numero === mIni)?.nome;
+      const mesFimNome = MESES.find(m => m.numero === mFim)?.nome;
+      return `${mesIniNome} a ${mesFimNome} de ${yIni}`;
+    }
+
+    // Caso de dias específicos (ex: 05/02/2025 a 20/03/2025)
+    return `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+  }, [dataInicio, dataFim]);
 
   // Função para verificar se uma ação itinerante está concluída
   const checkIsConcluida = useCallback((acao: AcaoData) => {
@@ -288,10 +400,13 @@ export default function AcoesItinerantesPage() {
   // =============================================
 
   const fetchData = async () => {
+    if (!dataInicio || !dataFim) {
+      return;
+    }
     setLoading(true);
     try {
       console.log('=== BUSCA DE ATENDIMENTOS E VIAGENS ===');
-      console.log(`Período: ${dataInicio} a ${dataFim}`);
+      console.log(`Período da consulta: ${dataInicio} a ${dataFim}`);
 
       // Buscar viagens concluídas cadastradas na Gestão de Viagens
       try {
@@ -733,7 +848,7 @@ export default function AcoesItinerantesPage() {
 
     // Período e Total
     doc.setFontSize(9);
-    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const periodoText = `Período: ${getPeriodoTexto()}`;
     const totalText = `Total Atendimentos: ${totalAtendimentos}`;
     const infoText = `${periodoText}  |  ${totalText}`;
     const infoWidth = doc.getStringUnitWidth(infoText) * 9 / doc.internal.scaleFactor;
@@ -795,7 +910,7 @@ export default function AcoesItinerantesPage() {
         // Período no canto direito
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodo = getPeriodoTexto();
         const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
         doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
       }
@@ -820,7 +935,10 @@ export default function AcoesItinerantesPage() {
       doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
-    doc.save(`acoes-itinerantes-${dataInicio}-${dataFim}.pdf`);
+    const fileSuffix = tipoFiltroPeriodo === 'meses'
+      ? `meses-${anoSelecionado}-${mesesSelecionados.join('-')}`
+      : `${dataInicio}-${dataFim}`;
+    doc.save(`acoes-itinerantes-${fileSuffix}.pdf`);
   };
 
   const generateChronologicalPDF = () => {
@@ -861,7 +979,7 @@ export default function AcoesItinerantesPage() {
 
     // Período
     doc.setFontSize(9);
-    const periodoText = `Período: ${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+    const periodoText = `Período: ${getPeriodoTexto()}`;
     const infoWidth = doc.getStringUnitWidth(periodoText) * 9 / doc.internal.scaleFactor;
     const infoX = logoBase64 ? 52 + (pageWidth - 52 - infoWidth) / 2 : (pageWidth - infoWidth) / 2;
     doc.text(periodoText, infoX, 32);
@@ -917,7 +1035,7 @@ export default function AcoesItinerantesPage() {
         // Período no canto direito
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        const headerPeriodo = `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+        const headerPeriodo = getPeriodoTexto();
         const headerPeriodoWidth = doc.getStringUnitWidth(headerPeriodo) * 7 / doc.internal.scaleFactor;
         doc.text(headerPeriodo, pageWidth - 14 - headerPeriodoWidth, 11);
       }
@@ -942,7 +1060,10 @@ export default function AcoesItinerantesPage() {
       doc.text(pageText, pageWidth - 14 - pageTextWidth, pageHeight - 12);
     }
 
-    doc.save(`acoes-itinerantes-cronologica-${dataInicio}-${dataFim}.pdf`);
+    const fileSuffix = tipoFiltroPeriodo === 'meses'
+      ? `meses-${anoSelecionado}-${mesesSelecionados.join('-')}`
+      : `${dataInicio}-${dataFim}`;
+    doc.save(`acoes-itinerantes-cronologica-${fileSuffix}.pdf`);
   };
 
   // =============================================
@@ -1009,7 +1130,7 @@ export default function AcoesItinerantesPage() {
       ? (crono.dataInicio === crono.dataFim
         ? formatDateFull(crono.dataInicio)
         : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
-      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+      : getPeriodoTexto();
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
@@ -1123,7 +1244,10 @@ export default function AcoesItinerantesPage() {
     }
 
     const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-    doc.save(`relatorio_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
+    const fileSuffix = tipoFiltroPeriodo === 'meses'
+      ? `meses-${anoSelecionado}`
+      : `${dataInicio}_${dataFim}`;
+    doc.save(`relatorio_acao_${safeNome}_${fileSuffix}.pdf`);
   };
 
   const generateActionDeliveryPDF = (nomeAcao: string) => {
@@ -1189,7 +1313,7 @@ export default function AcoesItinerantesPage() {
       ? (crono.dataInicio === crono.dataFim
         ? formatDateFull(crono.dataInicio)
         : `${formatDateFull(crono.dataInicio)} a ${formatDateFull(crono.dataFim)}`)
-      : `${formatDateFull(dataInicio)} a ${formatDateFull(dataFim)}`;
+      : getPeriodoTexto();
 
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(9);
@@ -1303,7 +1427,10 @@ export default function AcoesItinerantesPage() {
     }
 
     const safeNome = nomeAcao.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-    doc.save(`lista_entrega_acao_${safeNome}_${dataInicio}_${dataFim}.pdf`);
+    const fileSuffix = tipoFiltroPeriodo === 'meses'
+      ? `meses-${anoSelecionado}`
+      : `${dataInicio}_${dataFim}`;
+    doc.save(`lista_entrega_acao_${safeNome}_${fileSuffix}.pdf`);
   };
 
   // =============================================
@@ -1398,60 +1525,159 @@ export default function AcoesItinerantesPage() {
       </div>
 
       {/* === Filters === */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <FiFilter className="h-3.5 w-3.5 text-emerald-600" />
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4 sm:p-5 space-y-4">
+        {/* Filter Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <FiFilter className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-700">Filtros de Período e Ações</span>
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Filtros</span>
+
+          <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-semibold bg-emerald-50/80 px-3 py-1.5 rounded-lg border border-emerald-200/60">
+            <FiCalendar className="w-3.5 h-3.5 text-emerald-600" />
+            <span>
+              Período: <strong className="text-emerald-950">{getPeriodoTexto()}</strong>
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600">Data Início</label>
-            <input
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-            />
+        {/* Month & Year Selection Panel */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-600">Ano:</span>
+              <div className="flex items-center gap-1">
+                {[2024, 2025, 2026, 2027].map((ano) => (
+                  <button
+                    key={ano}
+                    type="button"
+                    onClick={() => mudarAno(ano)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      anoSelecionado === ano
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {ano}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Shortcuts */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-xs text-gray-400 mr-1 font-medium">Atalhos rápidos:</span>
+              <button
+                type="button"
+                onClick={selecionarMesAtual}
+                className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium transition-colors"
+              >
+                Mês Atual
+              </button>
+              <button
+                type="button"
+                onClick={selecionarPrimeiroSemestre}
+                className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium transition-colors"
+              >
+                1º Semestre
+              </button>
+              <button
+                type="button"
+                onClick={selecionarSegundoSemestre}
+                className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium transition-colors"
+              >
+                2º Semestre
+              </button>
+              <button
+                type="button"
+                onClick={selecionarTodosMeses}
+                className="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"
+              >
+                Ano Completo
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600">Data Fim</label>
-            <input
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-            />
+          {/* 12 Month Pills Grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1.5">
+            {MESES.map((mes) => {
+              const isSelected = mesesSelecionados.includes(mes.numero);
+              return (
+                <button
+                  key={mes.numero}
+                  type="button"
+                  onClick={() => toggleMes(mes.numero)}
+                  className={`py-2 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 border ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-200'
+                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200'
+                  }`}
+                >
+                  <span className="text-[10px] uppercase tracking-wider opacity-80">{mes.sigla}</span>
+                  <span className="text-xs truncate max-w-full px-1">{mes.nome}</span>
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600">Filtrar por Ação</label>
-            <select
-              value={selectedAcao || ''}
-              onChange={(e) => setSelectedAcao(e.target.value || null)}
-              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-            >
-              <option value="">Todas as Ações</option>
-              {acoes.map(acao => (
-                <option key={acao.nome} value={acao.nome}>{acao.nome}</option>
-              ))}
-            </select>
-          </div>
+        {/* Exact Date Range: De Dia X até Dia Y */}
+        <div className="pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <FiCalendar className="w-3.5 h-3.5 text-emerald-600" />
+                Data Início (Dia X)
+              </label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all font-medium"
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600">Status da Ação</label>
-            <select
-              value={statusAcaoFilter}
-              onChange={(e) => setStatusAcaoFilter(e.target.value as any)}
-              className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 font-semibold transition-all text-emerald-800 cursor-pointer"
-            >
-              <option value="todas">Todas as Ações</option>
-              <option value="concluidas">✅ Ações Concluídas</option>
-              <option value="nao_concluidas">⏳ Ações Não Concluídas</option>
-            </select>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <FiCalendar className="w-3.5 h-3.5 text-emerald-600" />
+                Data Fim (Dia Y)
+              </label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all font-medium"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700">Filtrar por Ação</label>
+              <select
+                value={selectedAcao || ''}
+                onChange={(e) => setSelectedAcao(e.target.value || null)}
+                className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+              >
+                <option value="">Todas as Ações</option>
+                {acoes.map(acao => (
+                  <option key={acao.nome} value={acao.nome}>{acao.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700">Status da Ação</label>
+              <select
+                value={statusAcaoFilter}
+                onChange={(e) => setStatusAcaoFilter(e.target.value as any)}
+                className="w-full px-3 py-2 h-10 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 font-semibold transition-all text-emerald-800 cursor-pointer"
+              >
+                <option value="todas">Todas as Ações</option>
+                <option value="concluidas">✅ Ações Concluídas</option>
+                <option value="nao_concluidas">⏳ Ações Não Concluídas</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
